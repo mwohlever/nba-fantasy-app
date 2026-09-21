@@ -456,9 +456,14 @@ function AppNavContent() {
         ? bracketContestId
           ? [
               {
-                href: `/bracket-challenge/${bracketContestId}`,
+                href: "/bracket-challenge",
                 label: "Home",
                 icon: "⌂",
+              },
+              {
+                href: `/bracket-challenge/${bracketContestId}`,
+                label: "Leaderboard",
+                icon: "▦",
               },
               {
                 href: `/bracket-challenge/${bracketContestId}/bracket`,
@@ -476,6 +481,24 @@ function AppNavContent() {
                 href: "/bracket-challenge",
                 label: "Home",
                 icon: "⌂",
+              },
+              {
+                href: "/bracket-challenge",
+                label: "Leaderboard",
+                icon: "▦",
+                disabled: true,
+              },
+              {
+                href: "/bracket-challenge",
+                label: "Bracket",
+                icon: "✎",
+                disabled: true,
+              },
+              {
+                href: "/bracket-challenge",
+                label: "Live Scores",
+                icon: "◫",
+                disabled: true,
               },
             ]
         : activeSport === "nfl" || activeSport === "nba"
@@ -1075,7 +1098,11 @@ function AppNavContent() {
     return isLinkActive(href);
   }
 
-  function desktopLinkClass(href: string) {
+  function desktopLinkClass(href: string, disabled = false) {
+    if (disabled) {
+      return "app-desktop-link cursor-not-allowed rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-400 opacity-70";
+    }
+
     const active = isDisplayedMainLinkActive(href);
 
     return `app-desktop-link rounded-full border px-4 py-2 text-sm font-medium ${
@@ -1085,7 +1112,11 @@ function AppNavContent() {
     }`;
   }
 
-  function mobileLinkClass(href: string) {
+  function mobileLinkClass(href: string, disabled = false) {
+    if (disabled) {
+      return "app-mobile-nav-item app-mobile-nav-disabled flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-0.5 text-xs font-medium text-slate-400 opacity-65";
+    }
+
     const active = isDisplayedMainLinkActive(href);
 
     return `app-mobile-nav-item flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-0.5 text-xs font-medium transition ${
@@ -1218,17 +1249,27 @@ function AppNavContent() {
               <img src="/logos/logo_all_sports.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
             </Link>
             {!isGroupHomeRoute ? displayedMainLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={
-                  isNcaaPickEm || isNbaSkins
-                    ? link.href
-                    : getLinkHref(link.href)
-                }
-                className={desktopLinkClass(link.href)}
-              >
-                {link.label}
-              </Link>
+              link.disabled ? (
+                <span
+                  key={link.label}
+                  aria-disabled="true"
+                  className={desktopLinkClass(link.href, true)}
+                >
+                  {link.label}
+                </span>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={
+                    isNcaaPickEm || isNbaSkins
+                      ? link.href
+                      : getLinkHref(link.href)
+                  }
+                  className={desktopLinkClass(link.href)}
+                >
+                  {link.label}
+                </Link>
+              )
             )) : null}
 
             {!isGroupHomeRoute &&
@@ -1491,6 +1532,20 @@ function AppNavContent() {
                             ))}
                           </div>
                         ))}
+
+                        {isBracketChallenge && bracketContestId ? (
+                          <Link
+                            href={`/bracket-challenge/${bracketContestId}/admin`}
+                            onClick={() => setDesktopUserOpen(false)}
+                            className={`block rounded-xl px-3 py-2 text-sm transition ${
+                              pathname === `/bracket-challenge/${bracketContestId}/admin`
+                                ? "bg-sky-100 font-semibold text-sky-900"
+                                : "text-slate-700 hover:bg-slate-100"
+                            }`}
+                          >
+                            Bracket Challenge settings
+                          </Link>
+                        ) : null}
                       </>
                     ) : null}
 
@@ -1616,7 +1671,7 @@ function AppNavContent() {
       </nav>
 
       {/* White shield behind mobile nav */}
-      {!isGroupHomeRoute && !(isBracketChallenge && !bracketContestId) ? (
+      {!isGroupHomeRoute ? (
       <div
         className="app-mobile-nav-shield pointer-events-none fixed bottom-[-52px] left-0 right-0 z-[9998] h-28 bg-white sm:hidden"
         aria-hidden="true"
@@ -1624,12 +1679,12 @@ function AppNavContent() {
       ) : null}
 
       {/* Mobile bottom nav only */}
-      {!isGroupHomeRoute && !(isBracketChallenge && !bracketContestId) ? (
+      {!isGroupHomeRoute ? (
       <div
         ref={mobileMoreRef}
-        className="app-mobile-bottom-nav fixed bottom-[-42px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[42px] pt-1 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden"
+        className={`app-mobile-bottom-nav fixed bottom-[-42px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[42px] pt-1 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden${isBracketChallenge ? " app-bracket-challenge-mobile-nav" : ""}`}
       >
-        {!isNcaaPickEm && !isNbaSkins && mobileMoreOpen ? (
+        {!isNcaaPickEm && !isNbaSkins && !isBracketChallenge && mobileMoreOpen ? (
           <div className="app-dropdown-panel absolute bottom-full right-3 mb-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
             {mobileMoreLinks.map((link) => (
               <Link
@@ -1663,28 +1718,41 @@ function AppNavContent() {
           className={`mx-auto grid max-w-xl gap-1 ${
             isNcaaPickEm
               ? "grid-cols-3"
-              : isNbaSkins
+            : isNbaSkins
                 ? "grid-cols-3"
+                : isBracketChallenge
+                  ? "grid-cols-4"
                 : activeSport === "nfl" || activeSport === "golf" || activeSport === "nba" ? "grid-cols-5" : "grid-cols-4"
-          }`}
+          }${isBracketChallenge ? " app-bracket-challenge-mobile-nav-row" : ""}`}
         >
           {displayedMainLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={
-                isNcaaPickEm || isNbaSkins
-                  ? link.href
-                  : getLinkHref(link.href)
-              }
-              prefetch={shouldPrefetchMobileLink(link.href)}
-              className={mobileLinkClass(link.href)}
-            >
-              <span className="text-lg leading-none">{link.icon}</span>
-              <span>{link.label}</span>
-            </Link>
+            link.disabled ? (
+              <span
+                key={link.label}
+                aria-disabled="true"
+                className={mobileLinkClass(link.href, true)}
+              >
+                <span className="text-lg leading-none">{link.icon}</span>
+                <span className="app-mobile-nav-label">{link.label}</span>
+              </span>
+            ) : (
+              <Link
+                key={link.href}
+                href={
+                  isNcaaPickEm || isNbaSkins
+                    ? link.href
+                    : getLinkHref(link.href)
+                }
+                prefetch={shouldPrefetchMobileLink(link.href)}
+                className={mobileLinkClass(link.href)}
+              >
+                <span className="text-lg leading-none">{link.icon}</span>
+                <span className="app-mobile-nav-label">{link.label}</span>
+              </Link>
+            )
           ))}
 
-          {!isNcaaPickEm && !isNbaSkins ? (
+          {!isNcaaPickEm && !isNbaSkins && !isBracketChallenge ? (
             <button
               type="button"
               onClick={() => setMobileMoreOpen((open) => !open)}

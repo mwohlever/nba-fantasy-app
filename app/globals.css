@@ -880,6 +880,32 @@ html.dark {
     box-shadow 150ms ease;
 }
 
+/* Bracket Challenge always uses four tabs. Keep its canonical 42px row from
+   growing when longer labels such as "Leaderboard" are present. */
+.app-bracket-challenge-mobile-nav-row {
+  height: 42px;
+}
+
+.app-bracket-challenge-mobile-nav .app-mobile-nav-item {
+  height: 42px;
+  min-height: 42px;
+  min-width: 0;
+}
+
+.app-bracket-challenge-mobile-nav .app-mobile-nav-label {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-mobile-nav-disabled {
+  pointer-events: none;
+}
+
 .app-mobile-nav-item:active {
   transform: scale(0.96);
 }

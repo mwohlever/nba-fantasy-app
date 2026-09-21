@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import AppNav from "@/components/AppNav";
 
 type ChallengeDetail = {
   group: {
@@ -80,7 +81,8 @@ export default function BracketChallengeLivePage() {
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <AppNav />
           <p className="text-sm text-slate-400">Loading live scores…</p>
         </div>
       </main>
@@ -90,7 +92,8 @@ export default function BracketChallengeLivePage() {
   if (error || !detail) {
     return (
       <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-5xl space-y-6">
+        <AppNav />
         <div className="rounded-2xl border border-red-500/30 bg-red-950/20 p-4 text-sm text-red-200">
           {error || "Unable to load live scores."}
         </div>
@@ -101,7 +104,8 @@ export default function BracketChallengeLivePage() {
 
   return (
     <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-5xl space-y-6">
+      <AppNav />
       <section className="rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-xl sm:p-7">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">
           Bracket Challenge · {detail.group.name}

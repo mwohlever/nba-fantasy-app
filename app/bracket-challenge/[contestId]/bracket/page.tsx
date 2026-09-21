@@ -95,6 +95,7 @@ export default function BracketChallengeDetailPage() {
 
   const entrantIdFromUrl =
     searchParams.get("entrantId") ?? "";
+  const entryIdFromUrl = searchParams.get("entryId") ?? "";
   const bracketNumberFromUrl = (() => {
     const value = Number(
       searchParams.get("bracket") ?? "1",
@@ -175,7 +176,7 @@ export default function BracketChallengeDetailPage() {
           fetch(
             `/api/bracket-challenge/contests/${encodeURIComponent(
               contestId,
-            )}/master-bracket?${new URLSearchParams({ ...(selectedEntrantId ? { entrantId: selectedEntrantId } : {}), bracketNumber: String(bracketNumber) })}`,
+            )}/master-bracket?${new URLSearchParams({ ...(entryIdFromUrl ? { entryId: entryIdFromUrl } : {}), ...(selectedEntrantId ? { entrantId: selectedEntrantId } : {}), bracketNumber: String(bracketNumber) })}`,
             {
               cache: "no-store",
             },
@@ -196,6 +197,7 @@ export default function BracketChallengeDetailPage() {
                 string,
                 string | null | undefined
               >;
+              readOnly?: boolean;
             };
             entrants?: { id: string; kind: "account" | "managed"; displayName: string }[];
             selectedEntrantId?: string;
@@ -260,7 +262,7 @@ export default function BracketChallengeDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [contestId, selectedEntrantId, bracketNumber]);
+  }, [contestId, selectedEntrantId, bracketNumber, entryIdFromUrl]);
 
   function selectBracket(
     entrantId: string,
@@ -529,7 +531,8 @@ export default function BracketChallengeDetailPage() {
       (["locked", "in_progress", "final"].includes(contest.status) ||
         (contest.lockAt && new Date(contest.lockAt).getTime() <= Date.now())),
   );
-  const editableGameKeys = new Set(games.filter((game) => contest && canEditBracketGame({ contest: { contestStatus: contest.status, contestLockAt: contest.lockAt }, gameLockAt: game.lockAt, gameStatus: game.status })).map((game) => game.gameKey));
+  const viewingFrozenEntry = Boolean(entryIdFromUrl);
+  const editableGameKeys = new Set(viewingFrozenEntry ? [] : games.filter((game) => contest && canEditBracketGame({ contest: { contestStatus: contest.status, contestLockAt: contest.lockAt }, gameLockAt: game.lockAt, gameStatus: game.status })).map((game) => game.gameKey));
   const completedPicks =
     games.filter((game) =>
       Boolean(picks[game.gameKey]),
@@ -557,7 +560,7 @@ export default function BracketChallengeDetailPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-      <div className="mx-auto max-w-7xl space-y-5">
+      <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
 
         <Link
@@ -616,13 +619,13 @@ export default function BracketChallengeDetailPage() {
                       {completedPicks} of {games.length} picks
                     </h2>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <select value={selectedEntrantId} onChange={(event) => { selectBracket(event.target.value, 1); }} className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-100">
+                      {!viewingFrozenEntry && <select value={selectedEntrantId} onChange={(event) => { selectBracket(event.target.value, 1); }} className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-100">
                         {entrants.map((entrant) => <option key={entrant.id} value={entrant.id}>{entrant.displayName}{entrant.kind === "managed" ? " (managed)" : ""}</option>)}
-                      </select>
-                      {contest.maxBracketsPerEntrant > 1 ? <select value={bracketNumber} onChange={(event) => selectBracket(selectedEntrantId, Number(event.target.value))} className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-100">
+                      </select>}
+                      {!viewingFrozenEntry && contest.maxBracketsPerEntrant > 1 ? <select value={bracketNumber} onChange={(event) => selectBracket(selectedEntrantId, Number(event.target.value))} className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-100">
                         {Array.from({ length: contest.maxBracketsPerEntrant }, (_, index) => index + 1).map((number) => <option key={number} value={number}>Bracket {number}</option>)}
                       </select> : null}
-                      {contest.managedEntrantsAllowed && !contestLocked ? <button type="button" onClick={() => void handleAddManagedEntrant()} className="rounded-lg border border-blue-400/50 px-2 py-1.5 text-xs font-black text-blue-200">Add entrant</button> : null}
+                      {contest.managedEntrantsAllowed && !contestLocked && !viewingFrozenEntry ? <button type="button" onClick={() => void handleAddManagedEntrant()} className="rounded-lg border border-blue-400/50 px-2 py-1.5 text-xs font-black text-blue-200">Add entrant</button> : null}
                     </div>
                   </div>
 
@@ -674,7 +677,9 @@ export default function BracketChallengeDetailPage() {
                 </div>
 
                 <p className="mt-3 text-sm text-slate-400">
-                  {contestLocked
+                  {viewingFrozenEntry
+                    ? "Viewing the entrant’s frozen contest bracket."
+                    : contestLocked
                     ? "This bracket is locked. Your submitted picks can no longer be changed."
                     : "Picks save automatically. You can change them while the bracket is editable."}
                 </p>
@@ -684,7 +689,7 @@ export default function BracketChallengeDetailPage() {
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-bold text-slate-400">
                     {masterBracketId
-                      ? contestLocked
+                      ? (contestLocked || viewingFrozenEntry)
                         ? `Bracket #${bracketNumber} · Locked`
                         : `Bracket #${bracketNumber} · Auto-save on`
                       : `Preparing Bracket #${bracketNumber}…`}
@@ -702,7 +707,7 @@ export default function BracketChallengeDetailPage() {
                     games={games}
                     teams={teams}
                     picks={picks}
-                    editable={Boolean(masterBracketId) && ["setup", "open"].includes(contest.status)}
+                    editable={!viewingFrozenEntry && Boolean(masterBracketId) && ["setup", "open"].includes(contest.status)}
                     editableGameKeys={editableGameKeys}
                     savingGameKey={
                       savingGameKey
@@ -714,7 +719,7 @@ export default function BracketChallengeDetailPage() {
                     games={games}
                     teams={teams}
                     picks={picks}
-                    editable={Boolean(masterBracketId) && ["setup", "open"].includes(contest.status)}
+                    editable={!viewingFrozenEntry && Boolean(masterBracketId) && ["setup", "open"].includes(contest.status)}
                     editableGameKeys={editableGameKeys}
                     savingGameKey={
                       savingGameKey
@@ -768,6 +773,7 @@ export default function BracketChallengeDetailPage() {
                           value={
                             tiebreakerValue
                           }
+                          disabled={viewingFrozenEntry || contestLocked}
                           onChange={(event) =>
                             setTiebreakerValue(
                               event.target.value,
@@ -782,7 +788,7 @@ export default function BracketChallengeDetailPage() {
                         type="button"
                         disabled={
                           !masterBracketId ||
-                          savingTiebreaker
+                          savingTiebreaker || viewingFrozenEntry || contestLocked
                         }
                         onClick={() =>
                           void handleTiebreakerSave()

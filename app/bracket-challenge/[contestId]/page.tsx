@@ -3,212 +3,112 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+
+import AppNav from "@/components/AppNav";
 import CfpFieldSetup from "./CfpFieldSetup";
 
-type ChallengeDetail = {
-  group: {
-    id: string;
-    name: string;
-    slug: string;
+type Data = {
+  detail: {
+    group: { name: string };
+    canAdministerGroup: boolean;
+    canManageCompetitionField: boolean;
+    contest: { status: string; rulesSnapshot: Record<string, unknown> };
+    competition: { id: number; name: string; season: number; formatKey: string };
   };
-  league: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  contest: {
-    id: string;
-    status: string;
-    lockAt: string | null;
-    maxBracketsPerEntrant: number;
-    rulesVersion: number;
-    rulesSnapshot: Record<string, unknown>;
-  };
-  competition: {
-    id: number;
-    sportKey: string;
-    formatKey: string;
-    season: number;
-    name: string;
-    status: string;
-    startsAt: string | null;
-    endsAt: string | null;
-  };
-  games: unknown[];
-  canManageCompetitionField: boolean;
+  picksVisible: boolean;
+  rounds: { key: string; label: string }[];
+  participation: { entryId: number; entrantName: string; entrantKind: string; bracketNumber: number; completionState: "in_progress" | "complete" | "locked"; isMine: boolean }[];
+  personalSummary: { totalBrackets: number; completeBrackets: number };
+  standings: { entryId: number; rank: number; entrantName: string; entrantKind: string; bracketNumber: number; entryStatus: string; pointsEarned: number; maxPossibleScore: number; correctPicks: number; pendingPicks: number; eliminatedPicks: number; championPick: string | null; canViewBracket: boolean }[];
 };
 
-function formatStatus(value: string) {
-  return value
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
+const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+function scoring(snapshot: Record<string, unknown>, key: string) {
+  const raw = snapshot.scoring as Record<string, unknown> | undefined;
+  const points = raw?.roundPoints as Record<string, unknown> | undefined ?? raw;
+  return typeof points?.[key] === "number" ? points[key] : null;
+}
+function completionLabel(state: "in_progress" | "complete" | "locked") {
+  if (state === "complete") return "Complete";
+  if (state === "locked") return "Locked";
+  return "In progress";
 }
 
 export default function BracketChallengeHomePage() {
-  const params = useParams<{ contestId: string }>();
-  const contestId = params.contestId;
-
-  const [detail, setDetail] = useState<ChallengeDetail | null>(null);
+  const { contestId } = useParams<{ contestId: string }>();
+  const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [showFieldTools, setShowFieldTools] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const response = await fetch(
-          `/api/bracket-challenge/contests/${contestId}`,
-          { cache: "no-store" },
-        );
-
+    void fetch(`/api/bracket-challenge/contests/${encodeURIComponent(contestId)}/leaderboard`, { cache: "no-store" })
+      .then(async (response) => {
         const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result?.error ?? "Unable to load bracket challenge.",
-          );
-        }
-
-        if (!cancelled) {
-          setDetail(result);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Unable to load bracket challenge.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
+        if (!response.ok) throw new Error(result.error ?? "Unable to load Bracket Challenge.");
+        return result as Data;
+      })
+      .then((result) => { if (!cancelled) setData(result); })
+      .catch((reason: unknown) => { if (!cancelled) setError(reason instanceof Error ? reason.message : "Unable to load Bracket Challenge."); });
+    return () => { cancelled = true; };
   }, [contestId]);
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-        <div className="mx-auto max-w-5xl">
-          <p className="text-sm text-slate-400">Loading challenge…</p>
-        </div>
-      </main>
-    );
-  }
+  if (!data && !error) return <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6"><div className="mx-auto max-w-5xl space-y-6"><AppNav /><p className="mt-5 text-sm text-slate-400">Loading challenge…</p></div></main>;
+  if (!data) return <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6"><div className="mx-auto max-w-5xl space-y-6"><AppNav /><p className="mt-5 rounded-xl border border-red-500/30 bg-red-950/20 p-4 text-sm text-red-200">{error}</p></div></main>;
 
-  if (error || !detail) {
-    return (
-      <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-        <div className="mx-auto max-w-5xl">
-        <div className="rounded-2xl border border-red-500/30 bg-red-950/20 p-4 text-sm text-red-200">
-          {error || "Unable to load bracket challenge."}
-        </div>
-      </div>
-      </main>
-    );
-  }
+  const { detail } = data;
+  const scoreSummary = data.rounds.map((round) => {
+    const points = scoring(detail.contest.rulesSnapshot, round.key);
+    return points === null ? null : `${round.label} ${points}`;
+  }).filter((value): value is string => Boolean(value));
+  const personalCompletion = data.personalSummary.totalBrackets === 0
+    ? "No admitted brackets yet"
+    : data.personalSummary.totalBrackets === 1
+      ? data.personalSummary.completeBrackets === 1 ? "Bracket complete" : "Bracket in progress"
+      : `${data.personalSummary.completeBrackets} of ${data.personalSummary.totalBrackets} brackets complete`;
+  const participationScroll = data.participation.length > 12 ? "max-h-[34rem] overflow-y-auto pr-1" : "";
 
   return (
-    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-        <div className="mx-auto max-w-5xl">
-      <section className="rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-xl sm:p-7">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <AppNav />
+
+        <div className="mt-5 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">
-              Bracket Challenge · {detail.group.name}
-            </p>
-
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">
-              {detail.competition.name}
-            </h1>
-
-            <p className="mt-1 text-sm text-slate-400">
-              {detail.competition.sportKey === "college_football"
-                ? "College Football"
-                : detail.competition.sportKey.replaceAll("_", " ")}
-              {" · "}
-              {detail.games.length} games
-            </p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Bracket Challenge · {detail.group.name}</p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">{detail.competition.name}</h1>
+            <p className="mt-1 text-sm text-slate-400">{detail.competition.season} season</p>
           </div>
-
-          <span className="rounded-full bg-blue-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-blue-200">
-            {formatStatus(detail.contest.status)}
-          </span>
+          <span className="rounded-full bg-blue-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-blue-200">{label(detail.contest.status)}</span>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <Link
-            href={`/bracket-challenge/${contestId}/bracket`}
-            className="rounded-2xl border border-slate-700/70 bg-slate-950/40 p-4 transition hover:border-blue-400/60 hover:bg-slate-900"
-          >
-            <div className="text-lg font-black text-white">
-              My Bracket
-            </div>
-            <p className="mt-1 text-sm text-slate-400">
-              Make, edit, and review your tournament picks.
-            </p>
-          </Link>
+        <section className="mt-5">
+          {!data.picksVisible ? (
+            <>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div><h2 className="text-xl font-black text-white">Your bracket</h2><p className="mt-1 text-sm text-slate-400">Make or finish picks before the contest locks.</p></div>
+                <Link href={`/bracket-challenge/${contestId}/bracket`} className="rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-400">Go to bracket</Link>
+              </div>
+              <p className="mt-3 text-sm font-semibold text-slate-300">{personalCompletion}</p>
+              <div className="mt-7"><h2 className="text-xl font-black text-white">Leaderboard</h2><p className="mt-1 text-sm text-slate-400">Bracket participation is visible; picks remain private until lock.</p></div>
+              <div className={`mt-4 divide-y divide-slate-800 border-y border-slate-800 ${participationScroll}`}>
+                {data.participation.length ? data.participation.map((entry) => <div key={entry.entryId} className="flex items-center justify-between gap-3 py-3 text-sm"><span className="min-w-0 truncate font-semibold text-slate-100">{entry.entrantName}{entry.bracketNumber > 1 ? ` · Bracket ${entry.bracketNumber}` : ""}</span><span className="shrink-0 text-slate-400">{completionLabel(entry.completionState)}</span></div>) : <p className="py-4 text-sm text-slate-400">No brackets have been admitted yet.</p>}
+              </div>
+              <p className="mt-4 text-xs text-slate-500">Picks and championship totals remain private until the contest lock.</p>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black text-white">Leaderboard</h2><p className="mt-1 text-sm text-slate-400">Ranked by points earned. Equal scores remain tied until a valid final tiebreak can be resolved.</p></div><Link href={`/bracket-challenge/${contestId}/bracket`} className="text-sm font-bold text-blue-300 transition hover:text-blue-200">My bracket</Link></div>
+              <div className="mt-4 divide-y divide-slate-800 border-y border-slate-800">
+                {data.standings.map((entry) => <div key={entry.entryId} className="py-4"><div className="flex items-start justify-between gap-3"><div className="flex gap-3"><span className="min-w-6 text-lg font-black text-blue-300">{entry.rank}</span><div><p className="font-bold text-white">{entry.entrantName}{entry.bracketNumber > 1 ? ` · Bracket ${entry.bracketNumber}` : ""}</p><p className="text-xs text-slate-400">{entry.entrantKind === "managed" ? "Managed entrant · " : ""}{entry.entryStatus}</p></div></div><div className="text-right"><p className="text-xl font-black text-white">{entry.pointsEarned}</p><p className="text-xs text-slate-400">max {entry.maxPossibleScore}</p></div></div><div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 pl-9 text-xs text-slate-400"><span>{entry.correctPicks} correct</span><span>{entry.pendingPicks} alive</span><span>{entry.eliminatedPicks} eliminated</span>{entry.championPick && <span>Champion: {entry.championPick}</span>}{entry.canViewBracket && <Link className="ml-auto font-bold text-blue-300 hover:text-blue-200" href={`/bracket-challenge/${contestId}/bracket?entryId=${entry.entryId}`}>View bracket</Link>}</div></div>)}
+              </div>
+            </>
+          )}
+        </section>
 
-          <Link
-            href={`/bracket-challenge/${contestId}/live`}
-            className="rounded-2xl border border-slate-700/70 bg-slate-950/40 p-4 transition hover:border-blue-400/60 hover:bg-slate-900"
-          >
-            <div className="text-lg font-black text-white">
-              Live Scores
-            </div>
-            <p className="mt-1 text-sm text-slate-400">
-              Follow tournament games and results.
-            </p>
-          </Link>
+        {scoreSummary.length > 0 && <details className="mt-6 text-xs text-slate-500"><summary className="cursor-pointer font-semibold text-slate-400">Scoring rules</summary><p className="mt-2">{scoreSummary.join(" · ")} points</p></details>}
 
-          <div className="rounded-2xl border border-slate-700/70 bg-slate-950/40 p-4">
-            <div className="text-lg font-black text-white">
-              Leaderboard
-            </div>
-            <p className="mt-1 text-sm text-slate-400">
-              Pool standings will appear here once entries are submitted.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-2xl border border-slate-700/70 bg-slate-950/40 p-4">
-          <div className="text-sm font-bold text-white">
-            Challenge setup
-          </div>
-
-          <div className="mt-2 grid gap-2 text-sm text-slate-400 sm:grid-cols-2">
-            <div>
-              Max brackets per entrant:{" "}
-              <span className="font-semibold text-slate-100">
-                {detail.contest.maxBracketsPerEntrant}
-              </span>
-            </div>
-
-            <div>
-              Competition status:{" "}
-              <span className="font-semibold text-slate-100">
-                {formatStatus(detail.competition.status)}
-              </span>
-            </div>
-          </div>
-
-          {detail.canManageCompetitionField && detail.competition.formatKey === "cfp" ? (
-            <CfpFieldSetup competitionId={detail.competition.id} />
-          ) : null}
-        </div>
-      </section>
+        {detail.canManageCompetitionField && detail.competition.formatKey === "cfp" && <section className="mt-8 border-t border-amber-400/20 pt-5"><button type="button" onClick={() => setShowFieldTools((current) => !current)} className="text-xs font-bold text-amber-300 transition hover:text-amber-200">{showFieldTools ? "Hide" : "Show"} super-admin global CFP field tools</button>{showFieldTools && <CfpFieldSetup competitionId={detail.competition.id} />}</section>}
       </div>
     </main>
   );

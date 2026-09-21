@@ -91,6 +91,7 @@ function MobileAccountMenuContent({
   const { selectedSport } = useSelectedSport();
 
   const { groupContext } = useGroupContext();
+  const bracketContestId = pathname.match(/^\/bracket-challenge\/([^/]+)/)?.[1] ?? null;
 
   const isNbaSkins =
     pathname.startsWith("/nba-skins") ||
@@ -331,6 +332,20 @@ function MobileAccountMenuContent({
                   ))}
                 </div>
               ))}
+
+              {bracketContestId ? (
+                <Link
+                  href={`/bracket-challenge/${bracketContestId}/admin`}
+                  onClick={() => setIsOpen(false)}
+                  className={`block rounded-xl px-3 py-2.5 text-sm transition ${
+                    pathname === `/bracket-challenge/${bracketContestId}/admin`
+                      ? "bg-sky-100 font-semibold text-sky-900"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  Bracket Challenge settings
+                </Link>
+              ) : null}
             </>
           ) : null}
 
