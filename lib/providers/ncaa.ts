@@ -238,9 +238,14 @@ function mapTeam(
 }
 
 
-function mapEvent(
+/**
+ * Normalizes one ESPN college-football scoreboard event into the shared
+ * score/Game Center shape. Canonical identities deliberately come from
+ * `event.id` and `competitor.team.id`, never matchup text or competitor.id.
+ */
+export function normalizeNcaaEspnEvent(
   event: any,
-  ranksByTeamId: Map<string, number>,
+  ranksByTeamId: Map<string, number> = new Map(),
 ): NcaaEspnGame | null {
   const competition =
     event?.competitions?.[0];
@@ -365,6 +370,35 @@ function mapEvent(
   };
 }
 
+/**
+ * Normalizes all valid events in an ESPN college-football scoreboard payload.
+ * Callers may supply rankings when their scoreboard policy has a matching
+ * week-specific ranking source; postseason consumers intentionally omit them.
+ */
+export function normalizeNcaaEspnScoreboardEvents(
+  payload: any,
+  ranksByTeamId: Map<string, number> = new Map(),
+): NcaaEspnGame[] {
+  const events =
+    Array.isArray(payload?.events)
+      ? payload.events
+      : [];
+
+  const games: NcaaEspnGame[] = [];
+
+  for (const event of events) {
+    const game = normalizeNcaaEspnEvent(event, ranksByTeamId);
+
+    if (game) games.push(game);
+  }
+
+  return games.sort(
+    (a, b) =>
+      new Date(a.kickoffAt).getTime() -
+      new Date(b.kickoffAt).getTime(),
+  );
+}
+
 function isRankedVsRanked(
   game: NcaaEspnGame,
 ) {
@@ -474,6 +508,45 @@ async function fetchRankings(
   };
 }
 
+/**
+ * Fetches the complete FBS postseason scoreboard for a season, including CFP
+ * and other bowl games. ESPN's postseason feed does not provide a stable CFP-
+ * only selector, so callers must bind authoritative `espnEventId` values
+ * rather than infer CFP membership from event names.
+ *
+ * Rankings are intentionally omitted: unlike NCAA Pick'em's regular-season
+ * week policy, this query has no matching AP-poll week to join.
+ */
+export async function fetchNcaaPostseasonEvents({
+  season,
+}: {
+  season: number;
+}): Promise<NcaaEspnGame[]> {
+  const params =
+    new URLSearchParams({
+      dates: String(season),
+      seasontype: "3",
+      limit: "500",
+      groups: "80",
+    });
+
+  const response = await fetch(
+    `${ESPN_CFB_BASE}/scoreboard?${params.toString()}`,
+    {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `ESPN NCAA postseason scoreboard failed: ${response.status}`,
+    );
+  }
+
+  return normalizeNcaaEspnScoreboardEvents(await response.json());
+}
+
 export async function fetchNcaaPickEmWeek({
   season,
   week,
@@ -527,32 +600,10 @@ export async function fetchNcaaPickEmWeek({
       : [];
 
   const scheduleGames =
-    (
-      events.map(
-        (event: any) =>
-          mapEvent(
-            event,
-            rankingResult.ranksByTeamId,
-          ),
-      ) as Array<
-        NcaaEspnGame | null
-      >
-    )
-      .filter(
-        (
-          game: NcaaEspnGame | null,
-        ): game is NcaaEspnGame =>
-          Boolean(game),
-      )
-      .sort(
-        (a, b) =>
-          new Date(
-            a.kickoffAt,
-          ).getTime() -
-          new Date(
-            b.kickoffAt,
-          ).getTime(),
-      );
+    normalizeNcaaEspnScoreboardEvents(
+      payload,
+      rankingResult.ranksByTeamId,
+    );
 
   const eligibleGames =
     scheduleGames.filter(

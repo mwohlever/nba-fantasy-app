@@ -1,136 +1,148 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import AppNav from "@/components/AppNav";
 
-type ChallengeDetail = {
-  group: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  contest: {
-    id: string;
-    status: string;
-  };
-  competition: {
-    id: number;
-    sportKey: string;
-    formatKey: string;
-    season: number;
-    name: string;
-    status: string;
-  };
+import AppNav from "@/components/AppNav";
+import BracketLiveScoreCard, {
+  type BracketLiveScoreCardGame,
+} from "@/components/bracket/BracketLiveScoreCard";
+
+type LiveScoresResponse = {
+  success?: boolean;
+  error?: string;
+  group: { id: string; name: string; slug: string };
+  contest: { id: string; status: string; lockAt: string | null };
+  competition: { id: number; season: number; name: string; status: string };
+  provider: { availability: "available" | "unavailable" };
+  rounds: Array<{ key: string; label: string; order: number }>;
+  games: Array<BracketLiveScoreCardGame & {
+    bracketGameId: number;
+    roundKey: string;
+    roundOrder: number;
+    regionKey: string | null;
+    providerEventId: string | null;
+  }>;
 };
 
-export default function BracketChallengeLivePage() {
-  const params = useParams<{ contestId: string }>();
-  const contestId = params.contestId;
+function dateKey(scheduledAt: string | null) {
+  if (!scheduledAt) return null;
+  return new Date(scheduledAt).toLocaleDateString("en-US", {
+    year: "numeric", month: "2-digit", day: "2-digit",
+  });
+}
 
-  const [detail, setDetail] = useState<ChallengeDetail | null>(null);
+function dateLabel(scheduledAt: string) {
+  return new Date(scheduledAt).toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric",
+  });
+}
+
+function orderedRoundGames(games: LiveScoresResponse["games"], roundKey: string) {
+  return games.filter((game) => game.roundKey === roundKey).sort((left, right) => {
+    const leftTime = left.scheduledAt ? new Date(left.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
+    const rightTime = right.scheduledAt ? new Date(right.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
+    return leftTime - rightTime || left.gameOrder - right.gameOrder;
+  });
+}
+
+export default function BracketChallengeLivePage() {
+  const { contestId } = useParams<{ contestId: string }>();
+  const [data, setData] = useState<LiveScoresResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const requestRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(async (initial = false) => {
+    if (!contestId || (!initial && requestRef.current)) return;
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+    if (initial) setLoading(true);
+    setError("");
 
-    async function load() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const response = await fetch(
-          `/api/bracket-challenge/contests/${contestId}`,
-          { cache: "no-store" },
-        );
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            result?.error ?? "Unable to load live scores.",
-          );
-        }
-
-        if (!cancelled) {
-          setDetail(result);
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Unable to load live scores.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+    try {
+      const response = await fetch(`/api/bracket-challenge/contests/${encodeURIComponent(contestId)}/live`, {
+        cache: "no-store", signal: controller.signal,
+      });
+      const result = (await response.json()) as LiveScoresResponse;
+      if (!response.ok) throw new Error(result.error ?? "Unable to load live scores.");
+      if (!controller.signal.aborted) setData(result);
+    } catch (loadError) {
+      if (!controller.signal.aborted) {
+        setError(loadError instanceof Error ? loadError.message : "Unable to load live scores.");
       }
+    } finally {
+      if (requestRef.current !== controller) return;
+      requestRef.current = null;
+      if (initial) setLoading(false);
     }
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
   }, [contestId]);
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-        <div className="mx-auto max-w-5xl space-y-6">
-          <AppNav />
-          <p className="text-sm text-slate-400">Loading live scores…</p>
-        </div>
-      </main>
-    );
+  useEffect(() => {
+    void load(true);
+    return () => { requestRef.current?.abort(); requestRef.current = null; };
+  }, [load]);
+
+  const hasLiveGame = Boolean(data?.games.some((game) =>
+    game.provider.mappingState === "valid" && game.provider.game?.status === "in",
+  ));
+
+  useEffect(() => {
+    if (!hasLiveGame) return;
+    const interval = window.setInterval(() => { void load(); }, 20_000);
+    return () => window.clearInterval(interval);
+  }, [hasLiveGame, load]);
+
+  const rounds = useMemo(
+    () => data?.rounds.slice().sort((left, right) => left.order - right.order) ?? [],
+    [data?.rounds],
+  );
+
+  if (loading && !data) {
+    return <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6"><div className="mx-auto max-w-5xl space-y-6"><AppNav /><p className="text-sm text-slate-400">Loading live scores…</p></div></main>;
   }
 
-  if (error || !detail) {
-    return (
-      <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-        <div className="mx-auto max-w-5xl space-y-6">
-        <AppNav />
-        <div className="rounded-2xl border border-red-500/30 bg-red-950/20 p-4 text-sm text-red-200">
-          {error || "Unable to load live scores."}
-        </div>
-      </div>
-      </main>
-    );
+  if (!data) {
+    return <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6"><div className="mx-auto max-w-5xl space-y-6"><AppNav /><p className="rounded-xl border border-red-500/30 bg-red-950/20 p-4 text-sm text-red-200">{error || "Unable to load live scores."}</p></div></main>;
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-        <div className="mx-auto max-w-5xl space-y-6">
-      <AppNav />
-      <section className="rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-xl sm:p-7">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">
-          Bracket Challenge · {detail.group.name}
-        </p>
+    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <AppNav />
+        <header>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">Bracket Challenge · {data.group.name}</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Live Scores</h1>
+          <p className="mt-1 text-sm text-slate-400">{data.competition.name} · {data.competition.season} season</p>
+        </header>
 
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">
-          Live Scores
-        </h1>
+        {data.provider.availability === "unavailable" ? <p className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-sm text-amber-100">Live game data is temporarily unavailable. The official tournament schedule is still shown below.</p> : null}
+        {error ? <p className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-sm text-amber-100">Live game data could not be refreshed. Showing the latest available tournament slate.</p> : null}
 
-        <p className="mt-2 text-sm text-slate-300">
-          {detail.competition.name}
-        </p>
+        {rounds.length ? <section className="space-y-7">
+          {rounds.map((round) => {
+            const games = orderedRoundGames(data.games, round.key);
+            const scheduledDates = new Set(games.map((game) => dateKey(game.scheduledAt)).filter(Boolean));
+            const showDateHeadings = scheduledDates.size > 1;
+            let previousDate: string | null = null;
 
-        <div className="mt-5 rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-5">
-          <div className="font-bold text-white">
-            Tournament games will live here.
-          </div>
-
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">
-            This page will use the shared college-football live score and
-            Game Center architecture once the CFP field and ESPN event
-            mappings are connected.
-          </p>
-        </div>
-      </section>
+            return <section key={round.key} className="space-y-3">
+              <div className="flex items-center gap-3"><h2 className="text-lg font-black text-white">{round.label}</h2><span className="h-px flex-1 bg-slate-800" /><span className="text-xs font-semibold text-slate-500">{games.length} game{games.length === 1 ? "" : "s"}</span></div>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {games.map((game) => {
+                  const gameDate = dateKey(game.scheduledAt);
+                  const showDate = showDateHeadings && gameDate !== previousDate;
+                  previousDate = gameDate;
+                  return <div key={game.bracketGameId} className="min-w-0">
+                    {showDate && game.scheduledAt ? <p className="mb-1 px-1 text-[11px] font-black uppercase tracking-wide text-slate-500">{dateLabel(game.scheduledAt)}</p> : null}
+                    <BracketLiveScoreCard game={game} />
+                  </div>;
+                })}
+              </div>
+            </section>;
+          })}
+        </section> : <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">Tournament games are not available yet.</section>}
       </div>
     </main>
   );
