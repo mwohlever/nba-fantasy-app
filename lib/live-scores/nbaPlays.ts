@@ -79,6 +79,18 @@ export function nbaPeriodLabel(period: number | null) {
 
 export type NbaShotMarker = { left: number; top: number; basket: "left" | "right"; made: boolean };
 
+export function nbaPlayBasket(play: NbaPlay, context: { awayTeamId?: string; homeTeamId?: string }): "left" | "right" | null {
+  if (!play.teamId || !context.homeTeamId || !context.awayTeamId || context.homeTeamId === context.awayTeamId) return null;
+  return play.teamId === context.homeTeamId ? "left" : play.teamId === context.awayTeamId ? "right" : null;
+}
+
+export function nbaPlayAttackIndicator(play: NbaPlay | null, context: { awayTeamId?: string; homeTeamId?: string; awayTeamAbbreviation?: string | null; homeTeamAbbreviation?: string | null }) {
+  if (!play) return null;
+  const basket = nbaPlayBasket(play, context);
+  const abbreviation = basket === "left" ? context.homeTeamAbbreviation?.trim() : basket === "right" ? context.awayTeamAbbreviation?.trim() : null;
+  return abbreviation ? basket === "left" ? `← ${abbreviation}` : `${abbreviation} →` : null;
+}
+
 /**
  * ESPN's x/y is a shooting-basket-relative plane: x is 0..50 lateral (rim at 25),
  * y runs outward from the rim. ESPN does not include arena-end metadata, so 111 Sports
@@ -86,7 +98,7 @@ export type NbaShotMarker = { left: number; top: number; basket: "left" | "right
  */
 export function nbaFullCourtMarker(play: NbaPlay, context: { awayTeamId?: string; homeTeamId?: string }): NbaShotMarker | null {
   if (!play.shootingPlay) return null;
-  const basket = play.teamId === context.homeTeamId ? "left" : play.teamId === context.awayTeamId ? "right" : null;
+  const basket = nbaPlayBasket(play, context);
   if (!basket) return null;
   // These are the regulation free-throw-line centers already drawn by CourtEnd.
   // They deliberately bypass ESPN's free-throw coordinate sentinels.

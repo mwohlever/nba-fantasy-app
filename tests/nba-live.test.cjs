@@ -18,7 +18,7 @@ for (const ext of ['.ts', '.tsx']) require.extensions[ext] = function(module, fi
 };
 
 const { normalizeNbaGame, nbaStatusDetail } = require('../lib/providers/nbaLiveScores.ts');
-const { normalizeNbaPlays, defaultNbaPlayPeriod, nbaFullCourtMarker, nbaPeriodLabel, nbaPlayPeriods, latestMeaningfulNbaPlay } = require('../lib/live-scores/nbaPlays.ts');
+const { normalizeNbaPlays, defaultNbaPlayPeriod, nbaFullCourtMarker, nbaPeriodLabel, nbaPlayAttackIndicator, nbaPlayPeriods, latestMeaningfulNbaPlay } = require('../lib/live-scores/nbaPlays.ts');
 const { buildNbaOwnership, canonicalNbaPlayerName, matchingNbaSlate, nbaAthleteId } = require('../lib/live-scores/nbaOwnership.ts');
 const { fetchNbaGameDetail } = require('../lib/live-scores/nbaGameDetail.ts');
 const { nbaDateKey, shiftNbaDate } = require('../lib/live-scores/nbaDate.ts');
@@ -55,6 +55,10 @@ test('NBA play normalizer retains general PBP but only maps verified field-goal 
   assert.deepEqual(nbaFullCourtMarker({ ...plays[0], id: 'away-miss', teamId: 'AWY', scoreValue: 0, coordinate: { x: 2, y: 10 } }, { awayTeamId: 'AWY', homeTeamId: 'HME' }), { left: 78.75, top: 2, basket: 'right', made: false });
   assert.equal(nbaFullCourtMarker({ ...plays[0], teamId: 'HME', pointsAttempted: 1 }, { awayTeamId: 'AWY', homeTeamId: 'HME' }), null);
   assert.equal(nbaFullCourtMarker({ ...plays[0], teamId: 'unknown' }, { awayTeamId: 'AWY', homeTeamId: 'HME' }), null);
+  assert.equal(nbaPlayAttackIndicator({ ...plays[0], teamId: 'HME' }, { awayTeamId: 'AWY', homeTeamId: 'HME', awayTeamAbbreviation: 'NY', homeTeamAbbreviation: 'CLE' }), '← CLE');
+  assert.equal(nbaPlayAttackIndicator({ ...plays[0], teamId: 'AWY' }, { awayTeamId: 'AWY', homeTeamId: 'HME', awayTeamAbbreviation: 'NY', homeTeamAbbreviation: 'CLE' }), 'NY →');
+  assert.equal(nbaPlayAttackIndicator({ ...plays[0], teamId: 'unknown' }, { awayTeamId: 'AWY', homeTeamId: 'HME', awayTeamAbbreviation: 'NY', homeTeamAbbreviation: 'CLE' }), null);
+  assert.equal(nbaPlayAttackIndicator({ ...plays[0], teamId: 'HME' }, { awayTeamId: 'AWY', homeTeamId: 'HME', homeTeamAbbreviation: null }), null);
   assert.deepEqual(nbaPlayPeriods([{ ...plays[0], period: 1 }, { ...plays[0], id: 'ot', period: 5 }, { ...plays[0], id: '2ot', period: 6 }]), [1, 5, 6]);
   assert.equal(nbaPeriodLabel(5), 'OT'); assert.equal(nbaPeriodLabel(6), '2OT');
   const periodPlays = [{ ...plays[0], period: 1 }, { ...plays[0], id: 'q4', period: 4 }, { ...plays[0], id: 'ot', period: 5 }];
