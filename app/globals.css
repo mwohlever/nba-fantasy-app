@@ -8339,3 +8339,37 @@ html
 
 /* Draft also includes the outer gutters as safe pull-start areas. */
 .draft-workspace { margin-inline: -1rem; padding-inline: 1rem; padding-bottom: 1rem; }
+
+/* Bracket Challenge: native browser printing is intentionally scoped to the
+   read-only bracket grid so saved PDFs remain a complete, useful bracket sheet. */
+.bracket-print-header { display: none; }
+
+@media print {
+  @page { size: landscape; margin: 0.5in; }
+
+  html, body { background: #fff !important; color: #111827 !important; overflow: visible !important; min-height: 0 !important; }
+  .bracket-print-page { min-height: 0 !important; padding: 0 !important; background: #fff !important; color: #111827 !important; overflow: visible !important; }
+  .bracket-print-page > div { display: block !important; max-width: none !important; margin: 0 !important; }
+  .bracket-print-page .app-desktop-nav, .bracket-print-page .app-mobile-nav-shield, .bracket-print-page .app-mobile-bottom-nav { display: none !important; }
+  .bracket-screen-only, .bracket-screen-only * { display: none !important; }
+  .bracket-print-shell { min-height: 0 !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: #fff !important; box-shadow: none !important; break-before: auto !important; break-after: auto !important; page-break-before: auto !important; page-break-after: auto !important; }
+  .bracket-print-shell > div:last-child { padding: 0 !important; }
+  .bracket-print-header { display: block; width: 92%; max-width: 9.2in; margin: 0 auto 0.08in; color: #111827; }
+  .bracket-print-brand { display: flex; align-items: center; gap: 0.1in; }
+  .bracket-print-brand img { width: 1.1in; height: auto; object-fit: contain; }
+  .bracket-print-header p { margin: 0; font-size: 9pt; font-weight: 600; }
+  .bracket-print-header h1 { margin: 0.02in 0; font-size: 15pt; font-weight: 800; }
+  .bracket-topology-preview { overflow: visible !important; width: 92% !important; max-width: 9.2in; min-height: 0 !important; margin-inline: auto !important; padding: 0 !important; }
+  .bracket-topology-preview > div { min-width: 0 !important; width: 100% !important; gap: 0.06in !important; }
+  .bracket-topology-preview > div { height: 4.7in; }
+  .bracket-topology-preview .bracket-round-column { position: relative; min-height: 0 !important; }
+  .bracket-topology-preview .bracket-round-games { position: relative; display: block !important; height: calc(100% - 0.25in) !important; min-height: 0 !important; margin-top: 0; }
+  .bracket-topology-preview article { break-inside: avoid; page-break-inside: avoid; border-color: #94a3b8 !important; background: #fff !important; box-shadow: none !important; }
+  .bracket-topology-preview .bracket-round-games > article { position: absolute; top: calc(var(--bracket-position) * 100%); left: 0; width: 100%; transform: translateY(-50%); }
+  .bracket-topology-preview article > div:first-child { padding: 0.06in 0.1in !important; }
+  .bracket-topology-preview .min-h-11 { min-height: 0.38in !important; padding: 0.04in 0.1in !important; }
+  .bracket-topology-preview article * { color: #111827 !important; }
+  .bracket-topology-preview button { border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; cursor: default !important; }
+  .bracket-topology-preview .text-slate-500 { color: #475569 !important; }
+  .bracket-topology-preview .bg-slate-950\/40 { background: #f8fafc !important; }
+}

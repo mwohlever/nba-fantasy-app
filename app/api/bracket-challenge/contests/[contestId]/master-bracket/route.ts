@@ -90,7 +90,7 @@ export async function GET(
 
     if (Number.isInteger(entryId) && entryId > 0) {
       const entryResult = await supabaseAdmin.from("bracket_entries")
-        .select("id, entrant_id, master_bracket_id, status, locked_at, picks_snapshot, tiebreaker_value, bracket_master_brackets(bracket_number), bracket_entrants(account_user_id, managing_user_id)")
+        .select("id, entrant_id, master_bracket_id, status, locked_at, picks_snapshot, tiebreaker_value, bracket_master_brackets(bracket_number), bracket_entrants(account_user_id, managing_user_id, display_name)")
         .eq("id", entryId).eq("contest_id", contestId).eq("competition_id", resolved.challenge.competition.id).maybeSingle();
       if (entryResult.error) throw new Error(`Failed to load frozen bracket: ${entryResult.error.message}`);
       const entry = entryResult.data as any;
@@ -101,7 +101,7 @@ export async function GET(
         return NextResponse.json({ success: false, error: "This bracket is private until the contest locks." }, { status: 403 });
       }
       return NextResponse.json({ success: true, entrants: [], selectedEntrantId: entry.entrant_id, contestEntry: { id: entry.id, status: entry.status, lockedAt: entry.locked_at },
-        masterBracket: { id: entry.master_bracket_id, bracketNumber: Number((Array.isArray(entry.bracket_master_brackets) ? entry.bracket_master_brackets[0] : entry.bracket_master_brackets)?.bracket_number ?? 1), status: entry.status, tiebreakerValue: entry.tiebreaker_value, picks: entry.picks_snapshot ?? {}, readOnly: true } }, { headers: { "Cache-Control": "no-store" } });
+        masterBracket: { id: entry.master_bracket_id, bracketNumber: Number((Array.isArray(entry.bracket_master_brackets) ? entry.bracket_master_brackets[0] : entry.bracket_master_brackets)?.bracket_number ?? 1), entrantName: entrant?.display_name ?? null, status: entry.status, tiebreakerValue: entry.tiebreaker_value, picks: entry.picks_snapshot ?? {}, readOnly: true } }, { headers: { "Cache-Control": "no-store" } });
     }
 
     if (

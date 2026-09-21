@@ -1,5 +1,7 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 type Game = {
   id: number;
   gameKey: string;
@@ -36,6 +38,8 @@ type Props = {
     gameKey: string,
     teamId: string,
   ) => void;
+  tiebreakerValue?: number | null;
+  blankPrint?: boolean;
 };
 
 const ROUND_LABELS: Record<
@@ -56,6 +60,8 @@ export default function BracketTopologyPreview({
   editableGameKeys,
   savingGameKey = null,
   onPick,
+  tiebreakerValue = null,
+  blankPrint = false,
 }: Props) {
   const gameById = new Map(
     games.map((game) => [
@@ -128,6 +134,16 @@ export default function BracketTopologyPreview({
         };
       }
 
+      if (blankPrint) {
+        return {
+          teamId: null,
+          seed: null,
+          label: "",
+          abbreviation: null,
+          logoUrl: null,
+        };
+      }
+
       return {
         teamId: null,
         seed: null,
@@ -169,6 +185,34 @@ export default function BracketTopologyPreview({
             b.gameOrder,
         ),
     }));
+
+  const gamePositionById = new Map<number, number>();
+  const leafGames = games
+    .filter((game) => game.sourceAGameId === null && game.sourceBGameId === null)
+    .sort((left, right) => left.gameOrder - right.gameOrder);
+  const leafPositionById = new Map(
+    leafGames.map((game, index) => [game.id, (index + 0.5) / Math.max(leafGames.length, 1)]),
+  );
+
+  function gamePosition(game: Game, resolving = new Set<number>()): number {
+    const cached = gamePositionById.get(game.id);
+    if (cached !== undefined) return cached;
+    if (resolving.has(game.id)) return 0.5;
+
+    const nextResolving = new Set(resolving).add(game.id);
+    const feederPositions = [game.sourceAGameId, game.sourceBGameId]
+      .filter((sourceGameId): sourceGameId is number => sourceGameId !== null)
+      .map((sourceGameId) => gameById.get(sourceGameId))
+      .filter((sourceGame): sourceGame is Game => Boolean(sourceGame))
+      .map((sourceGame) => gamePosition(sourceGame, nextResolving));
+    const fallback = leafPositionById.get(game.id) ?? 0.5;
+    const position = feederPositions.length
+      ? feederPositions.reduce((total, feeder) => total + feeder, 0) / feederPositions.length
+      : fallback;
+
+    gamePositionById.set(game.id, position);
+    return position;
+  }
 
   function renderTeam(
     game: Game,
@@ -259,7 +303,7 @@ export default function BracketTopologyPreview({
   }
 
   return (
-    <div className="overflow-x-auto pb-2">
+    <div className="bracket-topology-preview overflow-x-auto pb-2">
       <div className="grid min-w-[900px] grid-cols-4 gap-4">
         {rounds.map((round) => {
           const first =
@@ -268,7 +312,8 @@ export default function BracketTopologyPreview({
           return (
             <section
               key={round.roundOrder}
-              className="min-w-0"
+              className="bracket-round-column min-w-0"
+              data-bracket-round={round.roundOrder}
             >
               <div className="mb-3 text-center text-xs font-black uppercase tracking-[0.16em] text-blue-300">
                 {ROUND_LABELS[
@@ -278,7 +323,7 @@ export default function BracketTopologyPreview({
                   `Round ${round.roundOrder}`}
               </div>
 
-              <div className="flex h-full flex-col justify-around gap-4">
+              <div className="bracket-round-games flex h-full flex-col justify-around gap-4">
                 {round.games.map(
                   (game) => {
                     const sourceA =
@@ -299,6 +344,7 @@ export default function BracketTopologyPreview({
                       <article
                         key={game.id}
                         className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900/90 shadow-sm"
+                        style={{ "--bracket-position": String(gamePosition(game)) } as CSSProperties}
                       >
                         <div className="flex items-center justify-between border-b border-slate-700/80 px-3 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
                           <span>
@@ -324,6 +370,12 @@ export default function BracketTopologyPreview({
                             sourceB,
                           )}
                         </div>
+
+                        {game.roundKey === "championship" && tiebreakerValue !== null ? (
+                          <div className="border-t border-slate-700/80 bg-slate-950/40 px-3 py-2 text-xs font-bold text-slate-300">
+                            Tiebreaker: <span className="text-white">{tiebreakerValue} total points</span>
+                          </div>
+                        ) : null}
                       </article>
                     );
                   },

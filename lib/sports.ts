@@ -32,7 +32,7 @@ export const SPORTS: SportConfig[] = [
     key: "bracket-challenge",
     label: "Bracket Challenge",
     emoji: "🏆",
-    logo: "/logos/nfl.webp",
+    logo: "/logos/bracket.png",
   },
 ];
 
@@ -77,7 +77,7 @@ export const PLATFORM_GAMES: PlatformGameConfig[] = [
     label: "Bracket Challenge",
     description:
       "Tournament brackets for college football, March Madness, and more.",
-    logo: "/logos/nfl.webp",
+    logo: "/logos/bracket.png",
   },
 ];
 

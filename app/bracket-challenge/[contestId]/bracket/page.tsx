@@ -117,6 +117,10 @@ export default function BracketChallengeDetailPage() {
     useState<Record<string, string | null | undefined>>({});
   const [masterBracketId, setMasterBracketId] =
     useState<string | null>(null);
+  const [loadedBracketNumber, setLoadedBracketNumber] =
+    useState<number>(bracketNumberFromUrl);
+  const [loadedEntrantName, setLoadedEntrantName] =
+    useState<string | null>(null);
   const [entrants, setEntrants] = useState<{ id: string; kind: "account" | "managed"; displayName: string }[]>([]);
   const [selectedEntrantId, setSelectedEntrantId] =
     useState(entrantIdFromUrl);
@@ -134,6 +138,14 @@ export default function BracketChallengeDetailPage() {
     useState("");
   const [savingTiebreaker, setSavingTiebreaker] =
     useState(false);
+  const [printMode, setPrintMode] =
+    useState<"filled" | "blank">("filled");
+
+  useEffect(() => {
+    const restorePrintMode = () => setPrintMode("filled");
+    window.addEventListener("afterprint", restorePrintMode);
+    return () => window.removeEventListener("afterprint", restorePrintMode);
+  }, []);
 
   useEffect(() => {
     if (
@@ -192,6 +204,8 @@ export default function BracketChallengeDetailPage() {
             error?: string;
             masterBracket?: {
               id: string;
+              bracketNumber?: number;
+              entrantName?: string | null;
               tiebreakerValue: number | null;
               picks: Record<
                 string,
@@ -226,6 +240,12 @@ export default function BracketChallengeDetailPage() {
           setMasterBracketId(
             masterResult.masterBracket
               ?.id ?? null,
+          );
+          setLoadedBracketNumber(
+            masterResult.masterBracket?.bracketNumber ?? bracketNumber,
+          );
+          setLoadedEntrantName(
+            masterResult.masterBracket?.entrantName ?? null,
           );
           setEntrants(masterResult.entrants ?? []);
           setSelectedEntrantId(masterResult.selectedEntrantId ?? selectedEntrantId);
@@ -508,6 +528,13 @@ export default function BracketChallengeDetailPage() {
     }
   }
 
+  function handlePrint(nextMode: "filled" | "blank") {
+    setPrintMode(nextMode);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => window.print());
+    });
+  }
+
   async function handleAddManagedEntrant() {
     const displayName = window.prompt("Managed entrant name");
     if (!displayName?.trim()) return;
@@ -537,35 +564,20 @@ export default function BracketChallengeDetailPage() {
     games.filter((game) =>
       Boolean(picks[game.gameKey]),
     ).length;
-  const championshipGame =
-    games.find(
-      (game) =>
-        game.roundKey ===
-        "championship",
-    );
-  const championTeamId =
-    championshipGame
-      ? picks[
-          championshipGame.gameKey
-        ]
-      : null;
-  const championTeam =
-    championTeamId
-      ? teams.find(
-          (team) =>
-            team.providerTeamId ===
-            championTeamId,
-        )
-      : null;
+  const viewedEntrantName =
+    loadedEntrantName ??
+    entrants.find((entrant) => entrant.id === selectedEntrantId)?.displayName ??
+    "Your bracket";
+  const printingBlankBracket = printMode === "blank";
 
   return (
-    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
+    <main className="bracket-print-page min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
 
         <Link
           href="/bracket-challenge"
-          className="inline-flex text-sm font-bold text-blue-300 transition hover:text-blue-200"
+          className="bracket-screen-only inline-flex text-sm font-bold text-blue-300 transition hover:text-blue-200"
         >
           ← Bracket Challenge
         </Link>
@@ -581,7 +593,7 @@ export default function BracketChallengeDetailPage() {
         ) : competition &&
           contest ? (
           <>
-            <section className="rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-xl sm:p-7">
+            <section className="bracket-screen-only rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-xl sm:p-7">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-300">
@@ -608,8 +620,8 @@ export default function BracketChallengeDetailPage() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-800 bg-slate-950/40">
-              <div className="border-b border-slate-800 px-4 py-4 sm:px-5">
+            <section className="bracket-print-shell rounded-2xl border border-slate-800 bg-slate-950/40">
+              <div className="bracket-screen-only border-b border-slate-800 px-4 py-4 sm:px-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">
@@ -686,7 +698,7 @@ export default function BracketChallengeDetailPage() {
               </div>
 
               <div className="p-4 sm:p-5">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div className="bracket-screen-only mb-4 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-bold text-slate-400">
                     {masterBracketId
                       ? (contestLocked || viewingFrozenEntry)
@@ -713,95 +725,45 @@ export default function BracketChallengeDetailPage() {
                       savingGameKey
                     }
                     onPick={handlePick}
+                    championshipTiebreaker={{
+                      value: tiebreakerValue,
+                      disabled: !masterBracketId || savingTiebreaker || viewingFrozenEntry || contestLocked,
+                      saving: savingTiebreaker,
+                      onChange: setTiebreakerValue,
+                      onSave: () => void handleTiebreakerSave(),
+                    }}
                   />
                 ) : (
-                  <BracketTopologyPreview
-                    games={games}
-                    teams={teams}
-                    picks={picks}
-                    editable={!viewingFrozenEntry && Boolean(masterBracketId) && ["setup", "open"].includes(contest.status)}
-                    editableGameKeys={editableGameKeys}
-                    savingGameKey={
-                      savingGameKey
-                    }
-                    onPick={handlePick}
-                  />
-                )}
-
-                <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-900/80 p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                      <div className="text-xs font-black uppercase tracking-[0.16em] text-blue-300">
-                        Championship tiebreaker
+                  <>
+                    <div className="bracket-print-header">
+                      <div className="bracket-print-brand">
+                        <img src="/logos/logo_all_sports.png" alt="111 Sports" />
+                        <p>111 Sports · Bracket Challenge</p>
                       </div>
-                      <h3 className="mt-1 text-lg font-black text-white">
-                        Championship Total
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-400">
-                        Predict the combined score of the championship game.
-                      </p>
-
-                      {championTeam ? (
-                        <div className="mt-3 flex items-center gap-2 text-sm font-bold text-slate-200">
-                          {championTeam.logoUrl ? (
-                            <img
-                              src={
-                                championTeam.logoUrl
-                              }
-                              alt=""
-                              className="h-7 w-7 object-contain"
-                            />
-                          ) : null}
-                          Champion:{" "}
-                          {
-                            championTeam.displayName
-                          }
-                        </div>
-                      ) : null}
+                      <h1>{competition.name}</h1>
+                      <p>{printingBlankBracket ? "Blank Bracket" : `${viewedEntrantName} · Bracket #${loadedBracketNumber}`}</p>
                     </div>
-
-                    <div className="flex items-end gap-2">
-                      <label className="block">
-                        <span className="sr-only">
-                          Championship total
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="999"
-                          inputMode="numeric"
-                          value={
-                            tiebreakerValue
-                          }
-                          disabled={viewingFrozenEntry || contestLocked}
-                          onChange={(event) =>
-                            setTiebreakerValue(
-                              event.target.value,
-                            )
-                          }
-                          className="w-28 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-center text-lg font-black text-white outline-none transition focus:border-blue-400"
-                          placeholder="0"
-                        />
-                      </label>
-
-                      <button
-                        type="button"
-                        disabled={
-                          !masterBracketId ||
-                          savingTiebreaker || viewingFrozenEntry || contestLocked
-                        }
-                        onClick={() =>
-                          void handleTiebreakerSave()
-                        }
-                        className="rounded-xl bg-blue-500 px-4 py-3 text-xs font-black text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {savingTiebreaker
-                          ? "Saving…"
-                          : "Save"}
+                    <div className="bracket-screen-only flex flex-wrap justify-end gap-2 pb-3">
+                      <button type="button" onClick={() => handlePrint("filled")} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-black text-slate-200 transition hover:border-blue-400 hover:text-white">
+                        Print / Save PDF
+                      </button>
+                      <button type="button" onClick={() => handlePrint("blank")} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-black text-slate-200 transition hover:border-blue-400 hover:text-white">
+                        Print Blank Bracket
                       </button>
                     </div>
-                  </div>
-                </div>
+                    <BracketTopologyPreview
+                      games={games}
+                      teams={teams}
+                      picks={printingBlankBracket ? {} : picks}
+                      editable={!printingBlankBracket && !viewingFrozenEntry && Boolean(masterBracketId) && ["setup", "open"].includes(contest.status)}
+                      editableGameKeys={editableGameKeys}
+                      savingGameKey={savingGameKey}
+                      onPick={handlePick}
+                      tiebreakerValue={printingBlankBracket || tiebreakerValue === "" ? null : Number(tiebreakerValue)}
+                      blankPrint={printingBlankBracket}
+                    />
+                  </>
+                )}
               </div>
             </section>
           </>

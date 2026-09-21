@@ -36,6 +36,13 @@ type Props = {
     gameKey: string,
     teamId: string,
   ) => void;
+  championshipTiebreaker: {
+    value: string;
+    disabled: boolean;
+    saving: boolean;
+    onChange: (value: string) => void;
+    onSave: () => void;
+  };
 };
 
 const ROUND_LABELS: Record<string, string> = {
@@ -53,6 +60,7 @@ export default function BracketMakePicks({
   editableGameKeys,
   savingGameKey,
   onPick,
+  championshipTiebreaker,
 }: Props) {
   const rounds = [
     ...new Map(
@@ -368,6 +376,21 @@ export default function BracketMakePicks({
                   source={sourceB}
                 />
               </div>
+
+              {game.roundKey === "championship" ? (
+                <div className="border-t border-slate-700/80 bg-slate-950/40 px-3 py-3">
+                  <label className="block">
+                    <span className="text-xs font-black uppercase tracking-[0.14em] text-blue-300">Championship Total Points</span>
+                    <span className="mt-1 block text-xs text-slate-400">Combined points scored by both teams.</span>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input type="number" min="0" max="999" inputMode="numeric" value={championshipTiebreaker.value} disabled={championshipTiebreaker.disabled} onChange={(event) => championshipTiebreaker.onChange(event.target.value)} className="w-24 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-center text-base font-black text-white outline-none transition focus:border-blue-400" placeholder="0" aria-label="Championship Total Points" />
+                      <button type="button" disabled={championshipTiebreaker.disabled || championshipTiebreaker.saving} onClick={championshipTiebreaker.onSave} className="rounded-lg bg-blue-500 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50">
+                        {championshipTiebreaker.saving ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+                  </label>
+                </div>
+              ) : null}
             </article>
           );
         })}
