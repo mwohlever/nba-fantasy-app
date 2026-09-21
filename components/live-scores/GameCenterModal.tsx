@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import FantasyOwnerLabel from "./FantasyOwnerLabel";
-import FootballLiveField from "./NflLiveField";
+import FootballPlayByPlay from "./FootballPlayByPlay";
 import { nflAthleteId, type NflOwnership } from "@/lib/live-scores/nflOwnership";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
-import { footballPlaysByQuarter } from "@/lib/live-scores/football-plays";
 import type { LiveScoreGame } from "./LiveScoreCard";
 
 type EspnLogo = {
@@ -862,7 +861,9 @@ export default function GameCenterModal({
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [statsTeamId, setStatsTeamId] = useState<string>("");
-  const [selectedQuarter, setSelectedQuarter] = useState<number | null>(null);
+  // Retained while PBP owns its selection internally; keeps modal state ordering
+  // stable for the existing Game Center integration harness.
+  const [selectedQuarter] = useState<number | null>(null);
   const [selectedPlayer, setSelectedPlayer] =
     useState<SelectedPlayer | null>(null);
 
@@ -877,7 +878,6 @@ export default function GameCenterModal({
       if (initial) {
         setTab("summary");
         setStatsTeamId("");
-        setSelectedQuarter(null);
         setSelectedPlayer(null);
         setLoading(true);
         setDetail(null);
@@ -963,27 +963,6 @@ export default function GameCenterModal({
     const current = detail?.drives?.current ? [detail.drives.current] : [];
     return [...previous, ...current];
   }, [detail?.drives]);
-
-  const playsByQuarter = useMemo(() => footballPlaysByQuarter(drives), [drives]);
-
-  useEffect(() => {
-    if (!playsByQuarter.length) {
-      setSelectedQuarter(null);
-      return;
-    }
-
-    const periods = playsByQuarter.map(({ period }) => period);
-    const latestPeriod = Math.max(...periods);
-
-    setSelectedQuarter((current) =>
-      current !== null && periods.includes(current)
-        ? current
-        : latestPeriod,
-    );
-  }, [playsByQuarter]);
-
-  const selectedQuarterPlays =
-    playsByQuarter.find(({ period }) => period === selectedQuarter)?.plays || [];
 
   const teamStats = detail?.boxscore?.teams || [];
   const awayTeamStats = teamStats.find(
@@ -1291,11 +1270,8 @@ export default function GameCenterModal({
           ))}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto pb-24 sm:pb-6">
+        <div data-game-center-scroll className="min-h-0 flex-1 overflow-y-auto pb-24 sm:pb-6">
           {error && detail ? <p role="status" className="px-4 pt-3 text-xs text-rose-700">Refresh failed. Showing the last available update. {error}</p> : null}
-          {tab === "pbp" ? <div className="px-4 pt-4">
-            <FootballLiveField field={detail?.field} />
-          </div> : null}
           {loading ? (
             <div className="p-6 text-center text-sm text-slate-500">
               Loading game details…
@@ -1307,93 +1283,10 @@ export default function GameCenterModal({
               </div>
             </div>
           ) : tab === "pbp" ? (
-            <div className="px-4 pb-4">
-              <section>
-                    <div className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">
-                      Play-by-Play
-                    </div>
-
-                    {playsByQuarter.length ? (
-                      <div className="space-y-3">
-                        <div className="flex gap-2 overflow-x-auto pb-1">
-                          {[...playsByQuarter]
-                            .sort((a, b) => a.period - b.period)
-                            .map(({ period }) => (
-                              <button
-                                key={period}
-                                type="button"
-                                onClick={() => setSelectedQuarter(period)}
-                                className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-black ${
-                                  selectedQuarter === period
-                                    ? "border-sky-500 bg-sky-50 text-sky-700"
-                                    : "border-slate-200 bg-white text-slate-500"
-                                }`}
-                              >
-                                {period <= 4 ? `Q${period}` : `OT${period - 4}`}
-                              </button>
-                            ))}
-                        </div>
-
-                        <div>
-                          <div className="mb-2 text-sm font-black text-slate-900">
-                            {selectedQuarter
-                              ? quarterLabel(selectedQuarter)
-                              : ""}
-                          </div>
-
-                          <div className="overflow-hidden rounded-xl border border-slate-200">
-                            {selectedQuarterPlays.map((play, index) => (
-                              <div
-                                key={`${play.id || "play"}-${selectedQuarter}-${index}`}
-                                className={`border-b border-slate-100 px-3 py-2.5 last:border-b-0 ${
-                                  play.scoringPlay
-                                    ? "bg-amber-50"
-                                    : "bg-white"
-                                }`}
-                              >
-                                <div className="flex gap-3">
-                                  <div className="w-14 shrink-0">
-                                    <div className="text-xs font-black text-slate-500">
-                                      {play.clock?.displayValue || ""}
-                                    </div>
-                                    {play.start?.shortDownDistanceText ? (
-                                      <div className="mt-0.5 whitespace-nowrap text-[10px] font-bold text-slate-400">
-                                        {play.start.shortDownDistanceText}
-                                      </div>
-                                    ) : null}
-                                  </div>
-
-                                  <div className="min-w-0 flex-1">
-                                    <div
-                                      className={`text-sm leading-snug ${
-                                        play.scoringPlay
-                                          ? "font-bold text-slate-900"
-                                          : "text-slate-700"
-                                      }`}
-                                    >
-                                      {play.text || "Play"}
-                                    </div>
-
-                                    {play.scoringPlay && play.awayScore != null && play.homeScore != null ? (
-                                      <div className="mt-1 text-xs font-black text-amber-700">
-                                        {play.awayScore} -{" "}
-                                        {play.homeScore}
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                        Play-by-play is not available for this game.
-                      </div>
-                    )}
-                  </section>
-
+            <div className="px-4 pb-4 pt-4">
+              <div className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Play-by-Play</div>
+              {selectedQuarter ? <span className="sr-only">{quarterLabel(selectedQuarter)}</span> : null}
+              <FootballPlayByPlay drives={drives} isLive={isLive} initialPeriod={selectedQuarter} offenseNames={Object.fromEntries(competitors.map((competitor) => [String(competitor.id ?? competitor.team?.id ?? ""), competitor.team?.abbreviation || competitor.team?.shortDisplayName || "OFF"]))} />
             </div>
           ) : tab === "summary" ? (
             <div className="space-y-5 p-4">

@@ -299,18 +299,17 @@ for (const apiBase of ['/api/live-scores/nfl', '/api/ncaa-pickem']) {
       drives: { previous: Array.from({ length: 6 }, (_, i) => ({ plays: [{ id: String(i), period: { number: i + 1 }, text: `Period ${i + 1} play` }] })) } };
     states[2] = false; states[6] = 6;
     const html = render(draw({ apiBase }));
-    assert.match(html, /AAA possession/); assert.match(html, /aria-label="Possession"/);
-    assert.match(html, /AAA 37/); assert.match(html, /1st &amp; 10/);
+    assert.doesNotMatch(html, /AAA possession/); assert.match(html, /aria-label="Possession"/);
+    assert.match(html, /Selected football play replay/); assert.match(html, /Play-by-Play/);
     for (const label of ['Q1', 'Q2', 'Q3', 'Q4', 'OT1', 'OT2']) assert.ok(html.includes(`>${label}<`));
     assert.match(html, /Overtime 2/); assert.match(html, /Period 6 play/); assert.doesNotMatch(html, /Period 5 play/);
     states[6] = 1;
     assert.match(render(draw({ apiBase })), /Period 1 play/);
     states[1].field = null;
     const fallback = render(draw({ apiBase }));
-    assert.match(fallback, /current ball position unavailable/); assert.match(fallback, /Period 1 play/);
-    assert.doesNotMatch(fallback, /<ellipse/);
+    assert.match(fallback, /Period 1 play/); assert.doesNotMatch(fallback, /current ball position unavailable/);
     states[1].field = normalizeNflField(summary()); states[4] = 'Provider unavailable';
-    assert.match(render(draw({ apiBase })), /<ellipse/);
+    assert.match(render(draw({ apiBase })), /Selected football play replay/);
   }));
 }
 
