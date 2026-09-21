@@ -36,6 +36,8 @@ const {
 } = require("../lib/bracket/dependencies.ts");
 
 const {
+  bracketResultsFromOfficialGames,
+  bracketScoringRulesFromSnapshot,
   maximumPossibleBracketPoints,
   scoreBracket,
 } = require("../lib/bracket/scoring.ts");
@@ -489,6 +491,148 @@ test("downstream picks remain alive while their required upstream result is unse
       ["sf-1", "alive"],
       ["champ", "alive"],
     ],
+  );
+});
+
+test("authoritative score summary distinguishes pending, incorrect, and eliminated picks", () => {
+  const topology = cfpTopology();
+  const picks = {
+    "r1-1": "8",
+    "r1-2": "5",
+    "qf-1": "8",
+    "sf-1": "8",
+    champ: "8",
+  };
+  const frozenRules = {
+    scoring: {
+      roundPoints: cfpScoring,
+    },
+  };
+
+  const beforeResults = scoreBracket(
+    topology,
+    picks,
+    {},
+    bracketScoringRulesFromSnapshot(frozenRules, topology),
+  );
+
+  assert.equal(beforeResults.pointsEarned, 0);
+  assert.equal(beforeResults.pointsStillAvailable, 160);
+  assert.equal(beforeResults.maxPossibleScore, 160);
+  assert.equal(beforeResults.pendingPicks, 5);
+  assert.equal(beforeResults.eliminatedPicks, 0);
+  assert.deepEqual(beforeResults.rounds.map((round) => [round.roundKey, round.maxPossibleScore]), [
+    ["first_round", 20],
+    ["quarterfinal", 20],
+    ["semifinal", 40],
+    ["championship", 80],
+  ]);
+
+  const afterFirstRound = scoreBracket(
+    topology,
+    picks,
+    { "r1-1": "9", "r1-2": "5" },
+    bracketScoringRulesFromSnapshot(frozenRules, topology),
+  );
+
+  assert.equal(afterFirstRound.pointsEarned, 10);
+  assert.equal(afterFirstRound.pointsStillAvailable, 0);
+  assert.equal(afterFirstRound.maxPossibleScore, 10);
+  assert.equal(afterFirstRound.correctPicks, 1);
+  assert.equal(afterFirstRound.incorrectPicks, 1);
+  assert.equal(afterFirstRound.eliminatedPicks, 3);
+  assert.equal(afterFirstRound.pointsLost, 150);
+  assert.deepEqual(
+    afterFirstRound.breakdown
+      .filter((pick) => pick.pickedTeamId !== null)
+      .map((pick) => [pick.gameId, pick.status, pick.correct, pick.awardedPoints]),
+    [
+      ["r1-1", "incorrect", false, 0],
+      ["r1-2", "correct", true, 10],
+      ["qf-1", "eliminated", null, 0],
+      ["sf-1", "eliminated", null, 0],
+      ["champ", "eliminated", null, 0],
+    ],
+  );
+});
+
+test("frozen scoring rules and corrected official results recompute deterministically without mutating picks", () => {
+  const topology = cfpTopology();
+  const picks = {
+    "r1-1": "8",
+    "qf-1": "8",
+    "sf-1": "8",
+    champ: "8",
+  };
+  const originalPicks = structuredClone(picks);
+  const frozenRules = {
+    scoring: {
+      first_round: 13,
+      quarterfinal: 29,
+      semifinal: 47,
+      championship: 101,
+    },
+  };
+  const rules = bracketScoringRulesFromSnapshot(frozenRules, topology);
+
+  const firstPass = scoreBracket(topology, picks, { "r1-1": "8" }, rules);
+  const secondPass = scoreBracket(topology, picks, { "r1-1": "8" }, rules);
+  const corrected = scoreBracket(topology, picks, { "r1-1": "9" }, rules);
+
+  assert.deepEqual(secondPass, firstPass);
+  assert.equal(firstPass.pointsEarned, 13);
+  assert.equal(firstPass.maxPossibleScore, 190);
+  assert.equal(corrected.pointsEarned, 0);
+  assert.equal(corrected.maxPossibleScore, 0);
+  assert.equal(corrected.breakdown.find((pick) => pick.gameId === "r1-1").status, "incorrect");
+  assert.equal(corrected.breakdown.find((pick) => pick.gameId === "champ").status, "eliminated");
+  assert.deepEqual(picks, originalPicks);
+  assert.deepEqual(frozenRules, {
+    scoring: {
+      first_round: 13,
+      quarterfinal: 29,
+      semifinal: 47,
+      championship: 101,
+    },
+  });
+});
+
+test("official results must follow the actual graph rather than an entrant prediction", () => {
+  const topology = cfpTopology();
+
+  assert.throws(
+    () => scoreBracket(
+      topology,
+      { "r1-1": "8" },
+      { "r1-1": "9", "qf-1": "8" },
+      cfpScoring,
+    ),
+    /not eligible/,
+  );
+});
+
+test("only final persisted games contribute official winners", () => {
+  assert.deepEqual(
+    bracketResultsFromOfficialGames([
+      { gameId: "first", status: "scheduled", winnerTeamId: null },
+      { gameId: "second", status: "in_progress", winnerTeamId: null },
+      { gameId: "third", status: "final", winnerTeamId: "team-c" },
+    ]),
+    { third: "team-c" },
+  );
+
+  assert.throws(
+    () => bracketResultsFromOfficialGames([
+      { gameId: "bad-final", status: "final", winnerTeamId: null },
+    ]),
+    /missing its official winner/,
+  );
+
+  assert.throws(
+    () => bracketResultsFromOfficialGames([
+      { gameId: "bad-live", status: "in_progress", winnerTeamId: "team-a" },
+    ]),
+    /Non-final bracket game/,
   );
 });
 

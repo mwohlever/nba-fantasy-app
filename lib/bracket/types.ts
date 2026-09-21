@@ -39,17 +39,52 @@ export type BracketScoreBreakdown = {
   roundKey: BracketRoundKey;
   pickedTeamId: BracketTeamId | null;
   winnerTeamId: BracketTeamId | null;
+  /**
+   * `eliminated` means the pick cannot be correct because its team lost an
+   * earlier official game. It is deliberately distinct from `incorrect`,
+   * which is reserved for a game with a final official winner.
+   */
+  status: BracketPickStatus;
   possiblePoints: number;
   awardedPoints: number;
   correct: boolean | null;
 };
 
+export type BracketPickStatus =
+  | "unmade"
+  | "pending"
+  | "correct"
+  | "incorrect"
+  | "eliminated";
+
+export type BracketRoundScore = {
+  roundKey: BracketRoundKey;
+  roundOrder: number;
+  pointsEarned: number;
+  pointsStillAvailable: number;
+  maxPossibleScore: number;
+  correctPicks: number;
+  incorrectPicks: number;
+  pendingPicks: number;
+  eliminatedPicks: number;
+  unmadePicks: number;
+};
+
 export type BracketScore = {
+  /** Backward-compatible alias for pointsEarned. */
   points: number;
+  pointsEarned: number;
+  pointsStillAvailable: number;
+  maxPossibleScore: number;
+  totalPotentialAtLock: number;
+  pointsLost: number;
   possibleSettledPoints: number;
   correctPicks: number;
   incorrectPicks: number;
+  pendingPicks: number;
+  eliminatedPicks: number;
   unsettledPicks: number;
   unmadePicks: number;
   breakdown: BracketScoreBreakdown[];
+  rounds: BracketRoundScore[];
 };
