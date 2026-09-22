@@ -21,12 +21,17 @@ const stats = require('../lib/lineups/nflDraftStats.ts');
 const { resolveNflFantasyGames } = require('../lib/live-scores/nflFantasyGames.ts');
 const { normalizeNflGame } = require('../lib/providers/nflLiveScores.ts');
 function payload(week = 1, season = 2026) {
-  const dates = week === 1 ? ['2026-09-10T00:20Z', '2026-09-13T17:00Z', '2026-09-15T00:15Z'] : ['2026-09-18T00:20Z', '2026-09-20T17:00Z', '2026-09-22T00:15Z'];
+  const dates = {
+    1: ['2026-09-10T00:20Z', '2026-09-13T17:00Z', '2026-09-15T00:15Z'],
+    2: ['2026-09-18T00:20Z', '2026-09-20T17:00Z', '2026-09-22T00:15Z'],
+    3: ['2026-09-25T00:15Z', '2026-09-27T17:00Z', '2026-09-29T00:15Z'],
+  }[week] ?? [];
   return {
     season: { year: season, type: 2 }, week: { number: week },
     leagues: [{ calendar: [{ value: '2', entries: [
       { value: '1', label: 'Week 1', startDate: '2026-09-06T07:00Z', endDate: '2026-09-16T06:59Z' },
       { value: '2', label: 'Week 2', startDate: '2026-09-16T07:00Z', endDate: '2026-09-23T06:59Z' },
+      { value: '3', label: 'Week 3', startDate: '2026-09-23T07:00Z', endDate: '2026-09-30T06:59Z' },
     ] }] }],
     events: dates.map((date, i) => ({ id: String(i), date, season: { year: season, type: 2 }, week: { number: week }, competitions: [{ competitors: [
       { homeAway: 'away', team: { id: `A${i}`, abbreviation: `A${i}`, displayName: 'Away' } },
@@ -44,6 +49,35 @@ test('provider week 1 includes Wednesday opener, Sunday and Monday after UTC mid
 test('week 2 resolves its own inclusive dates and name', () => {
   const selected = weeks.resolveNflWeekPayload(payload(2), 2026, 2);
   assert.equal(selected.startDate, '2026-09-17'); assert.equal(selected.endDate, '2026-09-21'); assert.equal(selected.name, '2026 Week 2');
+});
+test('published future weeks use the validated week response when ESPN omits season metadata from its calendar response', async () => {
+  const original = global.fetch;
+  try {
+    for (const week of [1, 2, 3]) {
+      const calendar = payload(2);
+      delete calendar.season;
+      calendar.week = { number: 18 };
+      const responses = [calendar, payload(week)];
+      global.fetch = async () => ({ ok: true, json: async () => responses.shift() });
+      const selected = await weeks.fetchNflWeekSelection(2026, week);
+      assert.equal(selected.name, `2026 Week ${week}`);
+      assert.equal(selected.week, week);
+      assert.equal(selected.weeks.length, 3);
+      if (week === 3) {
+        assert.equal(selected.startDate, '2026-09-24');
+        assert.equal(selected.endDate, '2026-09-28');
+      }
+    }
+
+    const calendar = payload(2);
+    delete calendar.season;
+    const unavailable = payload(3, 2025);
+    const responses = [calendar, unavailable];
+    global.fetch = async () => ({ ok: true, json: async () => responses.shift() });
+    await assert.rejects(() => weeks.fetchNflWeekSelection(2026, 3), /ESPN did not return the requested NFL regular-season week/);
+  } finally {
+    global.fetch = original;
+  }
 });
 test('default uses provider current week and upcoming regular-season calendar', () => {
   assert.equal(weeks.defaultNflWeek(payload(2)), 2);

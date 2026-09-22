@@ -63,7 +63,9 @@ export async function fetchNflWeekSelection(season?: number, week?: number) {
   if (season !== undefined && (!Number.isInteger(season) || season < 2000 || season > 2200)) throw new Error("Invalid NFL season.");
   const payload = await scoreboard(season);
   const resolvedSeason = season ?? Number(payload.season?.year);
-  if (Number(payload.season?.year) !== resolvedSeason) throw new Error("NFL season schedule is not available yet.");
+  // ESPN's dates=YYYY calendar response can omit top-level season metadata.
+  // The requested-week response below remains the authoritative season check.
+  if (season === undefined && Number(payload.season?.year) !== resolvedSeason) throw new Error("NFL season schedule is not available yet.");
   const weeks = nflRegularWeeks(payload).map(e => ({ value: Number(e.value), label: String(e.label) }));
   const selected = await fetchNflWeek(resolvedSeason, week ?? defaultNflWeek(payload));
   return { ...selected, weeks };
