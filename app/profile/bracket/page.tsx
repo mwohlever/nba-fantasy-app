@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import AppNav from "@/components/AppNav";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import { bracketChallengeRoutes } from "@/lib/bracket/navigation";
@@ -25,7 +25,7 @@ function Metric({ label, value, detail }: { label: string; value: string | numbe
 
 const rank = (value: number | null) => value === null ? "Finalizing" : value === 1 ? "1st" : value === 2 ? "2nd" : value === 3 ? "3rd" : `${value}th`;
 
-export default function BracketProfilePage() {
+function BracketProfilePageContent() {
   const params = useSearchParams();
   const entrantId = params.get("entrantId");
   const requestedContestId = params.get("contestId");
@@ -116,4 +116,16 @@ export default function BracketProfilePage() {
       </>}
     </div>
   </main>;
+}
+
+export default function BracketProfilePage() {
+  return <Suspense fallback={
+    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <p className="text-sm text-slate-400">Loading Bracket Challenge profile…</p>
+      </div>
+    </main>
+  }>
+    <BracketProfilePageContent />
+  </Suspense>;
 }
