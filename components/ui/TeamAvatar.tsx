@@ -1,6 +1,7 @@
 type TeamAvatarProps = {
   teamName: string;
   avatarUrl?: string | null;
+  useLegacyFallback?: boolean;
   size?: "chip" | "xs" | "sm" | "md" | "lg";
 };
 
@@ -28,9 +29,10 @@ function getFallbackTeamImage(teamName: string) {
 export default function TeamAvatar({
   teamName,
   avatarUrl,
+  useLegacyFallback = true,
   size = "md",
 }: TeamAvatarProps) {
-  const imageSrc = avatarUrl || getFallbackTeamImage(teamName);
+  const imageSrc = avatarUrl || (useLegacyFallback ? getFallbackTeamImage(teamName) : "");
 
   if (imageSrc) {
     return (
@@ -48,7 +50,7 @@ export default function TeamAvatar({
     <div
       className={`${sizeMap[size]} flex items-center justify-center rounded-full bg-slate-200 font-semibold text-slate-700`}
     >
-      {teamName.charAt(0).toUpperCase()}
+      {teamName.trim().charAt(0).toUpperCase() || "?"}
     </div>
   );
 }

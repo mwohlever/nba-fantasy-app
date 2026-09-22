@@ -5,8 +5,9 @@ import { bracketTopologyFromRows } from "@/lib/bracket/persistence";
 import { bracketResultsFromOfficialGames, bracketScoringRulesFromSnapshot, scoreBracket } from "@/lib/bracket/scoring";
 import type { BracketPicks } from "@/lib/bracket/types";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { loadBracketEntrantAvatars } from "@/lib/bracket/entrantAvatars";
 
-type Entrant = { display_name: string; entrant_kind: "account" | "managed"; account_user_id: string | null; managing_user_id: string | null };
+type Entrant = { id: string; display_name: string; entrant_kind: "account" | "managed"; account_user_id: string | null; managing_user_id: string | null };
 type Master = { bracket_number: number };
 type ParticipationEntry = { id: number; entrant_id: string; master_bracket_id: string; status: string; locked_at: string | null; bracket_entrants: Entrant | null; bracket_master_brackets: Master | null };
 type FrozenEntry = ParticipationEntry & { rules_snapshot: Record<string, unknown> | null; picks_snapshot: BracketPicks | null };
@@ -28,12 +29,19 @@ export async function getBracketContestLeaderboard(user: AppUser, contestId: str
   if (!detail) return null;
   const picksVisible = shouldFreezeBracketEntry({ contestStatus: detail.contest.status, contestLockAt: detail.contest.lockAt });
   const entryFields = picksVisible
-    ? "id, entrant_id, master_bracket_id, status, locked_at, rules_snapshot, picks_snapshot, bracket_entrants(display_name, entrant_kind, account_user_id, managing_user_id), bracket_master_brackets(bracket_number)"
-    : "id, entrant_id, master_bracket_id, status, locked_at, bracket_entrants(display_name, entrant_kind, account_user_id, managing_user_id), bracket_master_brackets(bracket_number)";
+    ? "id, entrant_id, master_bracket_id, status, locked_at, rules_snapshot, picks_snapshot, bracket_entrants(id, display_name, entrant_kind, account_user_id, managing_user_id), bracket_master_brackets(bracket_number)"
+    : "id, entrant_id, master_bracket_id, status, locked_at, bracket_entrants(id, display_name, entrant_kind, account_user_id, managing_user_id), bracket_master_brackets(bracket_number)";
   const entriesResult = await supabaseAdmin.from("bracket_entries").select(entryFields)
     .eq("contest_id", contestId).eq("competition_id", detail.competition.id).order("created_at");
   if (entriesResult.error) throw new Error(`Failed to load contest entries: ${entriesResult.error.message}`);
   const entries = (entriesResult.data ?? []) as unknown as ParticipationEntry[];
+  const entrantAvatars = await loadBracketEntrantAvatars(
+    supabaseAdmin,
+    [...new Map(entries.flatMap((entry) => entry.bracket_entrants
+      ? [[entry.entrant_id, { ...entry.bracket_entrants, id: entry.entrant_id }] as const]
+      : [],
+    )).values()],
+  );
   const masterIds = entries.map((entry) => entry.master_bracket_id);
   const picksResult = masterIds.length
     ? await supabaseAdmin.from("bracket_master_picks").select("master_bracket_id").eq("competition_id", detail.competition.id).in("master_bracket_id", masterIds)
@@ -44,8 +52,10 @@ export async function getBracketContestLeaderboard(user: AppUser, contestId: str
   const complete = (entry: ParticipationEntry) => (pickCountByMaster.get(entry.master_bracket_id) ?? 0) === detail.games.length;
   const participation = entries.map((entry) => ({
     entryId: entry.id,
+    entrantId: entry.entrant_id,
     entrantName: entry.bracket_entrants?.display_name ?? "Entrant",
     entrantKind: entry.bracket_entrants?.entrant_kind ?? "account",
+    avatarUrl: entrantAvatars.get(entry.entrant_id) ?? null,
     bracketNumber: entry.bracket_master_brackets?.bracket_number ?? 1,
     completionState: entry.locked_at ? "locked" : complete(entry) ? "complete" : "in_progress",
     isMine: entry.bracket_entrants?.account_user_id === user.id || entry.bracket_entrants?.managing_user_id === user.id,

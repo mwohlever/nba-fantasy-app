@@ -39,12 +39,49 @@ test("personal pre-lock completion is a real aggregate, not a bracket inventory"
   assert.doesNotMatch(home, /data\.entries/);
 });
 
+test("entrant identities link to their stable bracket profile before and after lock", () => {
+  const source = read("lib/bracket/leaderboard.server.ts");
+  const home = read("app/bracket-challenge/[contestId]/page.tsx");
+  const profile = read("lib/bracket/profile.server.ts");
+  assert.match(source, /entrantId: entry\.entrant_id/);
+  assert.match(home, /data\.participation\.map\(\(entry\) => .*<EntrantProfileLink entry=\{entry\} contestId=\{contestId\}/);
+  assert.match(home, /data\.standings\.map\(\(entry\) => .*<EntrantProfileLink entry=\{entry\} contestId=\{contestId\}/);
+  assert.match(home, /href=\{bracketEntrantProfileHref\(entry\.entrantId, contestId\)\}/);
+  assert.match(home, /Managed entrant/);
+  assert.match(profile, /\.eq\("league_id", access\.league\.id\)/);
+  assert.match(profile, /\.in\("contest_id", contestIds\)\.eq\("entrant_id", entrant\.id\)\.limit\(1\)/);
+  assert.match(profile, /resolveAuthorizedBracketContestId\(requestedContestId, contestIds\)/);
+  assert.doesNotMatch(home, /bracketEntrantProfileHref\(entry\.account_user_id/);
+});
+
+test("Bracket Profile uses only authorized contest context for nav and return path", () => {
+  const nav = read("components/AppNav.tsx");
+  const page = read("app/profile/bracket/page.tsx");
+  const api = read("app/api/bracket-challenge/profile/route.ts");
+  const server = read("lib/bracket/profile.server.ts");
+  assert.match(api, /params\.get\("contestId"\)/);
+  assert.match(server, /navigationContestId = resolveAuthorizedBracketContestId\(requestedContestId, contestIds\)/);
+  assert.match(page, /authorizedBracketContestId=\{authorizedContestId\}/);
+  assert.match(page, /contestRoutes && <Link href=\{contestRoutes\.leaderboard\}/);
+  assert.match(page, /profile\.entrant\.kind === "managed" \? "Managed entrant · historical bracket identity" : "Account entrant"/);
+  assert.match(page, /TeamAvatar teamName=\{profile\.entrant\.displayName\} avatarUrl=\{profile\.entrant\.avatarUrl\} useLegacyFallback=\{false\}/);
+  assert.match(nav, /pathname === "\/profile\/bracket"/);
+  assert.match(nav, /bracketChallengeRoutes\(bracketContestId\)/);
+  assert.match(nav, /href: bracketRoutes!\.home/);
+  assert.match(nav, /href: bracketRoutes!\.leaderboard/);
+  assert.match(nav, /href: bracketRoutes!\.bracket/);
+  assert.match(nav, /href: bracketRoutes!\.liveScores/);
+  assert.match(nav, /authorizedBracketContestId=\{authorizedBracketContestId\}/);
+  assert.match(server, /\.in\("contest_id", contestIds\)\.not\("locked_at", "is", null\)/);
+  assert.doesNotMatch(page, /window\.history\.back\(/);
+});
+
 test("Bracket Challenge contest navigation has four canonical destinations and no More tab", () => {
   const nav = read("components/AppNav.tsx");
   assert.match(nav, /href: "\/bracket-challenge",\s*label: "Home"/);
-  assert.ok(nav.includes("href: `/bracket-challenge/${bracketContestId}`,\n                label: \"Leaderboard\""));
-  assert.ok(nav.includes("href: `/bracket-challenge/${bracketContestId}/bracket`,\n                label: \"Bracket\""));
-  assert.ok(nav.includes("href: `/bracket-challenge/${bracketContestId}/live`,\n                label: \"Live Scores\""));
+  assert.match(nav, /href: bracketRoutes!\.leaderboard,\s*label: "Leaderboard"/);
+  assert.match(nav, /href: bracketRoutes!\.bracket,\s*label: "Bracket"/);
+  assert.match(nav, /href: bracketRoutes!\.liveScores,\s*label: "Live Scores"/);
   assert.match(nav, /isBracketChallenge\s*\? "grid-cols-4"/);
   assert.match(nav, /!isNcaaPickEm && !isNbaSkins && !isBracketChallenge && mobileMoreOpen/);
   assert.match(nav, /!isNcaaPickEm && !isNbaSkins && !isBracketChallenge \? \(/);

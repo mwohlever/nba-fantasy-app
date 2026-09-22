@@ -18,6 +18,7 @@ import {
 } from "@/lib/sports";
 import { shouldFallbackSportSelection } from "@/lib/groups/navigation";
 import { getAdminMenuGroups } from "@/lib/adminMenu";
+import { bracketChallengeRoutes } from "@/lib/bracket/navigation";
 
 type CurrentUser = {
   id: string;
@@ -62,7 +63,7 @@ const profileLinks = [
   },
 ];
 
-function AppNavContent() {
+function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracketContestId?: string | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -164,7 +165,9 @@ function AppNavContent() {
   const routeSport =
     pathname.startsWith("/golf/")
       ? "golf"
-      : pathname.startsWith(
+      : pathname === "/profile/bracket"
+        ? "bracket-challenge"
+        : pathname.startsWith(
           "/nba-skins",
         )
         ? "nba-skins"
@@ -194,7 +197,11 @@ function AppNavContent() {
   const bracketContestId =
     pathname.match(
       /^\/bracket-challenge\/([^/]+)/,
-    )?.[1] ?? null;
+    )?.[1] ?? authorizedBracketContestId;
+
+  const bracketRoutes = bracketContestId
+    ? bracketChallengeRoutes(bracketContestId)
+    : null;
 
   const displayedProfileLinks =
     isNbaSkins
@@ -210,7 +217,12 @@ function AppNavContent() {
             tab: "settings",
           },
         ]
-      : profileLinks;
+      : isBracketChallenge
+        ? [
+            { href: bracketContestId ? `/profile/bracket?contestId=${encodeURIComponent(bracketContestId)}` : "/profile/bracket", label: "Bracket Profile", tab: "overview" },
+            { href: "/profile?tab=settings", label: "Settings", tab: "settings" },
+          ]
+        : profileLinks;
 
   const displayedAdminGroups =
     getAdminMenuGroups(
@@ -456,22 +468,22 @@ function AppNavContent() {
         ? bracketContestId
           ? [
               {
-                href: "/bracket-challenge",
+                href: bracketRoutes!.home,
                 label: "Home",
                 icon: "⌂",
               },
               {
-                href: `/bracket-challenge/${bracketContestId}`,
+                href: bracketRoutes!.leaderboard,
                 label: "Leaderboard",
                 icon: "▦",
               },
               {
-                href: `/bracket-challenge/${bracketContestId}/bracket`,
+                href: bracketRoutes!.bracket,
                 label: "Bracket",
                 icon: "✎",
               },
               {
-                href: `/bracket-challenge/${bracketContestId}/live`,
+                href: bracketRoutes!.liveScores,
                 label: "Live Scores",
                 icon: "◫",
               },
@@ -1665,6 +1677,7 @@ function AppNavContent() {
               currentUser={currentUser}
               isLoading={isUserLoading}
               onLogout={() => setCurrentUser(null)}
+              authorizedBracketContestId={authorizedBracketContestId}
             />
           </div>
         </div>
@@ -1774,7 +1787,7 @@ function AppNavContent() {
 }
 
 
-export default function AppNav() {
+export default function AppNav({ authorizedBracketContestId }: { authorizedBracketContestId?: string | null } = {}) {
   return (
     <Suspense
       fallback={
@@ -1783,7 +1796,7 @@ export default function AppNav() {
         </nav>
       }
     >
-      <AppNavContent />
+      <AppNavContent authorizedBracketContestId={authorizedBracketContestId} />
     </Suspense>
   );
 }

@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import AppNav from "@/components/AppNav";
+import TeamAvatar from "@/components/ui/TeamAvatar";
+import { bracketEntrantProfileHref } from "@/lib/bracket/navigation";
 import CfpFieldSetup from "./CfpFieldSetup";
 
 type Data = {
@@ -17,10 +19,24 @@ type Data = {
   };
   picksVisible: boolean;
   rounds: { key: string; label: string }[];
-  participation: { entryId: number; entrantName: string; entrantKind: string; bracketNumber: number; completionState: "in_progress" | "complete" | "locked"; isMine: boolean }[];
+  participation: { entryId: number; entrantId: string; entrantName: string; entrantKind: string; avatarUrl: string | null; bracketNumber: number; completionState: "in_progress" | "complete" | "locked"; isMine: boolean }[];
   personalSummary: { totalBrackets: number; completeBrackets: number };
-  standings: { entryId: number; rank: number; entrantName: string; entrantKind: string; bracketNumber: number; entryStatus: string; pointsEarned: number; maxPossibleScore: number; correctPicks: number; pendingPicks: number; eliminatedPicks: number; championPick: string | null; canViewBracket: boolean }[];
+  standings: { entryId: number; entrantId: string; rank: number; entrantName: string; entrantKind: string; avatarUrl: string | null; bracketNumber: number; entryStatus: string; pointsEarned: number; maxPossibleScore: number; correctPicks: number; pendingPicks: number; eliminatedPicks: number; championPick: string | null; canViewBracket: boolean }[];
 };
+
+function EntrantProfileLink({ entry, contestId }: {
+  entry: { entrantId: string; entrantName: string; avatarUrl: string | null; bracketNumber: number };
+  contestId: string;
+}) {
+  return <Link
+    href={bracketEntrantProfileHref(entry.entrantId, contestId)}
+    aria-label={`Open ${entry.entrantName}'s Bracket Profile`}
+    className="inline-flex min-h-11 min-w-0 items-center gap-2 rounded-lg py-1 pr-2 text-left font-bold text-slate-100 transition hover:text-blue-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300"
+  >
+    <span className="shrink-0"><TeamAvatar teamName={entry.entrantName} avatarUrl={entry.avatarUrl} useLegacyFallback={false} size="sm" /></span>
+    <span className="min-w-0 truncate">{entry.entrantName}{entry.bracketNumber > 1 ? ` · Bracket ${entry.bracketNumber}` : ""}</span>
+  </Link>;
+}
 
 const label = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 function scoring(snapshot: Record<string, unknown>, key: string) {
@@ -92,7 +108,7 @@ export default function BracketChallengeHomePage() {
               <p className="mt-3 text-sm font-semibold text-slate-300">{personalCompletion}</p>
               <div className="mt-7"><h2 className="text-xl font-black text-white">Leaderboard</h2><p className="mt-1 text-sm text-slate-400">Bracket participation is visible; picks remain private until lock.</p></div>
               <div className={`mt-4 divide-y divide-slate-800 border-y border-slate-800 ${participationScroll}`}>
-                {data.participation.length ? data.participation.map((entry) => <div key={entry.entryId} className="flex items-center justify-between gap-3 py-3 text-sm"><span className="min-w-0 truncate font-semibold text-slate-100">{entry.entrantName}{entry.bracketNumber > 1 ? ` · Bracket ${entry.bracketNumber}` : ""}</span><span className="shrink-0 text-slate-400">{completionLabel(entry.completionState)}</span></div>) : <p className="py-4 text-sm text-slate-400">No brackets have been admitted yet.</p>}
+                {data.participation.length ? data.participation.map((entry) => <div key={entry.entryId} className="flex items-center justify-between gap-3 py-2 text-sm"><EntrantProfileLink entry={entry} contestId={contestId} /><span className="shrink-0 text-slate-400">{completionLabel(entry.completionState)}</span></div>) : <p className="py-4 text-sm text-slate-400">No brackets have been admitted yet.</p>}
               </div>
               <p className="mt-4 text-xs text-slate-500">Picks and championship totals remain private until the contest lock.</p>
             </>
@@ -100,7 +116,7 @@ export default function BracketChallengeHomePage() {
             <>
               <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-xl font-black text-white">Leaderboard</h2><p className="mt-1 text-sm text-slate-400">Ranked by points earned. Equal scores remain tied until a valid final tiebreak can be resolved.</p></div><Link href={`/bracket-challenge/${contestId}/bracket`} className="text-sm font-bold text-blue-300 transition hover:text-blue-200">My bracket</Link></div>
               <div className="mt-4 divide-y divide-slate-800 border-y border-slate-800">
-                {data.standings.map((entry) => <div key={entry.entryId} className="py-4"><div className="flex items-start justify-between gap-3"><div className="flex gap-3"><span className="min-w-6 text-lg font-black text-blue-300">{entry.rank}</span><div><p className="font-bold text-white">{entry.entrantName}{entry.bracketNumber > 1 ? ` · Bracket ${entry.bracketNumber}` : ""}</p><p className="text-xs text-slate-400">{entry.entrantKind === "managed" ? "Managed entrant · " : ""}{entry.entryStatus}</p></div></div><div className="text-right"><p className="text-xl font-black text-white">{entry.pointsEarned}</p><p className="text-xs text-slate-400">max {entry.maxPossibleScore}</p></div></div><div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 pl-9 text-xs text-slate-400"><span>{entry.correctPicks} correct</span><span>{entry.pendingPicks} alive</span><span>{entry.eliminatedPicks} eliminated</span>{entry.championPick && <span>Champion: {entry.championPick}</span>}{entry.canViewBracket && <Link className="ml-auto font-bold text-blue-300 hover:text-blue-200" href={`/bracket-challenge/${contestId}/bracket?entryId=${entry.entryId}`}>View bracket</Link>}</div></div>)}
+                {data.standings.map((entry) => <div key={entry.entryId} className="py-4"><div className="flex items-start justify-between gap-3"><div className="flex gap-3"><span className="min-w-6 pt-2 text-lg font-black text-blue-300">{entry.rank}</span><div><EntrantProfileLink entry={entry} contestId={contestId} /><p className="text-xs text-slate-400">{entry.entrantKind === "managed" ? "Managed entrant · " : ""}{entry.entryStatus}</p></div></div><div className="text-right"><p className="text-xl font-black text-white">{entry.pointsEarned}</p><p className="text-xs text-slate-400">max {entry.maxPossibleScore}</p></div></div><div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 pl-9 text-xs text-slate-400"><span>{entry.correctPicks} correct</span><span>{entry.pendingPicks} alive</span><span>{entry.eliminatedPicks} eliminated</span>{entry.championPick && <span>Champion: {entry.championPick}</span>}{entry.canViewBracket && <Link className="ml-auto font-bold text-blue-300 hover:text-blue-200" href={`/bracket-challenge/${contestId}/bracket?entryId=${entry.entryId}`}>View bracket</Link>}</div></div>)}
               </div>
             </>
           )}

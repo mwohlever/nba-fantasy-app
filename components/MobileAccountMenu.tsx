@@ -78,12 +78,14 @@ type Props = {
   currentUser: MobileAccountUser | null;
   isLoading: boolean;
   onLogout: () => void;
+  authorizedBracketContestId?: string | null;
 };
 
 function MobileAccountMenuContent({
   currentUser,
   isLoading,
   onLogout,
+  authorizedBracketContestId = null,
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
@@ -91,11 +93,16 @@ function MobileAccountMenuContent({
   const { selectedSport } = useSelectedSport();
 
   const { groupContext } = useGroupContext();
-  const bracketContestId = pathname.match(/^\/bracket-challenge\/([^/]+)/)?.[1] ?? null;
+  const bracketContestId = pathname.match(/^\/bracket-challenge\/([^/]+)/)?.[1] ?? authorizedBracketContestId;
 
   const isNbaSkins =
     pathname.startsWith("/nba-skins") ||
     selectedSport === "nba-skins";
+
+  const isBracketChallenge =
+    pathname.startsWith("/bracket-challenge") ||
+    pathname === "/profile/bracket" ||
+    selectedSport === "bracket-challenge";
 
   const activeAdminSport =
     isNbaSkins
@@ -121,7 +128,12 @@ function MobileAccountMenuContent({
             tab: "settings",
           },
         ]
-      : profileLinks;
+      : isBracketChallenge
+        ? [
+            { href: bracketContestId ? `/profile/bracket?contestId=${encodeURIComponent(bracketContestId)}` : "/profile/bracket", label: "Bracket Profile", tab: "overview" },
+            { href: "/profile?tab=settings", label: "Settings", tab: "settings" },
+          ]
+        : profileLinks;
 
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
