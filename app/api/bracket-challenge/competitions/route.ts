@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
 import { getBracketChallengeAccess } from "@/lib/bracket/access";
-import { loadBracketChallengeCompetitions } from "@/lib/bracket/competitions.server";
+import { loadBracketChallengeCompetitionBrowser } from "@/lib/bracket/competitions.server";
 
 export async function GET() {
   try {
@@ -35,8 +35,9 @@ export async function GET() {
     }
 
     const competitions =
-      await loadBracketChallengeCompetitions(
+      await loadBracketChallengeCompetitionBrowser(
         access.league.id,
+        user.id,
       );
 
     return NextResponse.json(
