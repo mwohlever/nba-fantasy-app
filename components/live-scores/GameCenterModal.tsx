@@ -949,6 +949,16 @@ export default function GameCenterModal({
   }, [isLive, loadGameDetail]);
 
   const competitors = competition?.competitors || [];
+  const footballTeam = (homeAway: "home" | "away") => {
+    const competitor = competitors.find((item) => item.homeAway === homeAway);
+    const id = competitor?.team?.id ?? competitor?.id;
+    return competitor && id ? {
+      id: String(id),
+      abbreviation: competitor.team?.abbreviation || competitor.team?.shortDisplayName || null,
+    } : undefined;
+  };
+  const footballHomeTeam = footballTeam("home");
+  const footballAwayTeam = footballTeam("away");
   const away = competitors.find((team) => team.homeAway === "away");
   const home = competitors.find((team) => team.homeAway === "home");
 
@@ -1288,7 +1298,7 @@ export default function GameCenterModal({
             <div className="px-4 pb-4 pt-4">
               <div className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Play-by-Play</div>
               {selectedQuarter ? <span className="sr-only">{quarterLabel(selectedQuarter)}</span> : null}
-              <FootballPlayByPlay drives={drives} isLive={isLive} initialPeriod={selectedQuarter} offenseNames={Object.fromEntries(competitors.map((competitor) => [String(competitor.id ?? competitor.team?.id ?? ""), competitor.team?.abbreviation || competitor.team?.shortDisplayName || "OFF"]))} />
+              <FootballPlayByPlay drives={drives} isLive={isLive} initialPeriod={selectedQuarter} offenseNames={Object.fromEntries(competitors.map((competitor) => [String(competitor.team?.id ?? competitor.id ?? ""), competitor.team?.abbreviation || competitor.team?.shortDisplayName || "OFF"]))} homeTeam={footballHomeTeam} awayTeam={footballAwayTeam} />
             </div>
           ) : tab === "summary" ? (
             <div className="space-y-5 p-4">
