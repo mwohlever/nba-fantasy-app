@@ -6,7 +6,10 @@ import { useEffect, useState } from "react";
 
 import AppNav from "@/components/AppNav";
 import TeamAvatar from "@/components/ui/TeamAvatar";
+import EditNameButton from "@/components/ui/EditNameButton";
+import TextEntryDialog from "@/components/ui/TextEntryDialog";
 import { bracketEntrantProfileHref } from "@/lib/bracket/navigation";
+import { bracketDisplayLabel } from "@/lib/bracket/names";
 import CfpFieldSetup from "./CfpFieldSetup";
 
 type Data = {
@@ -18,14 +21,15 @@ type Data = {
     competition: { id: number; name: string; season: number; formatKey: string };
   };
   picksVisible: boolean;
+  poolVisibility: "pre_lock" | "freezing" | "available";
   rounds: { key: string; label: string }[];
-  participation: { entryId: number; entrantId: string; entrantName: string; entrantKind: string; avatarUrl: string | null; bracketNumber: number; completionState: "in_progress" | "complete" | "locked"; isMine: boolean }[];
+  participation: { entryId: number; entrantId: string; entrantName: string; entrantKind: string; avatarUrl: string | null; bracketNumber: number; bracketName: string | null; completionState: "in_progress" | "complete" | "locked"; isMine: boolean }[];
   personalSummary: { totalBrackets: number; completeBrackets: number };
-  standings: { entryId: number; entrantId: string; rank: number; entrantName: string; entrantKind: string; avatarUrl: string | null; bracketNumber: number; entryStatus: string; pointsEarned: number; maxPossibleScore: number; correctPicks: number; pendingPicks: number; eliminatedPicks: number; championPick: string | null; canViewBracket: boolean }[];
+  standings: { entryId: number; entrantId: string; rank: number; entrantName: string; entrantKind: string; avatarUrl: string | null; bracketNumber: number; bracketName: string | null; entryStatus: string; pointsEarned: number; maxPossibleScore: number; correctPicks: number; pendingPicks: number; eliminatedPicks: number; championPick: string | null; canViewBracket: boolean }[];
 };
 
 function EntrantProfileLink({ entry, contestId }: {
-  entry: { entrantId: string; entrantName: string; avatarUrl: string | null; bracketNumber: number };
+  entry: { entrantId: string; entrantName: string; avatarUrl: string | null; bracketNumber: number; bracketName: string | null };
   contestId: string;
 }) {
   return <Link
@@ -34,7 +38,7 @@ function EntrantProfileLink({ entry, contestId }: {
     className="inline-flex min-h-11 min-w-0 items-center gap-2 rounded-lg py-1 pr-2 text-left font-bold text-slate-100 transition hover:text-blue-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300"
   >
     <span className="shrink-0"><TeamAvatar teamName={entry.entrantName} avatarUrl={entry.avatarUrl} useLegacyFallback={false} size="sm" /></span>
-    <span className="min-w-0 truncate">{entry.entrantName}{entry.bracketNumber > 1 ? ` · Bracket ${entry.bracketNumber}` : ""}</span>
+    <span className="min-w-0 truncate">{entry.entrantName}{entry.bracketName || entry.bracketNumber > 1 ? ` · ${bracketDisplayLabel(entry.bracketNumber, entry.bracketName)}` : ""}</span>
   </Link>;
 }
 
@@ -55,6 +59,21 @@ export default function BracketChallengeHomePage() {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState("");
   const [showFieldTools, setShowFieldTools] = useState(false);
+  const [renameEntry, setRenameEntry] = useState<Data["participation"][number] | null>(null);
+
+  async function renameParticipationBracket(name: string) {
+    if (!renameEntry) return;
+    const response = await fetch(`/api/bracket-challenge/contests/${encodeURIComponent(contestId)}/master-bracket`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "rename", entrantId: renameEntry.entrantId, bracketNumber: renameEntry.bracketNumber, name }),
+    });
+    const result = await response.json() as { name?: string | null; error?: string };
+    if (!response.ok) throw new Error(result.error ?? "Unable to rename bracket.");
+    setData((current) => current ? {
+      ...current,
+      participation: current.participation.map((entry) => entry.entryId === renameEntry.entryId ? { ...entry, bracketName: result.name ?? null } : entry),
+    } : current);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -106,11 +125,11 @@ export default function BracketChallengeHomePage() {
                 <Link href={`/bracket-challenge/${contestId}/bracket`} className="rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-400">Go to bracket</Link>
               </div>
               <p className="mt-3 text-sm font-semibold text-slate-300">{personalCompletion}</p>
-              <div className="mt-7"><h2 className="text-xl font-black text-white">Leaderboard</h2><p className="mt-1 text-sm text-slate-400">Bracket participation is visible; picks remain private until lock.</p></div>
+              <div className="mt-7"><h2 className="text-xl font-black text-white">Leaderboard</h2><p className="mt-1 text-sm text-slate-400">{data.poolVisibility === "freezing" ? "Frozen brackets are being prepared. Pool standings will appear when every entry is ready." : "Bracket participation is visible; picks remain private until lock."}</p></div>
               <div className={`mt-4 divide-y divide-slate-800 border-y border-slate-800 ${participationScroll}`}>
-                {data.participation.length ? data.participation.map((entry) => <div key={entry.entryId} className="flex items-center justify-between gap-3 py-2 text-sm"><EntrantProfileLink entry={entry} contestId={contestId} /><span className="shrink-0 text-slate-400">{completionLabel(entry.completionState)}</span></div>) : <p className="py-4 text-sm text-slate-400">No brackets have been admitted yet.</p>}
+                {data.participation.length ? data.participation.map((entry) => <div key={entry.entryId} className="flex min-w-0 items-center justify-between gap-2 py-2 text-sm"><span className="flex min-w-0 items-center gap-1"><EntrantProfileLink entry={entry} contestId={contestId} />{entry.isMine ? <EditNameButton label={bracketDisplayLabel(entry.bracketNumber, entry.bracketName)} onClick={() => setRenameEntry(entry)} /> : null}</span><span className="shrink-0 text-slate-400">{completionLabel(entry.completionState)}</span></div>) : <p className="py-4 text-sm text-slate-400">No brackets have been admitted yet.</p>}
               </div>
-              <p className="mt-4 text-xs text-slate-500">Picks and championship totals remain private until the contest lock.</p>
+              <p className="mt-4 text-xs text-slate-500">{data.poolVisibility === "freezing" ? "Pool insights are pending the complete frozen cohort." : "Picks and championship totals remain private until the contest lock."}</p>
             </>
           ) : (
             <>
@@ -125,6 +144,16 @@ export default function BracketChallengeHomePage() {
         {scoreSummary.length > 0 && <details className="mt-6 text-xs text-slate-500"><summary className="cursor-pointer font-semibold text-slate-400">Scoring rules</summary><p className="mt-2">{scoreSummary.join(" · ")} points</p></details>}
 
         {detail.canManageCompetitionField && detail.competition.formatKey === "cfp" && <section className="mt-8 border-t border-amber-400/20 pt-5"><button type="button" onClick={() => setShowFieldTools((current) => !current)} className="text-xs font-bold text-amber-300 transition hover:text-amber-200">{showFieldTools ? "Hide" : "Show"} super-admin global CFP field tools</button>{showFieldTools && <CfpFieldSetup competitionId={detail.competition.id} />}</section>}
+        {renameEntry ? <TextEntryDialog
+          key={`participation:${renameEntry.entryId}`}
+          title="Rename bracket"
+          label="Bracket name"
+          description="Leave blank to use the default bracket number."
+          initialValue={renameEntry.bracketName ?? ""}
+          submitLabel="Save"
+          onSubmit={renameParticipationBracket}
+          onClose={() => setRenameEntry(null)}
+        /> : null}
       </div>
     </main>
   );

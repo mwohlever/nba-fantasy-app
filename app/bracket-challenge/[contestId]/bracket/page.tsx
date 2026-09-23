@@ -10,7 +10,17 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import BracketMakePicks from "@/components/bracket/BracketMakePicks";
 import BracketTopologyPreview from "@/components/bracket/BracketTopologyPreview";
+import EditNameButton from "@/components/ui/EditNameButton";
+import TextEntryDialog from "@/components/ui/TextEntryDialog";
 import { canEditBracketGame } from "@/lib/bracket/lifecycle";
+import { bracketDisplayLabel } from "@/lib/bracket/names";
+
+type InsightResponse = {
+  visibility: { personal: "available"; pool: "pre_lock" | "freezing" | "available" };
+  identity: { championPick: string | null; selectedPicks: number; totalGames: number; alivePicks: number | null; bustedPicks: number | null };
+  pool: { totalBrackets: number; champion: { teamId: string; count: number; denominator: number }[] } | null;
+  teamNames: Record<string, string>;
+};
 
 type Game = {
   id: number;
@@ -121,6 +131,11 @@ export default function BracketChallengeDetailPage() {
     useState<number>(bracketNumberFromUrl);
   const [loadedEntrantName, setLoadedEntrantName] =
     useState<string | null>(null);
+  const [bracketName, setBracketName] = useState<string | null>(null);
+  const [bracketNames, setBracketNames] = useState<Record<number, string | null>>({});
+  const [canRename, setCanRename] = useState(true);
+  const [nameDialog, setNameDialog] = useState<"rename" | "entrant" | null>(null);
+  const [insights, setInsights] = useState<InsightResponse | null>(null);
   const [entrants, setEntrants] = useState<{ id: string; kind: "account" | "managed"; displayName: string }[]>([]);
   const [selectedEntrantId, setSelectedEntrantId] =
     useState(entrantIdFromUrl);
@@ -212,9 +227,11 @@ export default function BracketChallengeDetailPage() {
                 string | null | undefined
               >;
               readOnly?: boolean;
+              name?: string | null;
             };
             entrants?: { id: string; kind: "account" | "managed"; displayName: string }[];
             selectedEntrantId?: string;
+            bracketNames?: Record<number, string | null>;
           };
 
         if (!response.ok) {
@@ -247,6 +264,9 @@ export default function BracketChallengeDetailPage() {
           setLoadedEntrantName(
             masterResult.masterBracket?.entrantName ?? null,
           );
+          setBracketName(masterResult.masterBracket?.name ?? null);
+          setBracketNames(masterResult.bracketNames ?? {});
+          setCanRename(masterResult.masterBracket?.readOnly !== true);
           setEntrants(masterResult.entrants ?? []);
           setSelectedEntrantId(masterResult.selectedEntrantId ?? selectedEntrantId);
           setTiebreakerValue(
@@ -283,6 +303,30 @@ export default function BracketChallengeDetailPage() {
       cancelled = true;
     };
   }, [contestId, selectedEntrantId, bracketNumber, entryIdFromUrl]);
+
+  useEffect(() => {
+    if (!masterBracketId || !contestId) { setInsights(null); return; }
+    const params = new URLSearchParams(entryIdFromUrl
+      ? { entryId: entryIdFromUrl }
+      : { entrantId: selectedEntrantId, bracketNumber: String(bracketNumber) });
+    let cancelled = false;
+    void fetch(`/api/bracket-challenge/contests/${encodeURIComponent(contestId)}/insights?${params}`, { cache: "no-store" })
+      .then(async (response) => response.ok ? await response.json() as InsightResponse : null)
+      .then((result) => { if (!cancelled) setInsights(result); })
+      .catch(() => { if (!cancelled) setInsights(null); });
+    return () => { cancelled = true; };
+  }, [contestId, entryIdFromUrl, selectedEntrantId, bracketNumber, masterBracketId, picks]);
+
+  async function handleRename(proposed: string) {
+    const response = await fetch(`/api/bracket-challenge/contests/${encodeURIComponent(contestId)}/master-bracket`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "rename", entrantId: selectedEntrantId, bracketNumber: loadedBracketNumber, name: proposed }),
+    });
+    const result = await response.json() as { name?: string | null; error?: string };
+    if (!response.ok) throw new Error(result.error ?? "Unable to rename bracket.");
+    setBracketName(result.name ?? null);
+    setBracketNames((current) => ({ ...current, [loadedBracketNumber]: result.name ?? null }));
+  }
 
   function selectBracket(
     entrantId: string,
@@ -535,15 +579,13 @@ export default function BracketChallengeDetailPage() {
     });
   }
 
-  async function handleAddManagedEntrant() {
-    const displayName = window.prompt("Managed entrant name");
-    if (!displayName?.trim()) return;
+  async function handleAddManagedEntrant(displayName: string) {
     const response = await fetch(`/api/bracket-challenge/contests/${encodeURIComponent(contestId)}/master-bracket`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "createManagedEntrant", displayName }),
     });
     const result = await response.json() as { error?: string; entrant?: { id: string; kind: "account" | "managed"; displayName: string } };
-    if (!response.ok || !result.entrant) { setSaveError(result.error ?? "Unable to add entrant."); return; }
+    if (!response.ok || !result.entrant) throw new Error(result.error ?? "Unable to add entrant.");
     setEntrants((current) => [...current, result.entrant!]);
     selectBracket(result.entrant.id, 1);
   }
@@ -625,19 +667,22 @@ export default function BracketChallengeDetailPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">
-                      Your bracket
+                      {viewedEntrantName}'s bracket
                     </div>
                     <h2 className="mt-1 text-xl font-black text-white">
                       {completedPicks} of {games.length} picks
                     </h2>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      {!viewingFrozenEntry && <select value={selectedEntrantId} onChange={(event) => { selectBracket(event.target.value, 1); }} className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-100">
+                    <div className="mt-3 flex max-w-full flex-wrap items-center gap-2">
+                      {!viewingFrozenEntry && <select value={selectedEntrantId} onChange={(event) => { selectBracket(event.target.value, 1); }} className="max-w-full min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-100">
                         {entrants.map((entrant) => <option key={entrant.id} value={entrant.id}>{entrant.displayName}{entrant.kind === "managed" ? " (managed)" : ""}</option>)}
                       </select>}
-                      {!viewingFrozenEntry && contest.maxBracketsPerEntrant > 1 ? <select value={bracketNumber} onChange={(event) => selectBracket(selectedEntrantId, Number(event.target.value))} className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-100">
-                        {Array.from({ length: contest.maxBracketsPerEntrant }, (_, index) => index + 1).map((number) => <option key={number} value={number}>Bracket {number}</option>)}
-                      </select> : null}
-                      {contest.managedEntrantsAllowed && !contestLocked && !viewingFrozenEntry ? <button type="button" onClick={() => void handleAddManagedEntrant()} className="rounded-lg border border-blue-400/50 px-2 py-1.5 text-xs font-black text-blue-200">Add entrant</button> : null}
+                      <span className="inline-flex max-w-full min-w-0 items-center gap-1">
+                        {!viewingFrozenEntry && contest.maxBracketsPerEntrant > 1 ? <select value={bracketNumber} onChange={(event) => selectBracket(selectedEntrantId, Number(event.target.value))} className="max-w-[13rem] min-w-0 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-100">
+                          {Array.from({ length: contest.maxBracketsPerEntrant }, (_, index) => index + 1).map((number) => <option key={number} value={number}>{bracketDisplayLabel(number, bracketNames[number])}</option>)}
+                        </select> : <span className="min-w-0 truncate text-xs font-bold text-slate-200">{bracketDisplayLabel(loadedBracketNumber, bracketName)}</span>}
+                        {masterBracketId && canRename ? <EditNameButton label={bracketDisplayLabel(loadedBracketNumber, bracketName)} onClick={() => setNameDialog("rename")} /> : null}
+                      </span>
+                      {contest.managedEntrantsAllowed && !contestLocked && !viewingFrozenEntry ? <button type="button" onClick={() => setNameDialog("entrant")} className="rounded-lg border border-blue-400/50 px-2 py-1.5 text-xs font-black text-blue-200">Add entrant</button> : null}
                     </div>
                   </div>
 
@@ -702,9 +747,9 @@ export default function BracketChallengeDetailPage() {
                   <span className="text-xs font-bold text-slate-400">
                     {masterBracketId
                       ? (contestLocked || viewingFrozenEntry)
-                        ? `Bracket #${bracketNumber} · Locked`
-                        : `Bracket #${bracketNumber} · Auto-save on`
-                      : `Preparing Bracket #${bracketNumber}…`}
+                        ? `${bracketDisplayLabel(loadedBracketNumber, bracketName)} · Locked`
+                        : `${bracketDisplayLabel(loadedBracketNumber, bracketName)} · Auto-save on`
+                      : `Preparing Bracket #${loadedBracketNumber}…`}
                   </span>
 
                   {saveError ? (
@@ -741,7 +786,7 @@ export default function BracketChallengeDetailPage() {
                         <p>111 Sports · Bracket Challenge</p>
                       </div>
                       <h1>{competition.name}</h1>
-                      <p>{printingBlankBracket ? "Blank Bracket" : `${viewedEntrantName} · Bracket #${loadedBracketNumber}`}</p>
+                      <p>{printingBlankBracket ? "Blank Bracket" : `${viewedEntrantName} · ${bracketDisplayLabel(loadedBracketNumber, bracketName)}`}</p>
                     </div>
                     <div className="bracket-screen-only flex flex-wrap justify-end gap-2 pb-3">
                       <button type="button" onClick={() => handlePrint("filled")} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-black text-slate-200 transition hover:border-blue-400 hover:text-white">
@@ -762,12 +807,41 @@ export default function BracketChallengeDetailPage() {
                       tiebreakerValue={printingBlankBracket || tiebreakerValue === "" ? null : Number(tiebreakerValue)}
                       blankPrint={printingBlankBracket}
                     />
+                    {!printingBlankBracket && insights ? <section className="bracket-screen-only mt-4 border-t border-slate-800 pt-3 text-sm text-slate-300">
+                      <h2 className="font-black text-white">Insights · {bracketDisplayLabel(loadedBracketNumber, bracketName)}</h2>
+                      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
+                        {insights.identity.championPick ? <span>Champion pick: {insights.teamNames[insights.identity.championPick] ?? insights.identity.championPick}</span> : null}
+                        <span>{insights.identity.selectedPicks} of {insights.identity.totalGames} picks made</span>
+                        {insights.identity.alivePicks !== null ? <span>{insights.identity.alivePicks} picks alive · {insights.identity.bustedPicks} busted</span> : null}
+                        {insights.pool && insights.identity.championPick ? <span>{insights.pool.champion.find((team) => team.teamId === insights.identity.championPick)?.count ?? 0} of {insights.pool.totalBrackets} brackets picked {insights.teamNames[insights.identity.championPick] ?? insights.identity.championPick} to win</span> : null}
+                      </div>
+                    </section> : null}
                   </>
                 )}
               </div>
             </section>
           </>
         ) : null}
+        {nameDialog === "rename" ? <TextEntryDialog
+          key={`rename:${masterBracketId}`}
+          title="Rename bracket"
+          label="Bracket name"
+          description="Leave blank to use the default bracket number."
+          initialValue={bracketName ?? ""}
+          submitLabel="Save"
+          onSubmit={handleRename}
+          onClose={() => setNameDialog(null)}
+        /> : null}
+        {nameDialog === "entrant" ? <TextEntryDialog
+          key="create-managed-entrant"
+          title="Add entrant"
+          label="Entrant name"
+          description="Create a bracket for someone you manage."
+          submitLabel="Add entrant"
+          emptyError="Enter an entrant name."
+          onSubmit={handleAddManagedEntrant}
+          onClose={() => setNameDialog(null)}
+        /> : null}
       </div>
     </main>
   );
