@@ -69,6 +69,11 @@ export default function BracketChallengeLivePage() {
     setError("");
 
     try {
+      // The explicit authenticated POST is the only provider-to-official write boundary.
+      // A failed sync must not hide the read-only live scoreboard.
+      await fetch(`/api/bracket-challenge/contests/${encodeURIComponent(contestId)}/sync-results`, {
+        method: "POST", cache: "no-store", signal: controller.signal,
+      }).catch(() => undefined);
       const response = await fetch(`/api/bracket-challenge/contests/${encodeURIComponent(contestId)}/live`, {
         cache: "no-store", signal: controller.signal,
       });
@@ -96,8 +101,7 @@ export default function BracketChallengeLivePage() {
   ));
 
   useEffect(() => {
-    if (!hasLiveGame) return;
-    const interval = window.setInterval(() => { void load(); }, 20_000);
+    const interval = window.setInterval(() => { void load(); }, hasLiveGame ? 20_000 : 120_000);
     return () => window.clearInterval(interval);
   }, [hasLiveGame, load]);
 

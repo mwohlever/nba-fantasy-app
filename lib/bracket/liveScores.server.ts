@@ -11,7 +11,7 @@ import { bracketTopologyFromRows } from "@/lib/bracket/persistence";
 import { bracketResultsFromOfficialGames } from "@/lib/bracket/scoring";
 import { resolveBracketGame } from "@/lib/bracket/topology";
 import {
-  fetchNcaaPostseasonEvents,
+  fetchBracketPostseasonEvents,
   type NcaaEspnGame,
 } from "@/lib/providers/ncaa";
 
@@ -268,9 +268,7 @@ export async function getBracketContestLiveScores(
   if (!detail) return null;
 
   try {
-    const providerGames = await fetchNcaaPostseasonEvents({
-      season: detail.competition.season,
-    });
+    const providerGames = await fetchBracketPostseasonEvents(detail.competition);
 
     return buildBracketLiveScoresModel({
       detail,

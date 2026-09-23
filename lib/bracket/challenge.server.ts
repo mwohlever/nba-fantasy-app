@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { AppUser } from "@/lib/auth";
 import { getBracketChallengeAccess } from "@/lib/bracket/access";
+import { effectiveBracketLockAt } from "@/lib/bracket/lifecycle";
 import {
   bracketTopologyFromRows,
   type PersistedBracketGameRow,
@@ -24,6 +25,7 @@ export type BracketChallengeGame = {
   lockAt: string | null;
   status: string;
   winnerTeamId: string | null;
+  metadata: Record<string, unknown>;
 };
 
 export type BracketChallengeTeam = {
@@ -104,6 +106,7 @@ type GameRow = PersistedBracketGameRow & {
   lock_at: string | null;
   status: string;
   winner_team_id: string | null;
+  metadata: Record<string, unknown>;
 };
 
 export async function getBracketChallengeDetail(
@@ -147,7 +150,7 @@ export async function getBracketChallengeDetail(
       supabaseAdmin
         .from("bracket_games")
         .select(
-          "id, game_key, round_key, round_order, game_order, region_key, source_a_team_id, source_a_game_id, source_a_seed, source_b_team_id, source_b_game_id, source_b_seed, provider_event_id, scheduled_at, lock_at, status, winner_team_id",
+          "id, game_key, round_key, round_order, game_order, region_key, source_a_team_id, source_a_game_id, source_a_seed, source_b_team_id, source_b_game_id, source_b_seed, provider_event_id, scheduled_at, lock_at, status, winner_team_id, metadata",
         )
         .eq("competition_id", contest.competition_id)
         .order("round_order", { ascending: true })
@@ -211,7 +214,7 @@ export async function getBracketChallengeDetail(
     contest: {
       id: contest.id,
       status: contest.status,
-      lockAt: contest.lock_at,
+      lockAt: effectiveBracketLockAt(contest.lock_at, rows.map((game) => ({ scheduledAt: game.scheduled_at, status: game.status }))),
       maxBracketsPerEntrant:
         contest.max_brackets_per_entrant,
       managedEntrantsAllowed:
@@ -265,6 +268,7 @@ export async function getBracketChallengeDetail(
       status: game.status,
       winnerTeamId:
         game.winner_team_id,
+      metadata: game.metadata ?? {},
     })),
   };
 }

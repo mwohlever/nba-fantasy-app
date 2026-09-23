@@ -138,6 +138,7 @@ function positiveRank(
 function scoreValue(
   value: unknown,
 ): number | null {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
 
   return Number.isFinite(number)
@@ -544,6 +545,27 @@ export async function fetchNcaaPostseasonEvents({
     );
   }
 
+  return normalizeNcaaEspnScoreboardEvents(await response.json());
+}
+
+/** Bracket competitions use their own ESPN sport feed; event binding still decides eligibility. */
+export async function fetchBracketPostseasonEvents(input: {
+  season: number;
+  sportKey: string;
+  formatKey: string;
+}): Promise<NcaaEspnGame[]> {
+  if (input.sportKey === "college_football" && input.formatKey === "cfp")
+    return fetchNcaaPostseasonEvents({ season: input.season });
+  const league = input.sportKey === "mens_college_basketball" && input.formatKey === "ncaa_mens"
+    ? "mens-college-basketball"
+    : input.sportKey === "womens_college_basketball" && input.formatKey === "ncaa_womens"
+      ? "womens-college-basketball" : null;
+  if (!league) throw new Error("Unsupported Bracket Challenge provider competition.");
+  const params = new URLSearchParams({ dates: String(input.season), seasontype: "3", groups: "50", limit: "500" });
+  const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/${league}/scoreboard?${params}`, {
+    cache: "no-store", headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error(`ESPN basketball postseason scoreboard failed: ${response.status}`);
   return normalizeNcaaEspnScoreboardEvents(await response.json());
 }
 

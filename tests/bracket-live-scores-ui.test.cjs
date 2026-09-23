@@ -57,7 +57,7 @@ test("unmapped, provider-unavailable, and mismatched cards retain official teams
   }
 });
 
-test("Live Scores page is round-first, uses the new API, retains AppNav, and polls only safely live provider games", () => {
+test("Live Scores page is round-first, uses the authenticated sync boundary, and polls live and settled games", () => {
   const source = fs.readFileSync(path.join(root, "app/bracket-challenge/[contestId]/live/page.tsx"), "utf8");
   assert.match(source, /\/api\/bracket-challenge\/contests\/\$\{encodeURIComponent\(contestId\)\}\/live/);
   assert.match(source, /rounds\.slice\(\)\.sort\(\(left, right\) => left\.order - right\.order\)/);
@@ -65,7 +65,9 @@ test("Live Scores page is round-first, uses the new API, retains AppNav, and pol
   assert.match(source, /<BracketLiveScoreCard game=\{game\} onOpenGameCenter=/);
   assert.match(source, /game\.provider\.mappingState === "valid"/);
   assert.match(source, /game\.provider\.game\?\.status === "in"/);
-  assert.match(source, /window\.setInterval\(\(\) => \{ void load\(\); \}, 20_000\)/);
+  assert.match(source, /\/sync-results/);
+  assert.match(source, /method: "POST"/);
+  assert.match(source, /window\.setInterval\(\(\) => \{ void load\(\); \}, hasLiveGame \? 20_000 : 120_000\)/);
   assert.match(source, /<AppNav \/>/);
   assert.match(source, /mx-auto max-w-5xl space-y-6/);
   assert.match(source, /BracketGameCenterModal/);

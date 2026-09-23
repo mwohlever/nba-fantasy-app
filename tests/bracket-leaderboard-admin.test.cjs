@@ -10,7 +10,8 @@ test("pre-lock leaderboard returns admitted-entry participation only", () => {
   const source = read("lib/bracket/leaderboard.server.ts");
   assert.match(source, /from\("bracket_entries"\)\.select\(entryFields\)/);
   assert.match(source, /\.eq\("contest_id", contestId\)\.eq\("competition_id", detail\.competition\.id\)/);
-  assert.match(source, /const entryFields = picksVisible/);
+  assert.match(source, /const entryFields = contestLocked/);
+  assert.match(source, /bracketInsightVisibility/);
   assert.match(source, /if \(!picksVisible\) return \{ detail, picksVisible: false/);
   assert.match(source, /picksVisible: false/);
   assert.match(source, /participation/);

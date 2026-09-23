@@ -6,6 +6,7 @@ import { bracketResultsFromOfficialGames, bracketScoringRulesFromSnapshot, score
 import type { BracketPicks } from "@/lib/bracket/types";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { loadBracketEntrantAvatars } from "@/lib/bracket/entrantAvatars";
+import { bracketInsightVisibility } from "@/lib/bracket/insights";
 
 type Entrant = { id: string; display_name: string; entrant_kind: "account" | "managed"; account_user_id: string | null; managing_user_id: string | null };
 type Master = { bracket_number: number; name: string | null };
@@ -27,14 +28,22 @@ function roundData(games: Array<{ roundKey: string; roundOrder: number }>) {
 export async function getBracketContestLeaderboard(user: AppUser, contestId: string) {
   const detail = await getBracketChallengeDetail(user, contestId);
   if (!detail) return null;
-  const picksVisible = shouldFreezeBracketEntry({ contestStatus: detail.contest.status, contestLockAt: detail.contest.lockAt });
-  const entryFields = picksVisible
+  const contestLocked = shouldFreezeBracketEntry({ contestStatus: detail.contest.status, contestLockAt: detail.contest.lockAt });
+  const entryFields = contestLocked
     ? "id, entrant_id, master_bracket_id, status, locked_at, rules_snapshot, picks_snapshot, bracket_entrants(id, display_name, entrant_kind, account_user_id, managing_user_id), bracket_master_brackets(bracket_number, name)"
     : "id, entrant_id, master_bracket_id, status, locked_at, bracket_entrants(id, display_name, entrant_kind, account_user_id, managing_user_id), bracket_master_brackets(bracket_number, name)";
   const entriesResult = await supabaseAdmin.from("bracket_entries").select(entryFields)
     .eq("contest_id", contestId).eq("competition_id", detail.competition.id).order("created_at");
   if (entriesResult.error) throw new Error(`Failed to load contest entries: ${entriesResult.error.message}`);
   const entries = (entriesResult.data ?? []) as unknown as ParticipationEntry[];
+  const insightVisibility = bracketInsightVisibility(
+    { contestStatus: detail.contest.status, contestLockAt: detail.contest.lockAt },
+    contestLocked ? (entries as FrozenEntry[]).map((entry) => ({
+      id: entry.id, entrantId: entry.entrant_id, lockedAt: entry.locked_at,
+      picks: entry.picks_snapshot, rulesSnapshot: entry.rules_snapshot,
+    })) : [],
+  );
+  const picksVisible = insightVisibility.pool === "available";
   const entrantAvatars = await loadBracketEntrantAvatars(
     supabaseAdmin,
     [...new Map(entries.flatMap((entry) => entry.bracket_entrants
@@ -63,7 +72,7 @@ export async function getBracketContestLeaderboard(user: AppUser, contestId: str
   }));
   const personal = participation.filter((entry) => entry.isMine);
   const personalSummary = { totalBrackets: personal.length, completeBrackets: personal.filter((entry) => entry.completionState === "complete" || entry.completionState === "locked").length };
-  if (!picksVisible) return { detail, picksVisible: false, rounds: roundData(detail.games), participation, personalSummary, standings: [] as never[] };
+  if (!picksVisible) return { detail, picksVisible: false, poolVisibility: insightVisibility.pool, rounds: roundData(detail.games), participation, personalSummary, standings: [] as never[] };
 
   const topology = bracketTopologyFromRows(detail.games.map((game) => ({ id: game.id, game_key: game.gameKey, round_key: game.roundKey, round_order: game.roundOrder, game_order: game.gameOrder, source_a_team_id: game.sourceATeamId, source_a_game_id: game.sourceAGameId, source_b_team_id: game.sourceBTeamId, source_b_game_id: game.sourceBGameId })));
   const results = bracketResultsFromOfficialGames(detail.games.map((game) => ({ gameId: game.gameKey, status: game.status, winnerTeamId: game.winnerTeamId })));
@@ -76,5 +85,5 @@ export async function getBracketContestLeaderboard(user: AppUser, contestId: str
   }).sort((a, b) => b.pointsEarned - a.pointsEarned || a.entrantName.localeCompare(b.entrantName) || a.bracketNumber - b.bracketNumber);
   let priorPoints: number | null = null;
   let rank = 0;
-  return { detail, picksVisible: true, rounds: roundData(detail.games), participation: [] as never[], personalSummary, standings: standings.map((entry, index) => { if (entry.pointsEarned !== priorPoints) rank = index + 1; priorPoints = entry.pointsEarned; return { ...entry, rank }; }) };
+  return { detail, picksVisible: true, poolVisibility: insightVisibility.pool, rounds: roundData(detail.games), participation: [] as never[], personalSummary, standings: standings.map((entry, index) => { if (entry.pointsEarned !== priorPoints) rank = index + 1; priorPoints = entry.pointsEarned; return { ...entry, rank }; }) };
 }

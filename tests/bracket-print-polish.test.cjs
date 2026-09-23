@@ -99,7 +99,8 @@ test("selected managed and numbered brackets retain their loaded identity, inclu
   assert.match(page, /bracketNumber: String\(bracketNumber\)/);
   assert.match(page, /loadedBracketNumber/);
   assert.match(page, /loadedEntrantName/);
-  assert.match(route, /bracket_master_brackets\(bracket_number\)/);
+  assert.match(route, /bracket_master_brackets\(bracket_number, name\)/);
+  assert.match(page, /bracketDisplayLabel\(loadedBracketNumber, bracketName\)/);
   assert.match(route, /entrantName: entrant\?\.display_name \?\? null/);
   assert.match(route, /picks: entry\.picks_snapshot \?\? \{\}/);
 });
