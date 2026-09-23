@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import AppNav from "@/components/AppNav";
+import { bracketDisplayLabel } from "@/lib/bracket/names";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import { bracketChallengeRoutes } from "@/lib/bracket/navigation";
 
@@ -11,7 +12,7 @@ type Profile = {
   entrant: { id: string; displayName: string; kind: "account" | "managed"; claimedAt: string | null; avatarUrl: string | null };
   navigationContestId: string | null;
   summary: { challengesEntered: number; championships: number; runnerUps: number; topHalfFinishes: number; averageFinish: number | null; bestFinish: number | null; totalPoints: number; correctPicks: number; resolvedPicks: number; pickAccuracy: number | null };
-  history: { entryId: number; contestId: string; season: number; competitionName: string; bracketNumber: number; rank: number | null; entrantCount: number | null; points: number; correctPicks: number; resolvedPicks: number; championCorrect: boolean }[];
+  history: { entryId: number; contestId: string; season: number; competitionName: string; bracketNumber: number; bracketName: string | null; rank: number | null; entrantCount: number | null; points: number; correctPicks: number; resolvedPicks: number; championCorrect: boolean }[];
   achievements: { bracketChampion: boolean; runnerUp: boolean; championCalled: boolean; topHalf: boolean; perfectRound: boolean; perfectBracket: boolean; perfectRoundCount: number };
 };
 
@@ -93,7 +94,7 @@ function BracketProfilePageContent() {
             {profile.history.length ? profile.history.map((entry) => <article key={entry.entryId} className="py-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-black text-white">{entry.season} {entry.competitionName}{entry.bracketNumber > 1 ? ` · Bracket ${entry.bracketNumber}` : ""}</p>
+                  <p className="font-black text-white">{entry.season} {entry.competitionName}{entry.bracketName || entry.bracketNumber > 1 ? ` · ${bracketDisplayLabel(entry.bracketNumber, entry.bracketName)}` : ""}</p>
                   <p className="mt-1 text-sm text-slate-400">{rank(entry.rank)}{entry.entrantCount ? ` of ${entry.entrantCount}` : ""} · {entry.points} pts · {entry.correctPicks}/{entry.resolvedPicks} correct</p>
                   <p className="mt-1 text-xs text-slate-500">Champion pick: {entry.championCorrect ? "Correct" : "Not correct"}</p>
                 </div>

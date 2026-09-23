@@ -5,6 +5,7 @@ import { applyBracketPick } from "@/lib/bracket/dependencies";
 import { bracketTopologyFromRows } from "@/lib/bracket/persistence";
 import { canEditBracketGame, shouldFreezeBracketEntry } from "@/lib/bracket/lifecycle";
 import { validateBracketPicks } from "@/lib/bracket/topology";
+import { normalizeBracketName } from "@/lib/bracket/names";
 
 type EntrantRow = {
   id: string;
@@ -130,6 +131,21 @@ async function requireOwnedEntrant(user: AppUser, entrantId: string) {
     .eq("id", entrantId).or(`account_user_id.eq.${user.id},managing_user_id.eq.${user.id}`).eq("is_active", true).maybeSingle();
   if (result.error || !result.data) throw new Error("You cannot manage this entrant.");
   return result.data as EntrantRow;
+}
+
+export async function renameMasterBracket(user: AppUser, input: {
+  competitionId: number; entrantId: string; bracketNumber: number; name: unknown;
+}) {
+  await requireOwnedEntrant(user, input.entrantId);
+  const name = normalizeBracketName(input.name);
+  const result = await supabaseAdmin.from("bracket_master_brackets")
+    .update({ name, updated_at: new Date().toISOString() })
+    .eq("competition_id", input.competitionId).eq("entrant_id", input.entrantId)
+    .eq("bracket_number", input.bracketNumber)
+    .select("id, name").maybeSingle();
+  if (result.error) throw new Error(`Failed to rename bracket: ${result.error.message}`);
+  if (!result.data) throw new Error("Bracket not found.");
+  return { id: result.data.id, name: result.data.name as string | null };
 }
 
 export async function getOrCreateMasterBracket(

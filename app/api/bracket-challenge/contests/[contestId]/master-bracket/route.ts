@@ -10,6 +10,7 @@ import {
   getOrCreateMasterBracket,
   listAccountEntrants,
   maybeFreezeContestEntry,
+  renameMasterBracket,
   saveMasterBracketPick,
   saveMasterBracketTiebreaker,
 } from "@/lib/bracket/masterBracket.server";
@@ -90,7 +91,7 @@ export async function GET(
 
     if (Number.isInteger(entryId) && entryId > 0) {
       const entryResult = await supabaseAdmin.from("bracket_entries")
-        .select("id, entrant_id, master_bracket_id, status, locked_at, picks_snapshot, tiebreaker_value, bracket_master_brackets(bracket_number), bracket_entrants(account_user_id, managing_user_id, display_name)")
+        .select("id, entrant_id, master_bracket_id, status, locked_at, picks_snapshot, tiebreaker_value, bracket_master_brackets(bracket_number, name), bracket_entrants(account_user_id, managing_user_id, display_name)")
         .eq("id", entryId).eq("contest_id", contestId).eq("competition_id", resolved.challenge.competition.id).maybeSingle();
       if (entryResult.error) throw new Error(`Failed to load frozen bracket: ${entryResult.error.message}`);
       const entry = entryResult.data as any;
@@ -101,7 +102,7 @@ export async function GET(
         return NextResponse.json({ success: false, error: "This bracket is private until the contest locks." }, { status: 403 });
       }
       return NextResponse.json({ success: true, entrants: [], selectedEntrantId: entry.entrant_id, contestEntry: { id: entry.id, status: entry.status, lockedAt: entry.locked_at },
-        masterBracket: { id: entry.master_bracket_id, bracketNumber: Number((Array.isArray(entry.bracket_master_brackets) ? entry.bracket_master_brackets[0] : entry.bracket_master_brackets)?.bracket_number ?? 1), entrantName: entrant?.display_name ?? null, status: entry.status, tiebreakerValue: entry.tiebreaker_value, picks: entry.picks_snapshot ?? {}, readOnly: true } }, { headers: { "Cache-Control": "no-store" } });
+        masterBracket: { id: entry.master_bracket_id, bracketNumber: Number((Array.isArray(entry.bracket_master_brackets) ? entry.bracket_master_brackets[0] : entry.bracket_master_brackets)?.bracket_number ?? 1), name: (Array.isArray(entry.bracket_master_brackets) ? entry.bracket_master_brackets[0] : entry.bracket_master_brackets)?.name ?? null, entrantName: entrant?.display_name ?? null, status: entry.status, tiebreakerValue: entry.tiebreaker_value, picks: entry.picks_snapshot ?? {}, readOnly: !owner } }, { headers: { "Cache-Control": "no-store" } });
     }
 
     if (
@@ -117,6 +118,11 @@ export async function GET(
     const selectedEntrantId = entrantId || entrants.find((entrant) => entrant.kind === "account")?.id;
     if (!selectedEntrantId) throw new Error("Unable to find your primary entrant.");
     const masterBracket = await getOrCreateMasterBracket(resolved.user, resolved.challenge.competition.id, bracketNumber, selectedEntrantId);
+    const namesResult = await supabaseAdmin.from("bracket_master_brackets")
+      .select("bracket_number, name")
+      .eq("competition_id", resolved.challenge.competition.id)
+      .eq("entrant_id", selectedEntrantId);
+    if (namesResult.error) throw new Error(`Failed to load bracket names: ${namesResult.error.message}`);
     const entry = await getContestEntryForMaster(contestId, masterBracket.id);
     if (entry) await maybeFreezeContestEntry({ entryId: entry.id, contestStatus: resolved.challenge.contest.status, contestLockAt: resolved.challenge.contest.lockAt });
     const frozen = entry ? await getFrozenEntrySnapshot(entry.id) : null;
@@ -126,6 +132,7 @@ export async function GET(
         success: true,
         entrants,
         selectedEntrantId,
+        bracketNames: Object.fromEntries((namesResult.data ?? []).map((row) => [row.bracket_number, row.name])),
         contestEntry: entry ? { id: entry.id, status: entry.status, lockedAt: entry.locked_at } : null,
         masterBracket: frozen ? { ...masterBracket, status: frozen.status, picks: frozen.picks_snapshot ?? {}, tiebreakerValue: frozen.tiebreaker_value } : masterBracket,
       },
@@ -187,6 +194,14 @@ export async function PATCH(
       throw new Error(
         "This entrant has reached the contest bracket limit.",
       );
+    }
+
+    if (body?.action === "rename") {
+      if (!entrantId) throw new Error("Entrant is required to rename a bracket.");
+      const renamed = await renameMasterBracket(resolved.user, {
+        competitionId: resolved.challenge.competition.id, entrantId, bracketNumber, name: body.name,
+      });
+      return NextResponse.json({ success: true, ...renamed }, { headers: { "Cache-Control": "no-store" } });
     }
 
     const hasTiebreaker =

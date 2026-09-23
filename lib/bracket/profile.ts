@@ -3,7 +3,7 @@ import { bracketTopologyFromRows } from "./persistence";
 import type { BracketPicks } from "./types";
 
 export type BracketProfileEntry = {
-  id: number; entrantId: string; contestId: string; competitionId: number; bracketNumber: number;
+  id: number; entrantId: string; contestId: string; competitionId: number; bracketNumber: number; bracketName?: string | null;
   season: number; competitionName: string; competitionStatus: string; contestStatus: string;
   lockedAt: string | null; rulesSnapshot: Record<string, unknown> | null; picks: BracketPicks | null;
 };
@@ -45,7 +45,7 @@ export function deriveBracketProfile(entries: BracketProfileEntry[], games: Brac
   const resolved = mine.reduce((sum, row) => sum + row.score.correctPicks + row.score.incorrectPicks, 0);
   const correct = mine.reduce((sum, row) => sum + row.score.correctPicks, 0);
   const finishes = mine.map((row) => row.placement?.rank).filter((value): value is number => value !== null && value !== undefined);
-  const history = [...mine].sort((a, b) => b.entry.season - a.entry.season || b.entry.id - a.entry.id).map((row) => ({ entryId: row.entry.id, contestId: row.entry.contestId, season: row.entry.season, competitionName: row.entry.competitionName, bracketNumber: row.entry.bracketNumber, rank: row.placement?.rank ?? null, entrantCount: row.placement?.entrants ?? null, points: row.score.pointsEarned, correctPicks: row.score.correctPicks, resolvedPicks: row.score.correctPicks + row.score.incorrectPicks, championCorrect: row.championCorrect }));
+  const history = [...mine].sort((a, b) => b.entry.season - a.entry.season || b.entry.id - a.entry.id).map((row) => ({ entryId: row.entry.id, contestId: row.entry.contestId, season: row.entry.season, competitionName: row.entry.competitionName, bracketNumber: row.entry.bracketNumber, bracketName: row.entry.bracketName ?? null, rank: row.placement?.rank ?? null, entrantCount: row.placement?.entrants ?? null, points: row.score.pointsEarned, correctPicks: row.score.correctPicks, resolvedPicks: row.score.correctPicks + row.score.incorrectPicks, championCorrect: row.championCorrect }));
   const championCount = mine.filter((row) => row.placement?.rank === 1).length;
   const runnerUpCount = mine.filter((row) => row.placement?.rank === 2).length;
   const topHalfCount = mine.filter((row) => row.placement && topHalf(row.placement.rank, row.placement.entrants)).length;
