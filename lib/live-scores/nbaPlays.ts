@@ -1,5 +1,16 @@
 type Raw = Record<string, any>;
 
+export type NbaSemanticEvent = {
+  kind: "timeout" | "turnover" | "foul" | "review" | "jump_ball" | "period_end";
+  primaryLabel: string;
+  teamId?: string;
+  chargedPlayerId?: string;
+  playerLabel?: string;
+  secondaryLabel?: string;
+};
+
+type NbaBoxscorePlayer = { teamId: string; shortName: string };
+
 export type NbaPlay = {
   id: string;
   period: number | null;
@@ -14,10 +25,76 @@ export type NbaPlay = {
   shootingPlay: boolean;
   isFreeThrow: boolean;
   type: string | null;
+  typeId: string | null;
   teamId: string | null;
   shooterId: string | null;
   coordinate: { x: number; y: number } | null;
+  semanticEvent?: NbaSemanticEvent;
 };
+
+export function nbaBoxscorePlayers(boxscore: unknown): Map<string, NbaBoxscorePlayer> {
+  const players = new Map<string, NbaBoxscorePlayer>();
+  const ambiguous = new Set<string>();
+  for (const team of (boxscore as Raw | null)?.players ?? []) {
+    const teamId = team?.team?.id == null ? null : String(team.team.id);
+    if (!teamId) continue;
+    for (const category of team.statistics ?? []) for (const row of category.athletes ?? []) {
+      const id = row?.athlete?.id == null ? null : String(row.athlete.id);
+      const shortName = typeof row?.athlete?.shortName === "string" ? row.athlete.shortName.trim() : "";
+      if (!id || !shortName) continue;
+      const prior = players.get(id);
+      if (prior && (prior.teamId !== teamId || prior.shortName !== shortName)) ambiguous.add(id);
+      else players.set(id, { teamId, shortName });
+    }
+  }
+  for (const id of ambiguous) players.delete(id);
+  return players;
+}
+
+function semanticNbaEvent(raw: Raw, players: Map<string, NbaBoxscorePlayer>): NbaSemanticEvent | undefined {
+  const typeId = String(raw.type?.id ?? "");
+  const teamId = raw.team?.id == null ? undefined : String(raw.team.id);
+  const withTeam = (kind: NbaSemanticEvent["kind"], primaryLabel: string): NbaSemanticEvent => ({ kind, primaryLabel, ...(teamId ? { teamId } : {}) });
+  if (typeId === "16") return withTeam("timeout", "TIMEOUT");
+  if (["62", "63", "65", "70", "84", "87", "90"].includes(typeId)) return withTeam("turnover", "TURNOVER");
+
+  const foulLabels: Record<string, string> = {
+    "22": "PERSONAL TAKE FOUL", "29": "DEFENSIVE 3 SECONDS", "30": "DOUBLE TECHNICAL FOUL",
+    "32": "FLAGRANT FOUL TYPE 1", "35": "TECHNICAL FOUL", "42": "OFFENSIVE FOUL",
+    "44": "SHOOTING FOUL", "45": "PERSONAL FOUL",
+  };
+  if (foulLabels[typeId]) {
+    // Double technicals can charge players on both teams; a single team or player label would mislead.
+    if (typeId === "30") return { kind: "foul", primaryLabel: foulLabels[typeId] };
+    const event = withTeam("foul", foulLabels[typeId]);
+    const participants = Array.isArray(raw.participants) ? raw.participants : [];
+    if (teamId && participants.length === 1 && participants[0]?.athlete?.id != null) {
+      const id = String(participants[0].athlete.id);
+      event.chargedPlayerId = id;
+      const player = players.get(id);
+      if (player?.teamId === teamId) event.playerLabel = player.shortName.toUpperCase();
+    }
+    return event;
+  }
+
+  if (["213", "214", "215", "216"].includes(typeId)) {
+    const event = withTeam("review", "COACH'S CHALLENGE");
+    if (typeId === "214") event.secondaryLabel = "SUPPORTED";
+    if (typeId === "215") event.secondaryLabel = "OVERTURNED";
+    if (typeId === "216") event.secondaryLabel = "STANDS";
+    return event;
+  }
+  if (["278", "279", "280"].includes(typeId)) {
+    return { kind: "review", primaryLabel: "REF REVIEW", secondaryLabel: typeId === "278" ? "SUPPORTED" : typeId === "279" ? "OVERTURNED" : "STANDS" };
+  }
+  if (typeId === "615") return { kind: "jump_ball", primaryLabel: "JUMP BALL" };
+  if (typeId === "402") return { kind: "period_end", primaryLabel: "END OF GAME" };
+  if (typeId === "412") {
+    const period = numberOrNull(raw.period?.number);
+    return { kind: "period_end", primaryLabel: period === 2 ? "HALFTIME" : period && period <= 4 ? `END OF Q${period}` : period ? `END OF ${nbaPeriodLabel(period)}` : "END OF PERIOD" };
+  }
+  return undefined;
+}
 
 const coordinateInDomain = (coordinate: unknown): coordinate is { x: number; y: number } => {
   const value = coordinate as { x?: unknown; y?: unknown } | null;
@@ -37,7 +114,7 @@ const isStructuredFreeThrow = (raw: Raw) => raw.shootingPlay === true
   && typeof raw.type?.text === "string"
   && /\bfree throw\b/i.test(raw.type.text);
 
-export function normalizeNbaPlays(input: unknown): NbaPlay[] {
+export function normalizeNbaPlays(input: unknown, players = new Map<string, NbaBoxscorePlayer>()): NbaPlay[] {
   if (!Array.isArray(input)) return [];
   const seen = new Set<string>();
   const plays: NbaPlay[] = [];
@@ -52,10 +129,11 @@ export function normalizeNbaPlays(input: unknown): NbaPlay[] {
       text: typeof raw.text === "string" ? raw.text : "Game event", shortDescription: typeof raw.shortDescription === "string" ? raw.shortDescription : null,
       awayScore: numberOrNull(raw.awayScore), homeScore: numberOrNull(raw.homeScore), scoringPlay: raw.scoringPlay === true,
       scoreValue: numberOrNull(raw.scoreValue) ?? 0, pointsAttempted: numberOrNull(raw.pointsAttempted), shootingPlay: raw.shootingPlay === true, isFreeThrow,
-      type: typeof raw.type?.text === "string" ? raw.type.text : null,
+      type: typeof raw.type?.text === "string" ? raw.type.text : null, typeId: raw.type?.id != null ? String(raw.type.id) : null,
       teamId: raw.team?.id != null ? String(raw.team.id) : null,
       shooterId: raw.participants?.[0]?.athlete?.id != null ? String(raw.participants[0].athlete.id) : null,
       coordinate: fieldGoal ? { x: Number(raw.coordinate.x), y: Number(raw.coordinate.y) } : null,
+      semanticEvent: semanticNbaEvent(raw, players),
     });
   }
   return plays;
@@ -69,7 +147,7 @@ export function defaultNbaPlayPeriod(plays: NbaPlay[], isLive: boolean, currentP
 }
 
 export function latestMeaningfulNbaPlay(plays: NbaPlay[]) {
-  return [...plays].reverse().find((play) => !/^end (of )?(game|period)$/i.test(play.text.trim())) ?? plays.at(-1) ?? null;
+  return [...plays].reverse().find((play) => play.semanticEvent?.kind !== "period_end" && !/^end (?:of )?(?:the )?(?:game|period|\d+(?:st|nd|rd|th) quarter)$/i.test(play.text.trim())) ?? null;
 }
 
 export function nbaPeriodLabel(period: number | null) {
@@ -85,7 +163,7 @@ export function nbaPlayBasket(play: NbaPlay, context: { awayTeamId?: string; hom
 }
 
 export function nbaPlayAttackIndicator(play: NbaPlay | null, context: { awayTeamId?: string; homeTeamId?: string; awayTeamAbbreviation?: string | null; homeTeamAbbreviation?: string | null }) {
-  if (!play) return null;
+  if (!play || play.semanticEvent) return null;
   const basket = nbaPlayBasket(play, context);
   const abbreviation = basket === "left" ? context.homeTeamAbbreviation?.trim() : basket === "right" ? context.awayTeamAbbreviation?.trim() : null;
   return abbreviation ? basket === "left" ? `← ${abbreviation}` : `${abbreviation} →` : null;
@@ -97,6 +175,7 @@ export function nbaPlayAttackIndicator(play: NbaPlay | null, context: { awayTeam
  * deliberately displays home shots at the left basket and away shots at the right.
  */
 export function nbaFullCourtMarker(play: NbaPlay, context: { awayTeamId?: string; homeTeamId?: string }): NbaShotMarker | null {
+  if (play.semanticEvent) return null;
   if (!play.shootingPlay) return null;
   const basket = nbaPlayBasket(play, context);
   if (!basket) return null;

@@ -1,6 +1,6 @@
 import { normalizeBroadcast, normalizeGameStory } from "./metadata";
 import { selectFootballOdds } from "./odds";
-import { normalizeNbaPlays } from "./nbaPlays";
+import { nbaBoxscorePlayers, normalizeNbaPlays } from "./nbaPlays";
 import { ESPN_NBA_BASE } from "@/lib/providers/nbaLiveScores";
 
 export async function fetchNbaGameDetail(eventId: string) {
@@ -14,7 +14,7 @@ export async function fetchNbaGameDetail(eventId: string) {
   const home = competitors.find((team: any) => team.homeAway === "home");
   return {
     success: true, eventId, header: summary.header ?? null, boxscore: summary.boxscore ?? null,
-    leaders: Array.isArray(summary.leaders) ? summary.leaders : [], plays: normalizeNbaPlays(summary.plays),
+    leaders: Array.isArray(summary.leaders) ? summary.leaders : [], plays: normalizeNbaPlays(summary.plays, nbaBoxscorePlayers(summary.boxscore)),
     broadcast: normalizeBroadcast(competition), gameStory: normalizeGameStory(summary.article, eventId, competition?.status?.type?.state),
     gameInfo: summary.gameInfo ?? null,
     odds: selectFootballOdds(summary.odds?.length ? summary.odds : competition?.odds, { away: String(away?.team?.id ?? away?.id ?? ""), home: String(home?.team?.id ?? home?.id ?? "") }),
