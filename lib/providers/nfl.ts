@@ -193,3 +193,34 @@ export async function fetchScoreboardForRange(
   const payload = await response.json();
   return payload.events ?? [];
 }
+
+/** The scoring worker needs a fail-closed acquisition path; legacy callers retain their fallback. */
+export async function fetchNflScoringSchedule(startDateCode: string, endDateCode: string): Promise<EspnScoreboardEvent[]> {
+  const response = await fetch(`${ESPN_BASE_URL}/scoreboard?dates=${startDateCode}-${endDateCode}`, {
+    cache: "no-store", signal: AbortSignal.timeout(12_000),
+  });
+  if (!response.ok) throw new Error("NFL scoreboard unavailable");
+  const payload: unknown = await response.json();
+  if (!payload || typeof payload !== "object" || !Array.isArray((payload as { events?: unknown }).events))
+    throw new Error("NFL scoreboard incomplete");
+  const events = (payload as { events: EspnScoreboardEvent[] }).events;
+  if (events.some(event => !event || !event.id || !Number.isFinite(Date.parse(event.date)) ||
+      !Array.isArray(event.competitions?.[0]?.competitors) ||
+      event.competitions![0].competitors!.length !== 2 ||
+      event.competitions![0].competitors!.some(c => !c.team?.id || !c.team.abbreviation) ||
+      !(event.competitions?.[0]?.status?.type ?? event.status?.type)))
+    throw new Error("NFL scoreboard incomplete");
+  return events;
+}
+
+export async function fetchNflScoringSummary(eventId: string): Promise<EspnGameSummary> {
+  const response = await fetch(`${ESPN_SUMMARY_URL}?event=${encodeURIComponent(eventId)}`, {
+    cache: "no-store", signal: AbortSignal.timeout(12_000),
+  });
+  if (!response.ok) throw new Error("NFL game summary unavailable");
+  const payload: unknown = await response.json();
+  if (!payload || typeof payload !== "object" || !Array.isArray((payload as EspnGameSummary).header?.competitions) ||
+      !(payload as EspnGameSummary).header?.competitions?.[0]?.status?.type)
+    throw new Error("NFL game summary incomplete");
+  return payload as EspnGameSummary;
+}

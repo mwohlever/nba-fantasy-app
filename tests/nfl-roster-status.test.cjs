@@ -40,7 +40,7 @@ test('schedule provider rejects stale responses and A-B-A does not restore a cac
   await new Promise(r=>setImmediate(r));assert.deepEqual(h.render(props).props.value.gamesByTeam,{});h.unmount();
 });
 test('scoring pipeline classifies scheduled/missing-boxscore rows and sums remaining instead of zero',()=>{
-  const ts=require('typescript');const source=fs.readFileSync('app/api/refresh-stats-nfl/route.ts','utf8');
+  const ts=require('typescript');const source=fs.readFileSync('lib/nfl/refreshSlate.server.ts','utf8');
   const exports={};new Function('require','exports',ts.transpileModule(source+'\nexport const statusTest={blankRow,applyGameStatus};',{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(()=>({}),exports);
   for(const [state,expected] of [['pre',result(0,0,1)],['in',result(0,1,0)],['post',result(1,0,0)]]){
     const row=exports.statusTest.blankRow();row.fantasy_points=23.7;exports.statusTest.applyGameStatus(row,{state});
