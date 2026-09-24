@@ -22,16 +22,17 @@ async function loadNbaProjectionHistoryRows(input: {
   const providerPlayerIds = [...new Set((identities.data ?? []).map(row => String(row.provider_player_id)))];
   if (!providerPlayerIds.length) return rows;
 
-  // Constrain the view's DISTINCT ON keys as well as its local-player and time filters.
+  // Read from the maintained current-state table rather than repeatedly
+  // deduplicating the full immutable observation-version history.
   for (let from = 0; ; from += NBA_HISTORY_PAGE_SIZE) {
-    const result = await db.from('nba_player_game_observations').select('*')
+    const result = await db.from('nba_player_game_current_observations').select('*')
       .eq('provider', 'espn')
       .in('provider_player_id', providerPlayerIds)
       .in('local_player_id', input.playerIds)
       .in('season', [input.targetSeason - 1, input.targetSeason])
       .lt('game_at', input.asOf)
       .order('game_at', { ascending: true })
-      .order('id', { ascending: true })
+      .order('version_id', { ascending: true })
       .range(from, from + NBA_HISTORY_PAGE_SIZE - 1);
 
     fail(input.errorLabel, result.error);
@@ -67,8 +68,9 @@ function asObservationRecord(row: Record<string, unknown>): NbaObservationRecord
 }
 
 export async function loadNbaProjectionHistory(input: { playerId: number; targetSeason: number; asOf: string }): Promise<NbaProjectionHistory> {
-  const result = await db.from('nba_player_game_observations').select('*').eq('local_player_id', input.playerId)
-    .in('season', [input.targetSeason - 1, input.targetSeason]).lt('game_at', input.asOf).order('game_at', { ascending: true });
+  const result = await db.from('nba_player_game_current_observations').select('*').eq('local_player_id', input.playerId)
+    .in('season', [input.targetSeason - 1, input.targetSeason]).lt('game_at', input.asOf)
+    .order('game_at', { ascending: true }).order('version_id', { ascending: true });
   fail('NBA projection history lookup failed', result.error);
   const rows = (result.data ?? []).map(row => asObservationRecord(row as Record<string, unknown>));
   return { playerId: input.playerId, observations: rows.map(nbaObservationFromRecord),
@@ -122,6 +124,7 @@ export function nbaProjectionGenerationRepository() {
       }
       return output;
     },
+
     upsertStatCache: upsertNbaProjectionStatCache,
   };
 }

@@ -84,7 +84,7 @@ test('batched projection history retrieval paginates beyond the Supabase 1,000-r
   assert.match(source, /const NBA_HISTORY_PAGE_SIZE = 1000;/);
   assert.match(source, /\.range\(from,\s*from \+ NBA_HISTORY_PAGE_SIZE - 1\)/);
   assert.match(source, /if \(page\.length < NBA_HISTORY_PAGE_SIZE\) break;/);
-  assert.match(source, /\.order\('game_at', \{ ascending: true \}\)\s*\.order\('id', \{ ascending: true \}\)/);
+  assert.match(source, /\.order\('game_at', \{ ascending: true \}\)\s*\.order\('version_id', \{ ascending: true \}\)/);
 });
 
 test('batched history narrows by resolved ESPN IDs without changing view, player, season, date, or page semantics', async () => {
@@ -126,7 +126,7 @@ test('batched history narrows by resolved ESPN IDs without changing view, player
       range(from, to) { query.rangeArgs = [from, to]; return this; },
       then(resolve, reject) {
         let data = identities;
-        if (table === 'nba_player_game_observations') {
+        if (table === 'nba_player_game_current_observations') {
           // Model the SQL view: latest version per provider/player/event, before outer filters.
           const latest = new Map();
           for (const row of versions) {
@@ -171,7 +171,7 @@ test('batched history narrows by resolved ESPN IDs without changing view, player
     assert.equal(result.get(7).observations[0].provider_event_id, 'prior1');
     assert.ok(result.get(7).observations.every(row => [2025, 2026].includes(row.season) && row.game_at < asOf));
   }
-  const historyQueries = queries.filter(query => query.table === 'nba_player_game_observations');
+  const historyQueries = queries.filter(query => query.table === 'nba_player_game_current_observations');
   assert.deepEqual(historyQueries.map(query => query.rangeArgs), [
     [0, 999], [1000, 1999], [0, 999], [0, 999], [1000, 1999], [0, 999],
   ]);
