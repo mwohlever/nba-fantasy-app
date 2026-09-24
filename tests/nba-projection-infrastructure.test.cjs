@@ -86,3 +86,106 @@ test('batched projection history retrieval paginates beyond the Supabase 1,000-r
   assert.match(source, /if \(page\.length < NBA_HISTORY_PAGE_SIZE\) break;/);
   assert.match(source, /\.order\('game_at', \{ ascending: true \}\)\s*\.order\('id', \{ ascending: true \}\)/);
 });
+
+test('batched history narrows by resolved ESPN IDs without changing view, player, season, date, or page semantics', async () => {
+  const asOf = '2026-09-24T00:00:00Z';
+  const makeRow = (event, localPlayerId, providerPlayerId, overrides = {}) => ({
+    id: Number(event.replace(/\D/g, '')) + 1, provider: 'espn', provider_player_id: providerPlayerId,
+    provider_event_id: event, local_player_id: localPlayerId, season: 2026,
+    game_at: '2026-01-20T00:00:00Z', provider_fetched_at: '2026-01-21T00:00:00Z',
+    points: 1, rebounds: 1, assists: 1, steals: 0, blocks: 0, turnovers: 0, minutes: 20,
+    ...overrides,
+  });
+  const versions = [
+    ...Array.from({ length: 1005 }, (_, i) => makeRow(`event${i}`, 7, '42')),
+    makeRow('event0', 7, '42', { id: 2000, points: 99, provider_fetched_at: '2026-01-22T00:00:00Z' }),
+    makeRow('other1', 8, '43'), makeRow('tail1', 298, '55'),
+    makeRow('unrequested1', 9, '44'), makeRow('wrongLocal1', 9, '42'),
+    makeRow('unresolved1', null, '99'),
+    makeRow('prior1', 7, '42', { season: 2025, game_at: '2025-12-20T00:00:00Z' }),
+    makeRow('old1', 7, '42', { season: 2024 }),
+    makeRow('future1', 7, '42', { game_at: '2026-10-01T00:00:00Z' }),
+  ];
+  const identities = [
+    { provider: 'espn', resolution_status: 'resolved', player_id: 7, provider_player_id: '42' },
+    { provider: 'espn', resolution_status: 'resolved', player_id: 8, provider_player_id: '43' },
+    { provider: 'espn', resolution_status: 'resolved', player_id: 9, provider_player_id: '44' },
+    { provider: 'espn', resolution_status: 'resolved', player_id: 298, provider_player_id: '55' },
+    { provider: 'espn', resolution_status: 'unresolved', player_id: null, provider_player_id: '99' },
+  ];
+  const queries = [];
+  const db = { from(table) {
+    const query = { table, filters: [], orders: [], rangeArgs: null };
+    queries.push(query);
+    const builder = {
+      select() { return this; },
+      eq(key, value) { query.filters.push([key, 'eq', value]); return this; },
+      in(key, value) { query.filters.push([key, 'in', value]); return this; },
+      lt(key, value) { query.filters.push([key, 'lt', value]); return this; },
+      order(key) { query.orders.push(key); return this; },
+      range(from, to) { query.rangeArgs = [from, to]; return this; },
+      then(resolve, reject) {
+        let data = identities;
+        if (table === 'nba_player_game_observations') {
+          // Model the SQL view: latest version per provider/player/event, before outer filters.
+          const latest = new Map();
+          for (const row of versions) {
+            const key = `${row.provider}:${row.provider_player_id}:${row.provider_event_id}`;
+            const previous = latest.get(key);
+            if (!previous || row.provider_fetched_at > previous.provider_fetched_at
+              || (row.provider_fetched_at === previous.provider_fetched_at && row.id > previous.id)) latest.set(key, row);
+          }
+          data = [...latest.values()];
+        }
+        for (const [key, op, value] of query.filters) {
+          data = data.filter(row => op === 'eq' ? row[key] === value : op === 'in' ? value.includes(row[key]) : row[key] < value);
+        }
+        if (query.orders.length) data.sort((a, b) => a.game_at.localeCompare(b.game_at) || a.id - b.id);
+        if (query.rangeArgs) data = data.slice(query.rangeArgs[0], query.rangeArgs[1] + 1);
+        return Promise.resolve({ data, error: null }).then(resolve, reject);
+      },
+    };
+    return builder;
+  } };
+  const source = fs.readFileSync(require.resolve('../lib/analytics/nba/projectionRepository.server.ts'), 'utf8');
+  const module = { exports: {} };
+  const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  new Function('require', 'module', 'exports', compiled)((name) => {
+    if (name === 'server-only') return {};
+    if (name === '@/lib/supabaseAdmin') return { supabaseAdmin: db };
+    if (name === './projectionInfrastructure') return { nbaObservationFromRecord: row => row };
+    throw new Error(`Unexpected import: ${name}`);
+  }, module, module.exports);
+
+  const playerIds = [7, 8, ...Array.from({ length: 199 }, (_, i) => i + 100)];
+  const input = { playerIds, targetSeason: 2026, asOf };
+  const generated = await module.exports.nbaProjectionGenerationRepository().loadHistories(input);
+  const histories = await module.exports.loadNbaProjectionHistories(input);
+  for (const result of [generated, histories]) {
+    assert.deepEqual([...result.keys()], playerIds);
+    assert.equal(result.get(7).observations.length, 1006);
+    assert.equal(result.get(8).observations.length, 1);
+    assert.equal(result.get(298).observations.length, 1);
+    assert.equal(result.get(100).observations.length, 0);
+    assert.equal(result.get(7).observations.find(row => row.provider_event_id === 'event0').points, 99);
+    assert.equal(result.get(7).observations[0].provider_event_id, 'prior1');
+    assert.ok(result.get(7).observations.every(row => [2025, 2026].includes(row.season) && row.game_at < asOf));
+  }
+  const historyQueries = queries.filter(query => query.table === 'nba_player_game_observations');
+  assert.deepEqual(historyQueries.map(query => query.rangeArgs), [
+    [0, 999], [1000, 1999], [0, 999], [0, 999], [1000, 1999], [0, 999],
+  ]);
+  for (const query of historyQueries.filter(query => query.filters.some(([key, op, value]) => key === 'local_player_id' && op === 'in' && value.includes(7)))) {
+    assert.deepEqual(query.filters, [
+      ['provider', 'eq', 'espn'], ['provider_player_id', 'in', ['42', '43']],
+      ['local_player_id', 'in', playerIds.slice(0, 200)], ['season', 'in', [2025, 2026]], ['game_at', 'lt', asOf],
+    ]);
+  }
+  for (const query of historyQueries.filter(query => query.filters.some(([key, op, value]) => key === 'local_player_id' && op === 'in' && value.includes(298)))) {
+    assert.deepEqual(query.filters, [
+      ['provider', 'eq', 'espn'], ['provider_player_id', 'in', ['55']],
+      ['local_player_id', 'in', [298]], ['season', 'in', [2025, 2026]], ['game_at', 'lt', asOf],
+    ]);
+  }
+  assert.equal(queries.filter(query => query.table === 'nba_player_provider_identities').length, 4);
+});

@@ -16,9 +16,17 @@ async function loadNbaProjectionHistoryRows(input: {
   errorLabel: string;
 }) {
   const rows: Record<string, unknown>[] = [];
+  const identities = await db.from('nba_player_provider_identities').select('provider_player_id')
+    .eq('provider', 'espn').eq('resolution_status', 'resolved').in('player_id', input.playerIds);
+  fail('NBA projection history identity lookup failed', identities.error);
+  const providerPlayerIds = [...new Set((identities.data ?? []).map(row => String(row.provider_player_id)))];
+  if (!providerPlayerIds.length) return rows;
 
+  // Constrain the view's DISTINCT ON keys as well as its local-player and time filters.
   for (let from = 0; ; from += NBA_HISTORY_PAGE_SIZE) {
     const result = await db.from('nba_player_game_observations').select('*')
+      .eq('provider', 'espn')
+      .in('provider_player_id', providerPlayerIds)
       .in('local_player_id', input.playerIds)
       .in('season', [input.targetSeason - 1, input.targetSeason])
       .lt('game_at', input.asOf)
