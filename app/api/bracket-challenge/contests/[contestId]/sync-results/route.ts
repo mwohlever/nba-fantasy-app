@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { syncBracketOfficialResults } from "@/lib/bracket/resultSync.server";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /** Authenticated, Group-scoped refresh boundary. GET and arbitrary event IDs cannot write. */
 export async function POST(_request: Request, context: { params: Promise<{ contestId: string }> }) {
@@ -12,6 +13,7 @@ export async function POST(_request: Request, context: { params: Promise<{ conte
     const { contestId } = await context.params;
     const result = await syncBracketOfficialResults(user, contestId);
     if (!result) return NextResponse.json({ success: false, error: "Contest not found in active Group." }, { status: 404 });
+    if ("busy" in result) return NextResponse.json({ success: false, error: "Competition sync is already running." }, { status: 409, headers: { "Cache-Control": "no-store" } });
     return NextResponse.json({ success: true, ...result }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Bracket official result sync failed", error);
