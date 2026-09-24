@@ -194,11 +194,27 @@ export async function fetchScoreboardForRange(
   return payload.events ?? [];
 }
 
+/** ESPN's NFL scoreboard accepts a single YYYYMMDD date, but rejects YYYYMMDD-YYYYMMDD ranges. */
+export function nflScoringDateCodes(startDateCode: string, endDateCode: string): string[] {
+  const parse = (code: string) => {
+    if (!/^\d{8}$/.test(code)) throw new Error("NFL scoreboard invalid date range");
+    const day = new Date(Date.UTC(Number(code.slice(0, 4)), Number(code.slice(4, 6)) - 1, Number(code.slice(6, 8))));
+    if (day.toISOString().slice(0, 10).replaceAll("-", "") !== code) throw new Error("NFL scoreboard invalid date range");
+    return day.getTime();
+  };
+  const start = parse(startDateCode), end = parse(endDateCode);
+  if (end < start || end - start > 13 * 86_400_000) throw new Error("NFL scoreboard invalid date range");
+  const dates: string[] = [];
+  for (let day = start; day <= end; day += 86_400_000)
+    dates.push(new Date(day).toISOString().slice(0, 10).replaceAll("-", ""));
+  return dates;
+}
+
 /** The scoring worker needs a fail-closed acquisition path; legacy callers retain their fallback. */
-export async function fetchNflScoringSchedule(startDateCode: string, endDateCode: string): Promise<EspnScoreboardEvent[]> {
+export async function fetchNflScoringScoreboardDate(dateCode: string): Promise<EspnScoreboardEvent[]> {
   let response: Response;
   try {
-    response = await fetch(`${ESPN_BASE_URL}/scoreboard?dates=${startDateCode}-${endDateCode}`, {
+    response = await fetch(`${ESPN_BASE_URL}/scoreboard?dates=${dateCode}`, {
       cache: "no-store", signal: AbortSignal.timeout(12_000),
     });
   } catch { throw new Error("NFL scoreboard request failed"); }
@@ -216,6 +232,28 @@ export async function fetchNflScoringSchedule(startDateCode: string, endDateCode
       !(event.competitions?.[0]?.status?.type ?? event.status?.type)))
     throw new Error("NFL scoreboard incomplete");
   return events;
+}
+
+export async function fetchNflScoringSchedule(
+  startDateCode: string, endDateCode: string,
+  fetchDate = fetchNflScoringScoreboardDate,
+): Promise<EspnScoreboardEvent[]> {
+  const events = new Map<string, EspnScoreboardEvent>();
+  // Acquire days concurrently so five individual timeouts cannot exhaust the route budget.
+  const days = await Promise.all(nflScoringDateCodes(startDateCode, endDateCode).map(fetchDate));
+  for (const dayEvents of days) {
+    for (const event of dayEvents) {
+      const previous = events.get(String(event.id));
+      if (previous && (previous.date !== event.date ||
+          JSON.stringify(previous.competitions?.[0]?.competitors?.map(c => [c.team?.id, c.team?.abbreviation])) !==
+          JSON.stringify(event.competitions?.[0]?.competitors?.map(c => [c.team?.id, c.team?.abbreviation])) ||
+          JSON.stringify(previous.competitions?.[0]?.status?.type ?? previous.status?.type) !==
+          JSON.stringify(event.competitions?.[0]?.status?.type ?? event.status?.type)))
+        throw new Error("NFL scoreboard incomplete");
+      events.set(String(event.id), event);
+    }
+  }
+  return [...events.values()];
 }
 
 export async function fetchNflScoringSummary(eventId: string): Promise<EspnGameSummary> {

@@ -57,8 +57,12 @@ test('strict provider distinguishes valid empty schedule from failed or incomple
   try {
     global.fetch = async () => ({ok:true,json:async()=>({events:[]})});
     assert.deepEqual(await new NflScoringProvider().schedule(date,date),[]);
-    global.fetch = async url => {assert.match(String(url),/scoreboard\?dates=20260924-20260928$/);return {ok:true,json:async()=>({events:[]})}};
+    const requested=[];
+    global.fetch = async url => {requested.push(String(url));return {ok:true,json:async()=>({events:[]})}};
     assert.deepEqual(await new NflScoringProvider().schedule('2026-09-24','2026-09-28'),[]);
+    assert.deepEqual(requested.map(url=>new URL(url).searchParams.get('dates')),
+      ['20260924','20260925','20260926','20260927','20260928']);
+    assert.ok(requested.every(url=>new URL(url).searchParams.size===1));
     global.fetch = async () => ({ok:false,status:503});
     await assert.rejects(new NflScoringProvider().schedule(date,date),/HTTP 503/);
     global.fetch = async () => ({ok:true,json:async()=>({})});
@@ -68,6 +72,50 @@ test('strict provider distinguishes valid empty schedule from failed or incomple
     global.fetch = async () => ({ok:true,json:async()=>({header:{competitions:[]}})});
     await assert.rejects(new NflScoringProvider().summary('g1'),/incomplete/);
   } finally {global.fetch = previous;}
+});
+
+test('Thursday-Monday scoreboards merge all game days and reuse overlapping dates across slates', async () => {
+  const previous=global.fetch, requested=[];
+  const first=game(live), last={...game(live,Date.parse('2026-09-29T00:15:00Z')),id:'g2'};
+  try {
+    global.fetch=async url=>{
+      const code=new URL(String(url)).searchParams.get('dates');requested.push(code);
+      return {ok:true,json:async()=>({events:code==='20260924'?[first]:code==='20260928'?[last]:[]})};
+    };
+    const provider=new NflScoringProvider();
+    assert.deepEqual((await provider.schedule('2026-09-24','2026-09-28')).map(event=>event.id),['g1','g2']);
+    assert.deepEqual((await provider.schedule('2026-09-25','2026-09-28')).map(event=>event.id),['g2']);
+    assert.equal(requested.length,5,'overlapping Group slate dates must be fetched once per invocation');
+    assert.equal(provider.summariesFetched,0);
+  } finally {global.fetch=previous}
+});
+
+test('duplicate scoreboard events are deduplicated and conflicting copies fail closed', async () => {
+  const previous=global.fetch;
+  const event=game(live);
+  try {
+    global.fetch=async()=>({ok:true,json:async()=>({events:[event]})});
+    assert.deepEqual((await new NflScoringProvider().schedule('2026-09-24','2026-09-25')).map(row=>row.id),['g1']);
+    let day=0;
+    global.fetch=async()=>({ok:true,json:async()=>({events:[day++===0?event:{...event,date:'2026-09-26T00:00:00Z'}]})});
+    await assert.rejects(new NflScoringProvider().schedule('2026-09-24','2026-09-25'),/scoreboard incomplete/);
+  } finally {global.fetch=previous}
+});
+
+test('one failed day rejects the whole Thursday-Monday schedule and preserves accepted stats', async () => {
+  const previous=global.fetch;
+  const fixture=fakeDb();activeDb=fixture.db;
+  fixture.slates[0].end_date='2026-09-28';
+  try {
+    global.fetch=async url=>new URL(String(url)).searchParams.get('dates')==='20260927'
+      ? {ok:false,status:503} : {ok:true,json:async()=>({events:[]})};
+    const provider=new NflScoringProvider();
+    await assert.rejects(provider.schedule('2026-09-24','2026-09-28'),/NFL scoreboard HTTP 503/);
+    const response=await refreshNflSlate(1,provider);
+    assert.equal(response.status,500);
+    assert.equal(fixture.writes.length,0);
+    assert.equal(fixture.slates[0].is_locked,false);
+  } finally {global.fetch=previous}
 });
 
 function fakeDb() {
@@ -148,15 +196,18 @@ test('missing D/ST evidence cannot replace an accepted score or finalize', async
   assert.equal(result.status,500);assert.equal(fixture.writes.length,0);assert.equal(fixture.slates[0].is_locked,false);
 });
 
-test('one scoreboard and summary fan out to two slates with distinct frozen reception scoring', async () => {
+test('one Thursday-Monday scoreboard set and summary fan out to two slates with distinct frozen scoring', async () => {
   const fixture=fakeDb();activeDb=fixture.db;
+  fixture.slates.forEach(slate=>{slate.end_date='2026-09-28'});
   const previous=global.fetch;const calls=[];
   try {
-    global.fetch=async url=>{calls.push(String(url));return {ok:true,json:async()=>String(url).includes('summary')?summary():{events:[game(live)]}}};
+    global.fetch=async url=>{calls.push(String(url));return {ok:true,json:async()=>String(url).includes('summary')?summary():
+      {events:new URL(String(url)).searchParams.get('dates')==='20260924'?[game(live)]:[]}}};
     const provider=new NflScoringProvider();
     assert.equal((await refreshNflSlate(1,provider)).status,200);
     assert.equal((await refreshNflSlate(2,provider)).status,200);
-    assert.equal(calls.filter(x=>x.includes('scoreboard')).length,1);
+    assert.deepEqual(calls.filter(x=>x.includes('scoreboard')).map(x=>new URL(x).searchParams.get('dates')),
+      ['20260924','20260925','20260926','20260927','20260928']);
     assert.equal(calls.filter(x=>x.includes('summary')).length,1);
     const rows=fixture.writes.filter(x=>x.table==='player_nfl_slate_stats');
     assert.equal(rows.length,2);
@@ -282,7 +333,7 @@ test('failed acquisition is claimed for retry without entering the scorer and re
       [{ok:true,json:async()=>({events:[{}]})},'provider_response_malformed:scoreboard:structure'],
     ]) {
       const fixture=workerDiscoveryDb();activeDb=fixture.db;
-      global.fetch=async url=>{assert.match(String(url),/scoreboard\?dates=20260924-20260924$/);return response};
+      global.fetch=async url=>{assert.match(String(url),/scoreboard\?dates=20260924$/);return response};
       const result=await runNflBackgroundScoring(new Date('2026-09-24T19:30:00Z'));
       assert.equal(result.eligible,0);assert.equal(result.claimed,1);assert.equal(result.failed,1);
       assert.equal(result.details[0].error,expected);
