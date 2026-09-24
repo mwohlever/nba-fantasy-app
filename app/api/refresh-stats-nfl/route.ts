@@ -14,6 +14,6 @@ export async function POST(request: Request) {
   const result = await runClaimedNflSlate(slateId, new NflScoringProvider(), true);
   if (result.state === "leased") return NextResponse.json({ error: "NFL scoring is already in progress." }, { status: 409 });
   if (result.state === "ineligible") return NextResponse.json({ error: "This slate is locked or unavailable." }, { status: 400 });
-  if (result.response) return result.response;
+  if ("response" in result && result.response) return result.response;
   return NextResponse.json({ error: "NFL scoring failed." }, { status: 500 });
 }

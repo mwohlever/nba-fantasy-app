@@ -57,8 +57,10 @@ test('strict provider distinguishes valid empty schedule from failed or incomple
   try {
     global.fetch = async () => ({ok:true,json:async()=>({events:[]})});
     assert.deepEqual(await new NflScoringProvider().schedule(date,date),[]);
+    global.fetch = async url => {assert.match(String(url),/scoreboard\?dates=20260924-20260928$/);return {ok:true,json:async()=>({events:[]})}};
+    assert.deepEqual(await new NflScoringProvider().schedule('2026-09-24','2026-09-28'),[]);
     global.fetch = async () => ({ok:false,status:503});
-    await assert.rejects(new NflScoringProvider().schedule(date,date),/unavailable/);
+    await assert.rejects(new NflScoringProvider().schedule(date,date),/HTTP 503/);
     global.fetch = async () => ({ok:true,json:async()=>({})});
     await assert.rejects(new NflScoringProvider().schedule(date,date),/incomplete/);
     global.fetch = async () => ({ok:true,json:async()=>({events:[{}]})});
@@ -250,4 +252,80 @@ test('idle invocation still finishes one durable run; budget cutoff stops before
   const oldNow=Date.now;let ticks=0;Date.now=()=>ticks++===0?0:31_000;
   try {const result=await runNflBackgroundScoring(new Date('2026-09-24T18:00:00Z'));assert.equal(result.budgetStopped,true);assert.equal(result.processed,0)}
   finally {Date.now=oldNow}
+});
+
+function workerDiscoveryDb() {
+  const rpcCalls=[], readTables=[], runs=[];
+  const db={
+    async rpc(name,args){rpcCalls.push({name,args});
+      if(name==='claim_nfl_sync')return {data:{state:'claimed',token:'lease',recovered:false},error:null};
+      return {data:true,error:null};
+    },
+    from(table){const query={mode:'read',select(){return this},single(){this.one=true;return this},eq(){return this},is(){return this},lte(){return this},gte(){return this},order(){return this},limit(){return this},in(){return this},insert(row){this.mode='insert';this.row=row;return this},update(row){this.mode='update';this.row=row;return this},then(resolve,reject){
+      if(this.mode==='insert')return Promise.resolve({data:{id:'run-id'},error:null}).then(resolve,reject);
+      if(this.mode==='update'){runs.push(this.row);return Promise.resolve({data:null,error:null}).then(resolve,reject)}
+      readTables.push(table);
+      const data=table==='slates'?[{id:189,start_date:date,end_date:date}]:
+        table==='nfl_sync_state'?[]:table==='lineups'?[{lineup_players:[{player_id:10}]}]:
+        table==='players_nfl'?[{team_abbreviation:'AAA'}]:[];
+      return Promise.resolve({data,error:null}).then(resolve,reject);
+    }};return query},
+  };
+  return {db,rpcCalls,readTables,runs};
+}
+
+test('failed acquisition is claimed for retry without entering the scorer and records its safe category', async () => {
+  const original=global.fetch;
+  try {
+    for (const [response,expected] of [
+      [{ok:false,status:503},'provider_request_failed:scoreboard:http_503'],
+      [{ok:true,json:async()=>({events:[{}]})},'provider_response_malformed:scoreboard:structure'],
+    ]) {
+      const fixture=workerDiscoveryDb();activeDb=fixture.db;
+      global.fetch=async url=>{assert.match(String(url),/scoreboard\?dates=20260924-20260924$/);return response};
+      const result=await runNflBackgroundScoring(new Date('2026-09-24T19:30:00Z'));
+      assert.equal(result.eligible,0);assert.equal(result.claimed,1);assert.equal(result.failed,1);
+      assert.equal(result.details[0].error,expected);
+      assert.equal(fixture.rpcCalls.find(call=>call.name==='finish_nfl_sync').args.p_error,expected);
+      assert.equal(fixture.readTables.filter(table=>table==='slates').length,1,'scorer must not reread slate');
+      assert.equal(result.summariesFetched,0);
+    }
+  } finally {global.fetch=original}
+});
+
+test('valid empty and unmatched schedules are distinct, safe discovery outcomes', async () => {
+  const original=global.fetch;
+  try {
+    for (const [events,expected] of [[[],'no_games_for_range'],[[{...game(),competitions:[{...game().competitions[0],competitors:[
+      {team:{id:'3',abbreviation:'CCC'}},{team:{id:'4',abbreviation:'DDD'}}]}]}],'no_matching_games']]) {
+      const fixture=workerDiscoveryDb();activeDb=fixture.db;
+      global.fetch=async()=>({ok:true,json:async()=>({events})});
+      const result=await runNflBackgroundScoring(new Date('2026-09-24T19:30:00Z'));
+      assert.equal(result.failed,0);assert.equal(result.claimed,0);
+      assert.equal(result.details[0].state,expected);
+      assert.equal(fixture.rpcCalls.some(call=>call.name==='claim_nfl_sync'),false);
+    }
+  } finally {global.fetch=original}
+});
+
+test('claimed scoring failures persist provider-summary and database categories without raw errors', async () => {
+  for (const [kind,expected] of [
+    ['summary','provider_request_failed:summary:http_503'],
+    ['database','scoring_database_failed:lineups_read'],
+  ]) {
+    const fixture=fakeDb();activeDb=fixture.db;const calls=[];
+    activeDb.rpc=async(name,args)=>{calls.push({name,args});return {data:name==='claim_nfl_sync'?{state:'claimed',token:'lease',recovered:false}:true,error:null}};
+    if(kind==='database') {
+      const original=activeDb.from;activeDb.from=function(table){const query=original.call(this,table);
+        if(table==='lineups')query.then=resolve=>Promise.resolve({data:null,error:{message:'raw database detail'}}).then(resolve);
+        return query;
+      };
+    }
+    const provider={scoreboardMs:0,summaryMs:0,summariesFetched:0,
+      schedule:async()=>[game(live)],summary:async()=>{throw Error('NFL game summary HTTP 503')}};
+    const outcome=await runClaimedNflSlate(1,provider);
+    assert.equal(outcome.state,'failed');assert.equal(outcome.error,expected);
+    assert.equal(calls.find(call=>call.name==='finish_nfl_sync').args.p_error,expected);
+    assert.equal(fixture.writes.length,0);
+  }
 });

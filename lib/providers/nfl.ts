@@ -196,11 +196,16 @@ export async function fetchScoreboardForRange(
 
 /** The scoring worker needs a fail-closed acquisition path; legacy callers retain their fallback. */
 export async function fetchNflScoringSchedule(startDateCode: string, endDateCode: string): Promise<EspnScoreboardEvent[]> {
-  const response = await fetch(`${ESPN_BASE_URL}/scoreboard?dates=${startDateCode}-${endDateCode}`, {
-    cache: "no-store", signal: AbortSignal.timeout(12_000),
-  });
-  if (!response.ok) throw new Error("NFL scoreboard unavailable");
-  const payload: unknown = await response.json();
+  let response: Response;
+  try {
+    response = await fetch(`${ESPN_BASE_URL}/scoreboard?dates=${startDateCode}-${endDateCode}`, {
+      cache: "no-store", signal: AbortSignal.timeout(12_000),
+    });
+  } catch { throw new Error("NFL scoreboard request failed"); }
+  if (!response.ok) throw new Error(`NFL scoreboard HTTP ${response.status}`);
+  let payload: unknown;
+  try { payload = await response.json(); }
+  catch { throw new Error("NFL scoreboard malformed JSON"); }
   if (!payload || typeof payload !== "object" || !Array.isArray((payload as { events?: unknown }).events))
     throw new Error("NFL scoreboard incomplete");
   const events = (payload as { events: EspnScoreboardEvent[] }).events;
@@ -214,13 +219,33 @@ export async function fetchNflScoringSchedule(startDateCode: string, endDateCode
 }
 
 export async function fetchNflScoringSummary(eventId: string): Promise<EspnGameSummary> {
-  const response = await fetch(`${ESPN_SUMMARY_URL}?event=${encodeURIComponent(eventId)}`, {
-    cache: "no-store", signal: AbortSignal.timeout(12_000),
-  });
-  if (!response.ok) throw new Error("NFL game summary unavailable");
-  const payload: unknown = await response.json();
+  let response: Response;
+  try {
+    response = await fetch(`${ESPN_SUMMARY_URL}?event=${encodeURIComponent(eventId)}`, {
+      cache: "no-store", signal: AbortSignal.timeout(12_000),
+    });
+  } catch { throw new Error("NFL game summary request failed"); }
+  if (!response.ok) throw new Error(`NFL game summary HTTP ${response.status}`);
+  let payload: unknown;
+  try { payload = await response.json(); }
+  catch { throw new Error("NFL game summary malformed JSON"); }
   if (!payload || typeof payload !== "object" || !Array.isArray((payload as EspnGameSummary).header?.competitions) ||
       !(payload as EspnGameSummary).header?.competitions?.[0]?.status?.type)
     throw new Error("NFL game summary incomplete");
   return payload as EspnGameSummary;
+}
+
+/** Bounded, payload-free diagnostics suitable for durable worker state. */
+export function nflProviderFailureCode(error: unknown): string | null {
+  const message = error instanceof Error ? error.message : "";
+  const source = message.startsWith("NFL scoreboard ") ? "scoreboard" :
+    message.startsWith("NFL game summary ") ? "summary" : null;
+  if (!source) return null;
+  const status = message.match(/ HTTP (\d{3})$/)?.[1];
+  if (status) return `provider_request_failed:${source}:http_${status}`;
+  if (message.endsWith("request failed")) return `provider_request_failed:${source}:network_or_timeout`;
+  if (message.endsWith("malformed JSON")) return `provider_response_malformed:${source}:json`;
+  if (message.endsWith("incomplete") || message.endsWith("boxscore incomplete"))
+    return `provider_response_malformed:${source}:structure`;
+  return null;
 }

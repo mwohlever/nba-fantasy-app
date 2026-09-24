@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   type EspnGameStatusType,
+  nflProviderFailureCode,
 } from "@/lib/providers/nfl";
 import {
   aggregateEspnBoxscore,
@@ -113,7 +114,7 @@ function applyGameStatus(
 
 type NotificationCounts = { attempted: number; sent: number; skipped: number; failed: number };
 export type NflRefreshMetrics = { dbReadMs: number; dbWriteMs: number; scoringMs: number; gamesConsidered: number; relevantGames: number; liveGames: number; finalGames: number;
-  playerNotifications?: NotificationCounts; completionNotifications?: NotificationCounts; locked?: boolean };
+  playerNotifications?: NotificationCounts; completionNotifications?: NotificationCounts; locked?: boolean; failureCode?: string };
 export async function refreshNflSlate(slateId: number, provider = new NflScoringProvider(), metrics?: NflRefreshMetrics, leaseToken?: string) {
   const readStarted = performance.now();
   async function assertLease() {
@@ -182,6 +183,7 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
       .eq("slate_id", slateId);
 
     if (lineupsError) {
+      if (metrics) metrics.failureCode = "scoring_database_failed:lineups_read";
       return NextResponse.json(
         { error: `Failed to load lineups: ${lineupsError.message}` },
         { status: 500 }
@@ -210,6 +212,7 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
       .in("id", draftedPlayerIds);
 
     if (playersError) {
+      if (metrics) metrics.failureCode = "scoring_database_failed:players_read";
       return NextResponse.json(
         { error: `Failed to load NFL players: ${playersError.message}` },
         { status: 500 }
@@ -244,6 +247,7 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
         .in("player_id", draftedPlayerIds);
 
     if (existingStatsError) {
+      if (metrics) metrics.failureCode = "scoring_database_failed:stats_read";
       return NextResponse.json(
         { error: `Failed to load existing NFL stats: ${existingStatsError.message}` },
         { status: 500 }
@@ -464,6 +468,7 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
       });
 
     if (statsUpsertError) {
+      if (metrics) metrics.failureCode = "scoring_database_failed:stats_write";
       return NextResponse.json(
         { error: `Failed to save NFL player stats: ${statsUpsertError.message}` },
         { status: 500 }
@@ -559,6 +564,7 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
       });
 
     if (teamUpsertError) {
+      if (metrics) metrics.failureCode = "scoring_database_failed:teams_write";
       return NextResponse.json(
         { error: `Failed to save NFL team results: ${teamUpsertError.message}` },
         { status: 500 }
@@ -585,6 +591,7 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
         .eq("id", slateId).eq("is_locked", false).select("id");
 
       if (lockError || !lockedRows?.length) {
+        if (metrics) metrics.failureCode = "scoring_database_failed:slate_lock";
         return NextResponse.json(
           { error: "Stats saved, but failed to auto-lock slate." },
           { status: 500 }
@@ -628,7 +635,10 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
       playerFinishedNotifications,
       slateCompleteNotifications,
     });
-  } catch {
+  } catch (error) {
+    if (metrics) metrics.failureCode = nflProviderFailureCode(error) ??
+      (error instanceof Error && /boxscore incomplete/.test(error.message)
+        ? "provider_response_malformed:summary:boxscore" : "scoring_database_failed:unexpected");
     console.error("nfl_refresh_failed");
     return NextResponse.json(
       { error: "Unexpected server error while refreshing NFL stats." },

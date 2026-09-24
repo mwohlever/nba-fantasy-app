@@ -3,18 +3,17 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { NflScoringProvider } from "./scoringProvider";
 import { nflSlateEligibility } from "./scoringPolicy";
 import { refreshNflSlate, type NflRefreshMetrics } from "./refreshSlate.server";
-import type { EspnScoreboardEvent } from "@/lib/providers/nfl";
+import { nflProviderFailureCode, type EspnScoreboardEvent } from "@/lib/providers/nfl";
 
 type Candidate = { id: number; start_date: string; end_date: string };
 type Claim = { state: "claimed"; token: string; recovered: boolean } | { state: "leased" | "backoff" | "recent_success" | "ineligible" };
 const maxWork = 4;
 const maxDetails = 20;
 function safeError(error: unknown) {
-  const message = error instanceof Error ? error.message : "Unexpected NFL scoring failure";
-  return /scoreboard|summary|boxscore|provider/i.test(message) ? "NFL provider unavailable or incomplete" : "NFL scoring operation failed";
+  return nflProviderFailureCode(error) ?? "scoring_database_failed:unexpected";
 }
 
-export async function runClaimedNflSlate(slateId: number, provider: NflScoringProvider, manual = false) {
+export async function runClaimedNflSlate(slateId: number, provider: NflScoringProvider, manual = false, preflightFailure?: string) {
   const claim = await supabaseAdmin.rpc("claim_nfl_sync", { p_slate_id: slateId, p_ignore_retry: manual });
   if (claim.error) throw new Error("NFL claim failed");
   const lease = claim.data as Claim;
@@ -25,6 +24,15 @@ export async function runClaimedNflSlate(slateId: number, provider: NflScoringPr
   const fetchedBefore = provider.summariesFetched;
   const metrics: NflRefreshMetrics = { dbReadMs: 0, dbWriteMs: 0, scoringMs: 0, gamesConsidered: 0, relevantGames: 0, liveGames: 0, finalGames: 0 };
   try {
+    if (preflightFailure) {
+      const finished = await supabaseAdmin.rpc("finish_nfl_sync", {
+        p_slate_id: slateId, p_lease_token: lease.token, p_succeeded: false,
+        p_summary: {}, p_error: preflightFailure,
+      });
+      if (finished.error || !finished.data) throw new Error("NFL lease completion failed");
+      return { state: "failed", recovered: lease.recovered, error: preflightFailure,
+        summary: { durationMs: Math.round(performance.now() - started), phase: "scoreboard_acquisition" } };
+    }
     const response = await refreshNflSlate(slateId, provider, metrics, lease.token);
     const result = await response.clone().json();
     const success = response.ok && result.success === true;
@@ -43,12 +51,13 @@ export async function runClaimedNflSlate(slateId: number, provider: NflScoringPr
     };
     const finished = await supabaseAdmin.rpc("finish_nfl_sync", {
       p_slate_id: slateId, p_lease_token: lease.token, p_succeeded: success,
-      p_summary: success ? summary : {}, p_error: success ? null : "NFL refresh failed",
+      p_summary: success ? summary : {}, p_error: success ? null : metrics.failureCode ?? "scoring_database_failed:unexpected",
     });
     if (finished.error || !finished.data) throw new Error("NFL lease completion failed");
-    return { state: success ? "succeeded" : "failed", recovered: lease.recovered, summary, response };
+    return { state: success ? "succeeded" : "failed", recovered: lease.recovered, summary, response,
+      ...(success ? {} : { error: metrics.failureCode ?? "scoring_database_failed:unexpected" }) };
   } catch (error) {
-    const message = safeError(error);
+    const message = nflProviderFailureCode(error) ?? safeError(error);
     const finished = await supabaseAdmin.rpc("finish_nfl_sync", {
       p_slate_id: slateId, p_lease_token: lease.token, p_succeeded: false,
       p_summary: {}, p_error: message,
@@ -108,13 +117,30 @@ export async function runNflBackgroundScoring(now = new Date()) {
         const teams = await draftedTeams(slate.id);
         if (!teams.size) continue;
         let schedule: EspnScoreboardEvent[];
-        let acquisitionFailed = false;
+        let acquisitionFailure: string | null = null;
         try { schedule = await provider.schedule(slate.start_date, slate.end_date); }
-        catch { acquisitionFailed = true; schedule = []; }
+        catch (error) {
+          acquisitionFailure = nflProviderFailureCode(error) ?? "provider_request_failed:scoreboard:unknown";
+          schedule = [];
+        }
+        if (!acquisitionFailure && schedule.length === 0) {
+          if (details.length < maxDetails) details.push({ slateId: slate.id, state: "no_games_for_range",
+            startDate: slate.start_date, endDate: slate.end_date, draftedTeams: teams.size });
+          continue;
+        }
+        if (!acquisitionFailure && !schedule.some(event => (event.competitions?.[0]?.competitors ?? []).some(c =>
+          teams.has(String(c.team?.abbreviation ?? "").toUpperCase())))) {
+          const scoreboardTeams = [...new Set(schedule.flatMap(event =>
+            (event.competitions?.[0]?.competitors ?? []).map(c => String(c.team?.abbreviation ?? "").toUpperCase())))].sort();
+          if (details.length < maxDetails) details.push({ slateId: slate.id, state: "no_matching_games",
+            startDate: slate.start_date, endDate: slate.end_date, gamesReturned: schedule.length,
+            draftedTeamCodes: [...teams].sort().slice(0, 32), scoreboardTeamCodes: scoreboardTeams.slice(0, 32) });
+          continue;
+        }
         const policy = nflSlateEligibility(schedule, teams, successById.get(slate.id) ?? null, now.getTime());
-        if (!policy.eligible && !acquisitionFailed) continue;
-        eligible++;
-        const outcome = await runClaimedNflSlate(slate.id, provider);
+        if (!policy.eligible && !acquisitionFailure) continue;
+        if (policy.eligible) eligible++;
+        const outcome = await runClaimedNflSlate(slate.id, provider, false, acquisitionFailure ?? undefined);
         if (outcome.state === "leased") leaseSkipped++;
         else if (outcome.state === "backoff" || outcome.state === "recent_success") backoffSkipped++;
         else if (outcome.state === "succeeded" || outcome.state === "failed") {
@@ -124,6 +150,7 @@ export async function runNflBackgroundScoring(now = new Date()) {
           if (outcome.state === "succeeded") succeeded++; else failed++;
         }
         if (details.length < maxDetails) details.push({ slateId: slate.id, state: outcome.state,
+          startDate: slate.start_date, endDate: slate.end_date,
           ...(outcome.summary ? { summary: outcome.summary } : {}), ...(outcome.error ? { error: outcome.error } : {}) });
       } catch (error) {
         failed++;
