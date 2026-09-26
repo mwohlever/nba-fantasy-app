@@ -625,7 +625,16 @@ export async function GET(request: Request) {
           new Date(a.end_date || a.start_date).getTime()
       )[0];
 
+    // Match Scores for NFL, including the gap between Thursday and Sunday games.
+    const newestNflSlate = sport === "nfl" ? normalizedSlates[0] ?? null : null;
+    const nflScoresSlate = newestNflSlate
+      ? safePlayerSlateStats.some((stat) => stat.slate_id === newestNflSlate.id)
+        ? newestNflSlate
+        : normalizedSlates[1] ?? newestNflSlate
+      : null;
+
     const latestSlate =
+      nflScoresSlate ??
       liveSlate ??
       startedOpenSlate ??
       lastCompletedSlate ??
