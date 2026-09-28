@@ -421,6 +421,7 @@ function hasRankedTeam(
 async function fetchRankings(
   season: number,
   week: number,
+  signal?: AbortSignal,
 ): Promise<RankingResult> {
   const params =
     new URLSearchParams({
@@ -433,6 +434,7 @@ async function fetchRankings(
       `${ESPN_CFB_BASE}/rankings?${params.toString()}`,
       {
         cache: "no-store",
+        signal,
 
         headers: {
           Accept: "application/json",
@@ -572,9 +574,11 @@ export async function fetchBracketPostseasonEvents(input: {
 export async function fetchNcaaPickEmWeek({
   season,
   week,
+  signal,
 }: {
   season: number;
   week: number;
+  signal?: AbortSignal;
 }): Promise<NcaaEspnWeek> {
   const params =
     new URLSearchParams({
@@ -594,6 +598,7 @@ export async function fetchNcaaPickEmWeek({
         `${ESPN_CFB_BASE}/scoreboard?${params.toString()}`,
         {
           cache: "no-store",
+          signal,
 
           headers: {
             Accept: "application/json",
@@ -604,6 +609,7 @@ export async function fetchNcaaPickEmWeek({
       fetchRankings(
         season,
         week,
+        signal,
       ),
     ]);
 
