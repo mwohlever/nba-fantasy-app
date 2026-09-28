@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET?.trim(), header = request.headers.get("authorization");
+  const secret = process.env.NBA_CRON_SECRET?.trim(), header = request.headers.get("authorization");
   const actual = Buffer.from(header?.startsWith("Bearer ") ? header.slice(7) : ""), expected = Buffer.from(secret ?? "");
   if (!secret || actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401, headers: { "Cache-Control": "no-store" } });
