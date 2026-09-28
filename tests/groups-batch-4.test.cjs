@@ -8,14 +8,14 @@ const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 const source = file => fs.readFileSync(path.join(root, file), 'utf8');
 function load(file, mocks = {}, extra = '') {
-  const module = { exports: {} };
+  const loaded = { exports: {} };
   vm.runInNewContext(ts.transpileModule(source(file) + extra, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText, { module, exports: module.exports, URL, Request, console,
+  }).outputText, { module: loaded, exports: loaded.exports, URL, Request, console,
     process: { env: { GOLF_CRON_SECRET: 'test-secret' } },
     require(id) { if (id in mocks) return mocks[id]; throw Error(`Unexpected import: ${id}`); },
   });
-  return module.exports;
+  return loaded.exports;
 }
 const next = { NextResponse: { json: (body, options) => ({ status: options?.status ?? 200, body }) } };
 function database(tables) {
@@ -193,7 +193,7 @@ test('migration defines scoped identity, verifies old objects, and protects data
 test('creation and refresh retain league/slate ownership, caller contracts stay aligned',()=>{
   const create=source('app/api/slates/route.ts');
   assert.match(create,/league_id: league\.id/);
-  const refresh=source('app/api/refresh-stats-golf/route.ts');
+  const refresh=source('lib/golf/refreshSlate.server.ts');
   assert.doesNotMatch(refresh,/\.eq\(\s*"external_event_id"/);
   assert.match(refresh,/\.eq\("id", slateId\)/);
   assert.match(refresh,/onConflict:\s*"slate_id,player_id"/);
@@ -231,7 +231,9 @@ test('Golf lifecycle refresh writes only players belonging to the authorized his
     mocks['@/lib/supabaseAdmin']={supabaseAdmin:db};
     mocks['@/lib/security/resourceAuthorization']=auth;
     const file='app/api/refresh-stats-golf/route.ts';
-    for (const match of source(file).matchAll(/from\s+["']([^"']+)["']/g)) if (!(match[1] in mocks)) mocks[match[1]]={};
+    const core='lib/golf/refreshSlate.server.ts';
+    mocks['server-only']={};
+    for (const match of source(core).matchAll(/from\s+["']([^"']+)["']/g)) if (!(match[1] in mocks)) mocks[match[1]]={};
     mocks['@/lib/scoring/golf']={GOLF_TOURNAMENT_ROUNDS:4};
     mocks['@/lib/providers/golf']={parseGolfTournamentByEventIdFromPayload:(_payload,eventId)=>({
       espnEventId:eventId,status:'final',completed:true,currentRound:4,
@@ -242,6 +244,8 @@ test('Golf lifecycle refresh writes only players belonging to the authorized his
       acceptedCalls.push({ slateId, batch });
       return { revision: 1, teamWrites: [], scoringChanged: false };
     } };
+    const refresh = load(core,mocks).refreshGolfSlate;
+    mocks['@/lib/golf/backgroundRefresh.server']={runClaimedGolfSlate:async(slateId,input)=>({state:'succeeded',response:await refresh(slateId,input,async()=>{})})};
     const req=request('');req.json=async()=>({slateId:id,reconcileLockedLifecycle:true,scoreboardPayload:{}});
     const result=await load(file,mocks).POST(req);
     assert.equal(result.status,200);

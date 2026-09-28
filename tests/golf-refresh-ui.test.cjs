@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { host, nodes, context } = require('./helpers/scores-harness.cjs');
@@ -236,7 +237,7 @@ test('Golf modal progress uses the accepted round count and preserves the course
 });
 
 test('Golf refresh requests fresh completed ShotCast evidence and Scores reloads accepted revisions', () => {
-  const refresh = require('node:fs').readFileSync('app/api/refresh-stats-golf/route.ts', 'utf8');
+  const refresh = require('node:fs').readFileSync('lib/golf/refreshSlate.server.ts', 'utf8');
   const scores = require('node:fs').readFileSync('components/lineups/GolfScoresDashboard.tsx', 'utf8');
   const provider = require('node:fs').readFileSync('lib/providers/pgaTourShots.ts', 'utf8');
   assert.match(refresh, /cacheBust: observedAt/);

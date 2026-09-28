@@ -1,0 +1,2377 @@
+import "server-only";
+import { shotcastObservation } from "@/lib/golf/holeAcceptance";
+import type { GolfObservationBatch } from "@/lib/golf/reconcileState";
+import { fetchGolfRoundScorecard } from "@/lib/providers/pgaTourShots";
+import { reconcileGolf } from "@/lib/golf/reconcileGolf";
+import { loadGolfRosters } from '@/lib/golf/fantasy.server';
+import { relevantGolfRosterPeriodKey } from '@/lib/golf/relevantRosterPeriod';
+import { reconcileGolfFieldIdentities } from "@/lib/golf/fieldIdentityReconciliation";
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { calculateGolfCutLine } from "@/lib/golf/cutLine";
+import {
+  calculateGolfPenaltyStrokes,
+  GOLF_TOURNAMENT_ROUNDS,
+} from "@/lib/scoring/golf";
+import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
+import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
+import {
+  fetchGolfCoursesByEventId,
+  fetchGolfTournamentByEventId,
+  parseGolfTournamentByEventIdFromPayload,
+  type GolfCompetitor,
+  type GolfCompetitorStatus,
+  type GolfRound,
+  type GolfTournament,
+} from "@/lib/providers/golf";
+
+import {
+  fetchPgaTourTeeTimes,
+  resolvePgaTourTournament,
+} from "@/lib/providers/pgaTourTeeTimes";
+
+export type GolfRefreshInput = {
+  scoreboardPayload?: unknown;
+  observedAt?: string;
+  reconcileLockedLifecycle?: boolean;
+};
+
+type GolfSlateRecord = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  external_event_id: string | null;
+  start_date: string;
+  end_date: string;
+  is_locked: boolean;
+  cut_penalty_per_round: number | null;
+  has_cut: boolean;
+  rules_snapshot: Record<string, unknown> | null;
+};
+
+type GolfEventPlayerIdRow = {
+  id: number;
+  player_id: number;
+};
+
+type GolfRoundIdRow = {
+  id: number;
+  event_player_id: number;
+  round_number: number;
+};
+
+const EXPECTED_TOURNAMENT_ROUNDS = GOLF_TOURNAMENT_ROUNDS;
+const INSERT_BATCH_SIZE = 750;
+
+function normalizeGolfNameKey(
+  value: string,
+) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      "",
+    )
+    .replace(
+      /[^a-z0-9]+/g,
+      " ",
+    )
+    .trim();
+}
+
+function pgaUtcTeeTimeToIso(input: {
+  raw: string;
+  tournamentStartDate: string | null;
+  roundNumber: number;
+}): string | null {
+  const match =
+    input.raw
+      .trim()
+      .match(
+        /^(\d{1,2}):(\d{2})\s*(AM|PM)(?:\s*UTC)?$/i,
+      );
+
+  if (
+    !match ||
+    !input.tournamentStartDate
+  ) {
+    return null;
+  }
+
+  const start =
+    new Date(
+      input.tournamentStartDate,
+    );
+
+  if (
+    Number.isNaN(
+      start.getTime(),
+    )
+  ) {
+    return null;
+  }
+
+  let hour =
+    Number(match[1]);
+
+  const minute =
+    Number(match[2]);
+
+  const meridiem =
+    match[3].toUpperCase();
+
+  if (
+    !Number.isInteger(hour) ||
+    hour < 1 ||
+    hour > 12 ||
+    !Number.isInteger(minute) ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+
+  if (hour === 12) {
+    hour = 0;
+  }
+
+  if (meridiem === "PM") {
+    hour += 12;
+  }
+
+  const roundDate =
+    new Date(
+      Date.UTC(
+        start.getUTCFullYear(),
+        start.getUTCMonth(),
+        start.getUTCDate() +
+          Math.max(
+            0,
+            input.roundNumber - 1,
+          ),
+        hour,
+        minute,
+        0,
+        0,
+      ),
+    );
+
+  return roundDate.toISOString();
+}
+
+function getTournamentYear(startDate: string): string | null {
+  const year = startDate.slice(0, 4);
+  return /^\d{4}$/.test(year) ? year : null;
+}
+
+function deduplicateCompetitors(
+  competitors: GolfCompetitor[],
+): GolfCompetitor[] {
+  return Array.from(
+    new Map(
+      competitors.map((competitor) => [competitor.espnPlayerId, competitor]),
+    ).values(),
+  );
+}
+
+function chunkRows<T>(rows: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < rows.length; index += size) {
+    chunks.push(rows.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
+function getRoundStatus(
+  round: GolfRound,
+  tournamentStatus: GolfTournament["status"],
+): "scheduled" | "active" | "finished" | "not_played" {
+  if (round.holesCompleted === 18) {
+    return "finished";
+  }
+
+  if (round.holesCompleted > 0) {
+    return "active";
+  }
+
+  if (round.strokes !== null && round.strokes > 0) {
+    return "active";
+  }
+
+  return tournamentStatus === "scheduled" ? "scheduled" : "not_played";
+}
+
+function normalizeGolfCompetitorState(
+  competitor: GolfCompetitor,
+  tournament: GolfTournament,
+): GolfCompetitor {
+  const rounds =
+    [...competitor.rounds].sort(
+      (a, b) =>
+        Number(a.roundNumber) -
+        Number(b.roundNumber),
+    );
+
+  const completedRounds =
+    rounds.filter(
+      (round) =>
+        Number(
+          round.holesCompleted ?? 0,
+        ) >= 18,
+    );
+
+  const activeRound =
+    rounds
+      .filter((round) => {
+        const holes =
+          Number(
+            round.holesCompleted ?? 0,
+          );
+
+        return (
+          (holes > 0 && holes < 18) ||
+          (
+            holes < 18 &&
+            round.strokes !== null &&
+            Number(round.strokes) > 0
+          )
+        );
+      })
+      .at(-1) ?? null;
+
+  const playedRounds =
+    rounds.filter(
+      (round) =>
+        Number(
+          round.holesCompleted ?? 0,
+        ) > 0 ||
+        (
+          round.strokes !== null &&
+          Number(round.strokes) > 0
+        ),
+    );
+
+  const latestPlayedRound =
+    playedRounds.at(-1) ?? null;
+
+  const latestCompletedRound =
+    completedRounds.at(-1) ?? null;
+
+  const completedRoundNumber =
+    latestCompletedRound
+      ? Number(
+          latestCompletedRound.roundNumber,
+        )
+      : 0;
+
+  const derivedRoundsCompleted =
+    Math.max(
+      Number(
+        competitor.roundsCompleted ?? 0,
+      ),
+      completedRoundNumber,
+    );
+
+  const holesFromRounds =
+    rounds.reduce(
+      (sum, round) =>
+        sum +
+        Math.max(
+          0,
+          Math.min(
+            18,
+            Number(
+              round.holesCompleted ?? 0,
+            ),
+          ),
+        ),
+      0,
+    );
+
+  const derivedHolesCompleted =
+    Math.max(
+      Number(
+        competitor.holesCompleted ?? 0,
+      ),
+      holesFromRounds,
+    );
+
+  const tournamentRoundRaw =
+    Number(
+      tournament.currentRound ?? 0,
+    );
+
+  const tournamentRound =
+    Number.isFinite(
+      tournamentRoundRaw,
+    ) &&
+    tournamentRoundRaw > 0
+      ? Math.min(
+          EXPECTED_TOURNAMENT_ROUNDS,
+          Math.max(
+            1,
+            tournamentRoundRaw,
+          ),
+        )
+      : null;
+
+  const providerRoundRaw =
+    Number(
+      competitor.currentRound ?? 0,
+    );
+
+  const providerRound =
+    Number.isFinite(
+      providerRoundRaw,
+    ) &&
+    providerRoundRaw > 0
+      ? Math.min(
+          EXPECTED_TOURNAMENT_ROUNDS,
+          Math.max(
+            1,
+            providerRoundRaw,
+          ),
+        )
+      : null;
+
+  const latestPlayedRoundNumber =
+    latestPlayedRound
+      ? Number(
+          latestPlayedRound.roundNumber,
+        )
+      : null;
+
+  const noScoringActivity =
+    playedRounds.length === 0 &&
+    derivedRoundsCompleted === 0 &&
+    derivedHolesCompleted === 0;
+
+  const tournamentHasStarted =
+    tournament.status !== "scheduled";
+
+  /*
+   * A future-round tee time can be published before the current
+   * tournament day is over. Keep that tee time, but do not let it
+   * erase today's completed-round state.
+   *
+   * Example:
+   *   Saturday: R3 complete + Sunday R4 tee time exists
+   *     -> round_complete
+   *
+   *   Sunday: R4 tee-time calendar date has arrived
+   *     -> scheduled until the golfer starts
+   *
+   * Compare calendar dates in America/New_York because PGA tournament
+   * day/status presentation in the app is Eastern-time based.
+   */
+  const easternDateKey = (
+    value: Date | string,
+  ): string | null => {
+    const date =
+      value instanceof Date
+        ? value
+        : new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    const parts =
+      new Intl.DateTimeFormat(
+        "en-CA",
+        {
+          timeZone: "America/New_York",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        },
+      ).formatToParts(date);
+
+    const year =
+      parts.find(
+        (part) => part.type === "year",
+      )?.value;
+
+    const month =
+      parts.find(
+        (part) => part.type === "month",
+      )?.value;
+
+    const day =
+      parts.find(
+        (part) => part.type === "day",
+      )?.value;
+
+    return year && month && day
+      ? `${year}-${month}-${day}`
+      : null;
+  };
+
+  const nextRound =
+    rounds.find(
+      (round) =>
+        Number(round.roundNumber) ===
+          derivedRoundsCompleted + 1 &&
+        Number(
+          round.holesCompleted ?? 0,
+        ) === 0 &&
+        (
+          round.strokes === null ||
+          Number(round.strokes) === 0
+        ),
+    ) ?? null;
+
+  const nextRoundTeeTime =
+    nextRound?.teeTime ?? null;
+
+  const todayEastern =
+    easternDateKey(new Date());
+
+  const nextRoundDateEastern =
+    nextRoundTeeTime
+      ? easternDateKey(nextRoundTeeTime)
+      : null;
+
+  const nextRoundDayHasArrived =
+    nextRoundDateEastern !== null &&
+    todayEastern !== null &&
+    nextRoundDateEastern <= todayEastern;
+
+  const terminalStatuses =
+    new Set<GolfCompetitorStatus>([
+      "finished",
+      "cut",
+      "withdrawn",
+      "disqualified",
+      "did_not_start",
+    ]);
+
+  let normalizedStatus:
+    GolfCompetitorStatus =
+      competitor.status;
+
+  /*
+   * Provider status is authoritative for true terminal states.
+   * Otherwise the actual round data wins.
+   */
+  if (
+    !terminalStatuses.has(
+      competitor.status,
+    )
+  ) {
+    if (activeRound) {
+      normalizedStatus = "active";
+    } else if (noScoringActivity) {
+      normalizedStatus = "scheduled";
+    } else if (
+      tournament.status === "final" &&
+      derivedRoundsCompleted >=
+        EXPECTED_TOURNAMENT_ROUNDS
+    ) {
+      normalizedStatus = "finished";
+    } else if (
+      tournamentRound !== null &&
+      tournamentRound >
+        derivedRoundsCompleted &&
+      derivedRoundsCompleted > 0 &&
+      nextRoundDayHasArrived
+    ) {
+      /*
+       * The next competitive day has actually arrived for this golfer.
+       * It is now correct to reset the daily completion state and show
+       * the golfer as upcoming until the next round begins.
+       *
+       * Merely receiving tomorrow's tee time does NOT trigger this.
+       */
+      normalizedStatus = "scheduled";
+    } else if (
+      latestCompletedRound
+    ) {
+      normalizedStatus =
+        "round_complete";
+    }
+  }
+
+  let normalizedCurrentRound:
+    number | null =
+      providerRound;
+
+  if (activeRound) {
+    normalizedCurrentRound =
+      Number(
+        activeRound.roundNumber,
+      );
+  } else if (
+    normalizedStatus === "scheduled"
+  ) {
+    normalizedCurrentRound =
+      tournamentHasStarted &&
+      tournamentRound !== null
+        ? Math.max(
+            tournamentRound,
+            Math.min(
+              EXPECTED_TOURNAMENT_ROUNDS,
+              derivedRoundsCompleted + 1,
+            ),
+          )
+        : providerRound ??
+          Math.min(
+            EXPECTED_TOURNAMENT_ROUNDS,
+            Math.max(
+              1,
+              derivedRoundsCompleted + 1,
+            ),
+          );
+  } else if (
+    latestPlayedRoundNumber !== null
+  ) {
+    normalizedCurrentRound =
+      latestPlayedRoundNumber;
+  }
+
+  /*
+   * An unplayed golfer cannot legitimately own a live tournament
+   * score or leaderboard position. ESPN/PGA occasionally leaves
+   * placeholder field order / even-par values attached to such a
+   * golfer after the tournament begins.
+   */
+  const clearUnplayedLeaderboardData =
+    tournamentHasStarted &&
+    noScoringActivity &&
+    !terminalStatuses.has(
+      competitor.status,
+    );
+
+  return {
+    ...competitor,
+
+    rounds,
+
+    roundsCompleted:
+      derivedRoundsCompleted,
+
+    holesCompleted:
+      derivedHolesCompleted,
+
+    currentRound:
+      normalizedCurrentRound,
+
+    status:
+      normalizedStatus,
+
+    lastHole:
+      noScoringActivity
+        ? null
+        : competitor.lastHole,
+
+    leaderboardOrder:
+      clearUnplayedLeaderboardData
+        ? null
+        : competitor.leaderboardOrder,
+
+    officialScoreToPar:
+      clearUnplayedLeaderboardData
+        ? null
+        : competitor.officialScoreToPar,
+
+    officialScoreDisplay:
+      clearUnplayedLeaderboardData
+        ? null
+        : competitor.officialScoreDisplay,
+  };
+}
+
+async function fetchTournamentForSlate(
+  slate: GolfSlateRecord,
+  scoreboardPayload?: unknown,
+): Promise<GolfTournament | null> {
+  const eventId =
+    slate.external_event_id?.trim();
+
+  if (!eventId) {
+    return null;
+  }
+
+  if (
+    scoreboardPayload !==
+    undefined
+  ) {
+    return parseGolfTournamentByEventIdFromPayload(
+      scoreboardPayload,
+      eventId,
+    );
+  }
+
+  const tournamentYear =
+    getTournamentYear(
+      slate.start_date,
+    );
+
+  if (tournamentYear) {
+    const tournament =
+      await fetchGolfTournamentByEventId(
+        eventId,
+        tournamentYear,
+      );
+
+    if (tournament) {
+      return tournament;
+    }
+  }
+
+  return fetchGolfTournamentByEventId(
+    eventId,
+  );
+}
+
+/** Authoritative Golf ingestion. Callers authorize and hold the slate refresh lease. */
+export async function refreshGolfSlate(slateId: number, body: GolfRefreshInput, assertLease: () => Promise<void>) {
+  try {
+    await assertLease();
+    const { data: slateData, error: slateError } = await supabaseAdmin
+      .from("slates")
+      .select(
+        [
+          "id",
+          "sport",
+          "display_name",
+          "external_event_id",
+          "start_date",
+          "end_date",
+          "is_locked",
+          "cut_penalty_per_round",
+          "has_cut",
+          "rules_snapshot",
+        ].join(","),
+      )
+      .eq("id", slateId)
+      .single();
+
+    if (slateError || !slateData) {
+      return NextResponse.json({ error: "Slate not found." }, { status: 404 });
+    }
+
+    const slate = slateData as unknown as GolfSlateRecord;
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error: "This slate is not a Golf slate.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      slate.is_locked &&
+      body.reconcileLockedLifecycle !== true
+    ) {
+      return NextResponse.json(
+        {
+          error: "This slate is locked and cannot be refreshed.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!slate.external_event_id?.trim()) {
+      return NextResponse.json(
+        {
+          error: "This Golf slate does not have an ESPN external event ID.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      slate.is_locked &&
+      body.reconcileLockedLifecycle === true &&
+      body.scoreboardPayload === undefined
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Locked Golf lifecycle reconciliation requires a browser-fetched ESPN scoreboard payload.",
+          provider: {
+            eventId:
+              slate.external_event_id,
+            year:
+              getTournamentYear(
+                slate.start_date,
+              ),
+          },
+        },
+        { status: 400 },
+      );
+    }
+
+    // Capture acquisition start, not the end of provider/database work.
+    const fetchStartedAt = new Date().toISOString();
+    const suppliedTime = Date.parse(body.observedAt ?? "");
+    const observedAt = Number.isFinite(suppliedTime) && suppliedTime <= Date.now()
+      ? new Date(suppliedTime).toISOString() : fetchStartedAt;
+    const tournament =
+      await fetchTournamentForSlate(
+        slate,
+        body.scoreboardPayload,
+      );
+
+    if (!tournament) {
+      return NextResponse.json(
+        {
+          error: `ESPN tournament ${slate.external_event_id} was not found.`,
+        },
+        { status: 404 },
+      );
+    }
+
+    if (
+      slate.is_locked &&
+      body.reconcileLockedLifecycle === true
+    ) {
+      if (
+        tournament.status !== "final" ||
+        !tournament.completed
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Locked Golf lifecycle reconciliation requires an authoritative final tournament.",
+          },
+          { status: 409 },
+        );
+      }
+
+      const refreshedAt = new Date().toISOString();
+      const competitors = deduplicateCompetitors(
+        tournament.competitors,
+      ).map((competitor) =>
+        normalizeGolfCompetitorState(
+          competitor,
+          tournament,
+        ),
+      );
+
+      const {
+        data: existingEventPlayerData,
+        error: existingEventPlayerError,
+      } = await supabaseAdmin
+        .from("golf_event_players")
+        .select("id, player_id")
+        .eq("slate_id", slateId);
+
+      if (existingEventPlayerError) {
+        return NextResponse.json(
+          { error: existingEventPlayerError.message },
+          { status: 500 },
+        );
+      }
+
+      const existingEventPlayers =
+        (existingEventPlayerData ?? []) as GolfEventPlayerIdRow[];
+      const playerIds = existingEventPlayers.map((row) => Number(row.player_id));
+      const { data: golfPlayerData, error: golfPlayerError } =
+        playerIds.length > 0
+          ? await supabaseAdmin
+              .from("golf_players")
+              .select("id, espn_player_id")
+              .in("id", playerIds)
+          : { data: [], error: null };
+
+      if (golfPlayerError) {
+        return NextResponse.json(
+          { error: golfPlayerError.message },
+          { status: 500 },
+        );
+      }
+
+      const eventPlayerByEspnId = new Map(
+        (golfPlayerData ?? []).flatMap((player) => {
+          const eventPlayer = existingEventPlayers.find(
+            (row) => Number(row.player_id) === Number(player.id),
+          );
+
+          return eventPlayer
+            ? [[String(player.espn_player_id), eventPlayer] as const]
+            : [];
+        }),
+      );
+
+      const matchedCompetitors = competitors.flatMap((competitor) => {
+        const eventPlayer = eventPlayerByEspnId.get(competitor.espnPlayerId);
+        return eventPlayer ? [{ competitor, eventPlayer }] : [];
+      });
+
+      const lifecycleRows = matchedCompetitors.map(
+        ({ competitor, eventPlayer }) => ({
+          id: eventPlayer.id,
+          slate_id: slateId,
+          player_id: eventPlayer.player_id,
+          rounds_completed: competitor.roundsCompleted,
+          holes_completed: competitor.holesCompleted,
+          current_round: competitor.currentRound,
+          last_hole: competitor.lastHole,
+          status: competitor.status,
+          tee_time: competitor.teeTime,
+          tee_time_raw: competitor.teeTimeRaw,
+          updated_at: refreshedAt,
+        }),
+      );
+
+      const roundRows = matchedCompetitors.flatMap(
+        ({ competitor, eventPlayer }) =>
+          competitor.rounds.map((round) => ({
+            event_player_id: eventPlayer.id,
+            round_number: round.roundNumber,
+            score_to_par: round.scoreToPar,
+            score_display: round.scoreDisplay,
+            strokes: round.strokes,
+            holes_completed: round.holesCompleted,
+            tee_time: round.teeTime,
+            tee_time_raw: round.teeTimeRaw,
+            status: getRoundStatus(round, tournament.status),
+            updated_at: refreshedAt,
+          })),
+      );
+
+      for (const batch of chunkRows(roundRows, INSERT_BATCH_SIZE)) {
+        await assertLease();
+        const { error } = await supabaseAdmin.from("golf_rounds").upsert(
+          batch.map(row => ({ event_player_id: row.event_player_id, round_number: row.round_number })),
+          { onConflict: "event_player_id,round_number", ignoreDuplicates: true },
+        );
+        if (error) throw new Error(error.message);
+      }
+      const { data: persistedRounds, error: roundError } = playerIds.length
+        ? await supabaseAdmin.from("golf_rounds").select("id, event_player_id, round_number")
+          .in("event_player_id", existingEventPlayers.map(row => row.id))
+        : { data: [], error: null };
+      if (roundError) throw new Error(roundError.message);
+      const holes = matchedCompetitors.flatMap(({ competitor, eventPlayer }) => competitor.rounds.flatMap(round => {
+        const saved = persistedRounds?.find(r => r.event_player_id === eventPlayer.id && r.round_number === round.roundNumber);
+        return saved ? round.holes.map(hole => ({
+          round_id: Number(saved.id), hole_number: hole.holeNumber, strokes: hole.strokes,
+          relative_to_par: hole.relativeToPar,
+          reconciliation: { source: "espn" as const, observedAt, final: hole.strokes !== null && hole.relativeToPar !== null },
+        })) : [];
+      }));
+      await assertLease();
+      const accepted = await reconcileGolf(slateId, { observedAt, events: lifecycleRows, rounds: roundRows, holes });
+
+      return NextResponse.json({
+        success: true,
+        slateId,
+        refreshedAt,
+        reconciliation: "locked_terminal_lifecycle",
+        tournament: {
+          eventId: tournament.espnEventId,
+          status: tournament.status,
+          completed: tournament.completed,
+        },
+        eventPlayersUpdated: lifecycleRows.length,
+        roundsUpserted: roundRows.length,
+        teamResultsUpdated: accepted.teamWrites.length,
+        acceptedRevision: accepted.revision,
+        scoringChanged: accepted.scoringChanged,
+      });
+    }
+
+    const rawCompetitors =
+      deduplicateCompetitors(
+        tournament.competitors,
+      );
+
+    const normalizedCompetitors =
+      rawCompetitors.map(
+        (competitor) =>
+          normalizeGolfCompetitorState(
+            competitor,
+            tournament,
+          ),
+      );
+
+    /*
+     * The cut is a 36-hole decision.
+     *
+     * Once Round 3 begins, officialScoreToPar includes Saturday scoring,
+     * so it must NOT be used to decide who made the Friday cut.
+     *
+     * Derive each golfer's cut score from R1 + R2 only and keep that
+     * eligibility stable for the rest of the tournament.
+     */
+    function getThirtySixHoleScore(
+      competitor: GolfCompetitor,
+    ): number | null {
+      const firstTwoRounds =
+        competitor.rounds
+          .filter(
+            (round) =>
+              Number(round.roundNumber) === 1 ||
+              Number(round.roundNumber) === 2,
+          )
+          .sort(
+            (a, b) =>
+              Number(a.roundNumber) -
+              Number(b.roundNumber),
+          );
+
+      if (firstTwoRounds.length < 2) {
+        return null;
+      }
+
+      const roundOne =
+        firstTwoRounds.find(
+          (round) =>
+            Number(round.roundNumber) === 1,
+        );
+
+      const roundTwo =
+        firstTwoRounds.find(
+          (round) =>
+            Number(round.roundNumber) === 2,
+        );
+
+      if (
+        roundOne?.scoreToPar === null ||
+        roundOne?.scoreToPar === undefined ||
+        roundTwo?.scoreToPar === null ||
+        roundTwo?.scoreToPar === undefined
+      ) {
+        return null;
+      }
+
+      const score =
+        Number(roundOne.scoreToPar) +
+        Number(roundTwo.scoreToPar);
+
+      return Number.isFinite(score)
+        ? score
+        : null;
+    }
+
+    const officialCut =
+      slate.has_cut
+        ? calculateGolfCutLine(
+            normalizedCompetitors.map(
+          (competitor) => ({
+            score:
+              getThirtySixHoleScore(
+                competitor,
+              ) ??
+              (
+                Number(
+                  competitor.currentRound ?? 0,
+                ) <= 2
+                  ? competitor.officialScoreToPar
+                  : null
+              ),
+            status:
+              competitor.status,
+            position:
+              competitor.leaderboardOrder,
+            holesCompleted:
+              competitor.holesCompleted,
+            roundsCompleted:
+              competitor.roundsCompleted,
+            currentRound:
+              competitor.currentRound,
+              }),
+            ),
+          )
+        : null;
+
+    const protectedTerminalStatuses =
+      new Set<GolfCompetitorStatus>([
+        "finished",
+        "withdrawn",
+        "disqualified",
+        "did_not_start",
+      ]);
+
+    const competitors =
+      officialCut?.official
+        ? normalizedCompetitors.map(
+            (competitor) => {
+              const cutScore =
+                getThirtySixHoleScore(
+                  competitor,
+                );
+
+              /*
+               * Before Round 3 begins, the cumulative tournament score is
+               * still equivalent to the 36-hole score, so retain the
+               * fallback for Friday cut processing.
+               */
+              const score =
+                cutScore ??
+                (
+                  Number(
+                    competitor.currentRound ?? 0,
+                  ) <= 2
+                    ? competitor.officialScoreToPar
+                    : null
+                );
+
+              if (
+                score === null ||
+                score === undefined ||
+                !Number.isFinite(
+                  Number(score),
+                ) ||
+                protectedTerminalStatuses.has(
+                  competitor.status,
+                )
+              ) {
+                return competitor;
+              }
+
+              /*
+               * The golfer made the official 36-hole cut.
+               *
+               * An earlier Round-3 refresh may have incorrectly changed
+               * this golfer to CUT after Saturday scoring moved the live
+               * leaderboard. Recover that stale state here.
+               */
+              if (
+                Number(score) <=
+                officialCut.score
+              ) {
+                if (
+                  competitor.status ===
+                    "cut" &&
+                  Number(
+                    tournament.currentRound ?? 0,
+                  ) >= 3
+                ) {
+                  return {
+                    ...competitor,
+                    status:
+                      "scheduled" as GolfCompetitorStatus,
+                    currentRound:
+                      Math.max(
+                        3,
+                        Number(
+                          tournament.currentRound ??
+                            3,
+                        ),
+                      ),
+                  };
+                }
+
+                return competitor;
+              }
+
+              /*
+               * This golfer missed the Friday cut. Keep the cut state
+               * anchored to Round 2 even after the tournament advances.
+               */
+              return {
+                ...competitor,
+                status:
+                  "cut" as GolfCompetitorStatus,
+                currentRound: 2,
+              };
+            },
+          )
+        : normalizedCompetitors;
+
+    const normalizationCorrections =
+      competitors.filter(
+        (competitor, index) => {
+          const raw =
+            rawCompetitors[index];
+
+          return (
+            competitor.status !==
+              raw.status ||
+            competitor.currentRound !==
+              raw.currentRound ||
+            competitor.roundsCompleted !==
+              raw.roundsCompleted ||
+            competitor.holesCompleted !==
+              raw.holesCompleted ||
+            competitor.leaderboardOrder !==
+              raw.leaderboardOrder ||
+            competitor.officialScoreToPar !==
+              raw.officialScoreToPar
+          );
+        },
+      ).length;
+
+    if (
+      normalizationCorrections > 0
+    ) {
+      console.log(
+        "Normalized inconsistent Golf competitor state",
+        {
+          slateId,
+          tournament:
+            tournament.name,
+          corrections:
+            normalizationCorrections,
+        },
+      );
+    }
+
+    if (competitors.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "ESPN returned the tournament, but the tournament field is not available yet.",
+          tournament: {
+            eventId: tournament.espnEventId,
+            name: tournament.name,
+            status: tournament.status,
+          },
+        },
+        { status: 502 },
+      );
+    }
+
+    const refreshedAt = new Date().toISOString();
+
+    let courseHolesUpserted = 0;
+
+    try {
+      /*
+       * Course-hole metadata is required independently of the
+       * player scoring ingestion path.
+       *
+       * Always refresh it so new tournaments have all 18 pars
+       * and yardages available before golfers play those holes.
+       */
+      const courses =
+        await fetchGolfCoursesByEventId(
+          slate.external_event_id ?? "",
+        );
+
+      const courseRows = courses.flatMap((course) =>
+        course.holes.map((hole) => ({
+          slate_id: slateId,
+          course_id: course.espnCourseId,
+          course_name: course.name,
+          is_host: course.isHost,
+          hole_number: hole.holeNumber,
+          par: hole.par,
+          yards: hole.yards,
+          updated_at: refreshedAt,
+        })),
+      );
+
+      if (courseRows.length > 0) {
+        await assertLease();
+        const { error: courseDeleteError } =
+          await supabaseAdmin
+            .from("golf_course_holes")
+            .delete()
+            .eq("slate_id", slateId);
+
+        if (courseDeleteError) {
+          throw new Error(courseDeleteError.message);
+        }
+
+        await assertLease();
+        const { error: courseUpsertError } =
+          await supabaseAdmin
+            .from("golf_course_holes")
+            .upsert(courseRows, {
+              onConflict:
+                "slate_id,course_id,hole_number",
+            });
+
+        if (courseUpsertError) {
+          throw new Error(courseUpsertError.message);
+        }
+
+        courseHolesUpserted = courseRows.length;
+      }
+    } catch (courseError) {
+      console.error(
+        "Golf player data will refresh, but course-hole data could not be saved:",
+        courseError,
+      );
+    }
+    const penaltyPerRound =
+      slate.has_cut
+        ? Math.max(0, slate.cut_penalty_per_round ?? 0)
+        : 0;
+
+    await assertLease();
+    const identityReconciliation = await reconcileGolfFieldIdentities({
+      db: supabaseAdmin,
+      competitors,
+      refreshedAt,
+    });
+    const playerIdByEspnId = identityReconciliation.playerIdByEspnId;
+    const unresolvedCompetitors = competitors.filter((competitor) => !playerIdByEspnId.has(competitor.espnPlayerId));
+
+    if (unresolvedCompetitors.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf players were saved, but one or more database player IDs could not be resolved.",
+          unresolvedPlayers: unresolvedCompetitors.map((competitor) => ({
+            espnPlayerId: competitor.espnPlayerId,
+            displayName: competitor.displayName,
+          })),
+        },
+        { status: 500 },
+      );
+    }
+
+    const playerIds = Array.from(
+      playerIdByEspnId.values(),
+    );
+
+    const {
+      data: previousEventPlayerData,
+      error: previousEventPlayerError,
+    } = playerIds.length > 0
+      ? await supabaseAdmin
+          .from("golf_event_players")
+          .select(
+            "id, player_id, rounds_completed, status",
+          )
+          .eq("slate_id", slateId)
+          .in("player_id", playerIds)
+      : {
+          data: [],
+          error: null,
+        };
+
+    if (previousEventPlayerError) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf players were loaded, but their previous progress could not be read: " +
+            previousEventPlayerError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    /*
+     * Snapshot each persisted round BEFORE this refresh writes the
+     * current ESPN/PGA scoring state.
+     *
+     * Golf round-complete notifications should be driven by the actual
+     * round transition:
+     *
+     *   previous holes_completed < 18
+     *               ->
+     *   current holesCompleted >= 18
+     *
+     * Do not depend on aggregate rounds_completed or a particular
+     * competitor status transition. Those fields can advance on a
+     * different refresh than the golfer's final hole.
+     */
+    const previousEventPlayerIdByPlayerId =
+      new Map<number, number>(
+        (previousEventPlayerData ?? [])
+          .filter(
+            (row) =>
+              Number.isFinite(
+                Number(row.id),
+              ),
+          )
+          .map(
+            (row) => [
+              Number(row.player_id),
+              Number(row.id),
+            ],
+          ),
+      );
+
+    const previousPlayerIdByEventPlayerId =
+      new Map<number, number>(
+        Array.from(
+          previousEventPlayerIdByPlayerId.entries(),
+        ).map(
+          ([playerId, eventPlayerId]) => [
+            eventPlayerId,
+            playerId,
+          ],
+        ),
+      );
+
+    const previousEventPlayerIds =
+      Array.from(
+        previousPlayerIdByEventPlayerId.keys(),
+      );
+
+    const {
+      data: previousGolfRoundData,
+      error: previousGolfRoundError,
+    } =
+      previousEventPlayerIds.length > 0
+        ? await supabaseAdmin
+            .from("golf_rounds")
+            .select(
+              "event_player_id, round_number, holes_completed",
+            )
+            .in(
+              "event_player_id",
+              previousEventPlayerIds,
+            )
+        : {
+            data: [],
+            error: null,
+          };
+
+    if (previousGolfRoundError) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf players were loaded, but their previous round progress could not be read: " +
+            previousGolfRoundError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const previousRoundHolesByPlayerRound =
+      new Map<string, number>();
+
+    for (
+      const round of
+      previousGolfRoundData ?? []
+    ) {
+      const playerId =
+        previousPlayerIdByEventPlayerId.get(
+          Number(
+            round.event_player_id,
+          ),
+        );
+
+      if (playerId === undefined) {
+        continue;
+      }
+
+      previousRoundHolesByPlayerRound.set(
+        `${playerId}:${Number(
+          round.round_number,
+        )}`,
+        Number(
+          round.holes_completed ?? 0,
+        ),
+      );
+    }
+
+    // Omission is not withdrawal evidence; only observed golfers enter reconciliation.
+    const liveEventPlayerRows =
+      competitors.map(
+        (competitor) => {
+          const penaltyStrokes =
+            calculateGolfPenaltyStrokes({
+              status:
+                competitor.status,
+              roundsCompleted:
+                competitor.roundsCompleted,
+              penaltyPerRound,
+            });
+
+          const fantasyScore =
+            competitor.officialScoreToPar ===
+            null
+              ? penaltyStrokes > 0
+                ? penaltyStrokes
+                : null
+              : competitor.officialScoreToPar +
+                penaltyStrokes;
+
+          return {
+            slate_id: slateId,
+            player_id:
+              playerIdByEspnId.get(
+                competitor.espnPlayerId,
+              )!,
+            leaderboard_order:
+              competitor.leaderboardOrder,
+            official_score_to_par:
+              competitor.officialScoreToPar,
+            official_score_display:
+              competitor.officialScoreDisplay,
+            penalty_strokes:
+              penaltyStrokes,
+            fantasy_score:
+              fantasyScore,
+            rounds_completed:
+              competitor.roundsCompleted,
+            holes_completed:
+              competitor.holesCompleted,
+            current_round:
+              competitor.currentRound,
+            last_hole:
+              competitor.lastHole,
+            status:
+              competitor.status,
+            tee_time:
+              competitor.teeTime,
+            tee_time_raw:
+              competitor.teeTimeRaw,
+            updated_at:
+              refreshedAt,
+          };
+        },
+      );
+
+    const eventPlayerRows = liveEventPlayerRows;
+
+    await assertLease();
+    const { error: eventPlayersUpsertError } =
+      await supabaseAdmin
+        .from("golf_event_players")
+        .upsert(eventPlayerRows.map(row => ({ slate_id: row.slate_id, player_id: row.player_id })), {
+          onConflict: "slate_id,player_id", ignoreDuplicates: true,
+        })
+        .select("id, player_id");
+
+    if (eventPlayersUpsertError) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf players were saved, but the tournament field could not be linked to the slate: " +
+            eventPlayersUpsertError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const { data: eventPlayersData, error: eventIdsError } = await supabaseAdmin
+      .from("golf_event_players").select("id, player_id").eq("slate_id", slateId);
+    if (eventIdsError) throw new Error(eventIdsError.message);
+
+    const eventPlayers = (eventPlayersData ?? []) as GolfEventPlayerIdRow[];
+
+    const eventPlayerIdByPlayerId = new Map(
+      eventPlayers.map((eventPlayer) => [
+        Number(eventPlayer.player_id),
+        Number(eventPlayer.id),
+      ]),
+    );
+
+    const unresolvedEventPlayers = competitors.filter((competitor) => {
+      const playerId = playerIdByEspnId.get(competitor.espnPlayerId);
+
+      return playerId === undefined || !eventPlayerIdByPlayerId.has(playerId);
+    });
+
+    if (unresolvedEventPlayers.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Tournament players were linked to the slate, but one or more event-player IDs could not be resolved.",
+          unresolvedPlayers: unresolvedEventPlayers.map(
+            (competitor) => competitor.displayName,
+          ),
+        },
+        { status: 500 },
+      );
+    }
+
+    /*
+     * Persist Golf scoring incrementally.
+     *
+     * golf_rounds is uniquely keyed by:
+     *   event_player_id + round_number
+     *
+     * golf_holes is uniquely keyed by:
+     *   round_id + hole_number
+     *
+     * Do not delete and reconstruct the scorecard on each refresh.
+     * Completed holes already stored in the database remain intact if a
+     * later ESPN snapshot is temporarily incomplete.
+     */
+
+    /*
+     * ESPN remains authoritative for scoring and live round advancement.
+     * PGA TOUR is authoritative for the tee sheet it is currently
+     * publishing. The PGA parser returns that published round explicitly,
+     * so never infer "next round" from ESPN's tournament.currentRound.
+     */
+    let pgaPublishedRoundNumber:
+      number | null = null;
+
+    const pgaTeeTimesByName =
+      new Map<
+        string,
+        {
+          raw: string;
+          iso: string | null;
+        }
+      >();
+
+    try {
+      const year =
+        tournament.startDate
+          ? new Date(
+              tournament.startDate,
+            ).getUTCFullYear()
+          : new Date()
+              .getUTCFullYear();
+
+      const pgaTournament =
+        await resolvePgaTourTournament(
+          {
+            tournamentName:
+              tournament.name,
+            year,
+          },
+        );
+
+      if (pgaTournament) {
+        const pgaTeeTimes =
+          await fetchPgaTourTeeTimes(
+            {
+              tournamentUrl:
+                pgaTournament
+                  .tournamentUrl,
+            },
+            competitors.map(
+              (competitor) =>
+                competitor.displayName,
+            ),
+          );
+
+        pgaPublishedRoundNumber =
+          pgaTeeTimes[0]
+            ?.roundNumber ??
+          null;
+
+        for (const row of pgaTeeTimes) {
+          if (
+            pgaPublishedRoundNumber !==
+              null &&
+            row.roundNumber !==
+              pgaPublishedRoundNumber
+          ) {
+            continue;
+          }
+
+          pgaTeeTimesByName.set(
+            normalizeGolfNameKey(
+              row.playerName,
+            ),
+            {
+              raw:
+                row.teeTimeRaw,
+              iso:
+                pgaUtcTeeTimeToIso(
+                  {
+                    raw:
+                      row.teeTimeRaw,
+                    tournamentStartDate:
+                      tournament.startDate,
+                    roundNumber:
+                      row.roundNumber,
+                  },
+                ),
+            },
+          );
+        }
+
+        console.log(
+          "PGA TOUR round-aware tee-time reconciliation",
+          {
+            tournament:
+              tournament.name,
+            round:
+              pgaPublishedRoundNumber,
+            pgaTournamentId:
+              pgaTournament.tournamentId,
+            matched:
+              pgaTeeTimesByName.size,
+          },
+        );
+      }
+    } catch (error) {
+      /*
+       * PGA tee-time reconciliation must never break score refresh.
+       * ESPN scoring continues normally if PGA is unavailable.
+       */
+      console.warn(
+        "PGA TOUR tee-time reconciliation failed",
+        error,
+      );
+    }
+
+    /*
+     * Add scheduling evidence to the shared reconciliation batch.
+     * Reconcile its scheduling fields only for the exact round PGA says
+     * it is publishing. This fixes current-round ESPN timezone errors and
+     * still allows a genuinely published future round to advance the
+     * scheduling state after the immediately preceding round is complete.
+     */
+    if (pgaPublishedRoundNumber !== null) {
+      for (const competitor of competitors) {
+        const publishedRound =
+          competitor.rounds.find(
+            (round) =>
+              Number(
+                round.roundNumber,
+              ) ===
+              pgaPublishedRoundNumber,
+          );
+
+        if (
+          !publishedRound ||
+          Number(
+            publishedRound.holesCompleted ??
+              0,
+          ) !== 0
+        ) {
+          continue;
+        }
+
+        const pgaTeeTime =
+          pgaTeeTimesByName.get(
+            normalizeGolfNameKey(
+              competitor.displayName,
+            ),
+          ) ??
+          null;
+
+        if (
+          !pgaTeeTime?.iso &&
+          !pgaTeeTime?.raw
+        ) {
+          continue;
+        }
+
+        const playerId =
+          playerIdByEspnId.get(
+            competitor.espnPlayerId,
+          );
+
+        if (playerId === undefined) {
+          continue;
+        }
+
+        const eventRow =
+          liveEventPlayerRows.find(
+            (row) =>
+              Number(row.player_id) ===
+              Number(playerId),
+          );
+
+        if (!eventRow) {
+          continue;
+        }
+
+        const roundsCompleted =
+          Number(
+            eventRow.rounds_completed ??
+              0,
+          );
+
+        const isCurrentScheduledRound =
+          Number(
+            eventRow.current_round ?? 0,
+          ) ===
+            pgaPublishedRoundNumber &&
+          Number(
+            eventRow.holes_completed ?? 0,
+          ) === 0;
+
+        const canAdvanceToPublishedRound =
+          roundsCompleted ===
+            pgaPublishedRoundNumber - 1;
+
+        if (
+          !isCurrentScheduledRound &&
+          !canAdvanceToPublishedRound
+        ) {
+          continue;
+        }
+
+        eventRow.current_round =
+          pgaPublishedRoundNumber;
+        eventRow.last_hole = null;
+        eventRow.tee_time =
+          pgaTeeTime.iso;
+        eventRow.tee_time_raw =
+          pgaTeeTime.raw;
+
+        if (
+          eventRow.status !==
+            "round_complete"
+        ) {
+          eventRow.status =
+            "scheduled";
+        }
+
+      }
+    }
+
+    const roundRows = competitors.flatMap((competitor) => {
+      const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+
+      const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
+
+      /*
+       * Before play begins, PGA may return the golfer in the
+       * tournament field without returning any round objects.
+       *
+       * Preserve a scheduled round so the scorecard can show
+       * all 18 holes and open the pre-round ShotCast layouts.
+       * No golf_holes rows are created until real scoring data
+       * arrives.
+       */
+      if (competitor.rounds.length === 0) {
+        const scheduledRoundNumber = Math.min(
+          4,
+          Math.max(
+            1,
+            Number(
+              competitor.currentRound ??
+                competitor.roundsCompleted + 1,
+            ),
+          ),
+        );
+
+        return [
+          {
+            event_player_id: eventPlayerId,
+            round_number: scheduledRoundNumber,
+            score_to_par: null,
+            score_display: null,
+            strokes: null,
+            holes_completed: 0,
+            tee_time:
+              scheduledRoundNumber ===
+                pgaPublishedRoundNumber
+                ? pgaTeeTimesByName.get(
+                    normalizeGolfNameKey(
+                      competitor.displayName,
+                    ),
+                  )?.iso ??
+                  competitor.teeTime
+                : competitor.teeTime,
+            tee_time_raw:
+              scheduledRoundNumber ===
+                pgaPublishedRoundNumber
+                ? pgaTeeTimesByName.get(
+                    normalizeGolfNameKey(
+                      competitor.displayName,
+                    ),
+                  )?.raw ??
+                  competitor.teeTimeRaw
+                : competitor.teeTimeRaw,
+            status: "scheduled" as const,
+            updated_at: refreshedAt,
+          },
+        ];
+      }
+
+      const pgaFallback =
+        pgaTeeTimesByName.get(
+          normalizeGolfNameKey(
+            competitor.displayName,
+          ),
+        ) ??
+        null;
+
+      const persistedRounds =
+        competitor.rounds.map(
+          (round) => {
+            const isPgaPublishedRound =
+              pgaPublishedRoundNumber !==
+                null &&
+              round.roundNumber ===
+                pgaPublishedRoundNumber &&
+              round.holesCompleted ===
+                0;
+
+            return {
+              event_player_id:
+                eventPlayerId,
+              round_number:
+                round.roundNumber,
+              score_to_par:
+                round.scoreToPar,
+              score_display:
+                round.scoreDisplay,
+              strokes:
+                round.strokes,
+              holes_completed:
+                round.holesCompleted,
+              tee_time:
+                isPgaPublishedRound
+                  ? pgaFallback?.iso ??
+                    round.teeTime
+                  : round.teeTime,
+              tee_time_raw:
+                isPgaPublishedRound
+                  ? pgaFallback?.raw ??
+                    round.teeTimeRaw
+                  : round.teeTimeRaw,
+              status:
+                getRoundStatus(
+                  round,
+                  tournament.status,
+                ),
+              updated_at:
+                refreshedAt,
+            };
+          },
+        );
+
+      const highestProviderRound =
+        competitor.rounds.reduce(
+          (highest, round) =>
+            Math.max(
+              highest,
+              Number(
+                round.roundNumber,
+              ),
+            ),
+          0,
+        );
+
+      const upcomingRoundNumber =
+        Number(
+          competitor.currentRound ?? 0,
+        );
+
+      const shouldAddUpcomingRound =
+        competitor.status ===
+          "scheduled" &&
+        upcomingRoundNumber > 0 &&
+        upcomingRoundNumber <=
+          EXPECTED_TOURNAMENT_ROUNDS &&
+        upcomingRoundNumber >
+          highestProviderRound;
+
+      if (
+        !shouldAddUpcomingRound
+      ) {
+        return persistedRounds;
+      }
+
+      return [
+        ...persistedRounds,
+        {
+          event_player_id:
+            eventPlayerId,
+          round_number:
+            upcomingRoundNumber,
+          score_to_par: null,
+          score_display: null,
+          strokes: null,
+          holes_completed: 0,
+          tee_time:
+            competitor.teeTime ??
+            pgaTeeTimesByName.get(
+              normalizeGolfNameKey(
+                competitor.displayName,
+              ),
+            )?.iso ??
+            null,
+          tee_time_raw:
+            competitor.teeTimeRaw ??
+            pgaTeeTimesByName.get(
+              normalizeGolfNameKey(
+                competitor.displayName,
+              ),
+            )?.raw ??
+            null,
+          status:
+            "scheduled" as const,
+          updated_at:
+            refreshedAt,
+        },
+      ];
+    });
+
+    for (const batch of chunkRows(roundRows, INSERT_BATCH_SIZE)) {
+      await assertLease();
+      const { error: roundsInsertError } =
+        await supabaseAdmin
+          .from("golf_rounds")
+          .upsert(batch.map(row => ({ event_player_id: row.event_player_id, round_number: row.round_number })), {
+            onConflict: "event_player_id,round_number", ignoreDuplicates: true,
+          });
+
+      if (roundsInsertError) {
+        return NextResponse.json(
+          {
+            error:
+              "Golf rounds could not be saved: " + roundsInsertError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+    }
+
+    const { data: allRoundIds, error: allRoundIdsError } = await supabaseAdmin
+      .from("golf_rounds").select("id, event_player_id, round_number")
+      .in("event_player_id", [...eventPlayerIdByPlayerId.values()]);
+    if (allRoundIdsError) throw new Error(allRoundIdsError.message);
+    const savedRounds = (allRoundIds ?? []) as GolfRoundIdRow[];
+
+    const roundIdByKey = new Map(
+      savedRounds.map((round) => [
+        `${round.event_player_id}:${round.round_number}`,
+        Number(round.id),
+      ]),
+    );
+
+    const holeRows: GolfObservationBatch["holes"] = competitors.flatMap((competitor) => {
+      const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+
+      const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
+
+      return competitor.rounds.flatMap((round) => {
+        const roundId = roundIdByKey.get(
+          `${eventPlayerId}:${round.roundNumber}`,
+        );
+
+        if (roundId === undefined) {
+          return [];
+        }
+
+        return round.holes.map((hole) => ({
+          round_id: roundId,
+          hole_number: hole.holeNumber,
+          strokes: hole.strokes,
+          relative_to_par: hole.relativeToPar,
+          score_display: hole.scoreDisplay,
+          reconciliation: { source: "espn" as const, observedAt, final: hole.strokes !== null && hole.relativeToPar !== null },
+        }));
+      });
+    });
+
+    const { data: rosterTeams, error: rosterTeamError } = await supabaseAdmin.from('slate_teams')
+      .select('team_id').eq('slate_id', slateId).eq('is_participating', true);
+    if (rosterTeamError) throw new Error(rosterTeamError.message);
+    const snapshot = slate.rules_snapshot ?? null;
+    const rosters = await loadGolfRosters(slateId, snapshot, (rosterTeams ?? []).map(t => Number(t.team_id)));
+    const { data: periods, error: periodError } = await supabaseAdmin.from('golf_roster_periods')
+      .select('period_key, opened_at, completed_at, started_rounds').eq('slate_id', slateId);
+    if (periodError) throw new Error(periodError.message);
+    const activePeriod = relevantGolfRosterPeriodKey(snapshot, periods ?? []);
+    const lineupsData = rosters.map(roster => ({
+      team_id: roster.teamId,
+      lineup_players: (roster.periods.find(p => p.period === activePeriod)?.playerIds ?? []).map(player_id => ({ player_id })),
+    }));
+
+    // Supplement only drafted golfers' live round during the existing Refresh.
+    // No timer, field-wide scan, historical backfill, or per-hole replay requests.
+    const draftedPlayerIds = new Set((lineupsData ?? []).flatMap(lineup =>
+      (lineup.lineup_players ?? []).map(player => Number(player.player_id))));
+    const shotcastCandidates = tournament.status === "in_progress" ? competitors.filter(competitor =>
+      competitor.status === "active" && competitor.currentRound != null &&
+      draftedPlayerIds.has(playerIdByEspnId.get(competitor.espnPlayerId)!)) : [];
+    let shotcastFailures = 0;
+    for (const batch of chunkRows(shotcastCandidates, 4)) {
+      const cards = await Promise.allSettled(batch.map(async competitor => {
+        const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+        const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
+        const roundId = roundIdByKey.get(`${eventPlayerId}:${competitor.currentRound}`);
+        if (!roundId) return [];
+        const card = await fetchGolfRoundScorecard({
+          year: Number(slate.start_date.slice(0, 4)), tournamentName: slate.display_name ?? tournament.name,
+          playerName: competitor.displayName, roundNumber: competitor.currentRound!, cacheBust: observedAt,
+        });
+        return card.holes.flatMap(hole => {
+          const observation = shotcastObservation(hole, card.observedAt);
+          return observation ? [{ ...observation, round_id: roundId }] : [];
+        });
+      }));
+      for (const card of cards) {
+        if (card.status === "fulfilled") holeRows.push(...card.value);
+        else { shotcastFailures += 1; console.warn("Golf ShotCast supplement unavailable", card.reason); }
+      }
+    }
+
+    await assertLease();
+    const accepted = await reconcileGolf(slateId, {
+      observedAt, events: eventPlayerRows, rounds: roundRows, holes: holeRows,
+    });
+    const persistedTeamRows = accepted.teamRows;
+
+    const statusCounts = competitors.reduce<
+      Record<GolfCompetitorStatus, number>
+    >(
+      (counts, competitor) => {
+        counts[competitor.status] += 1;
+        return counts;
+      },
+      {
+        scheduled: 0,
+        active: 0,
+        round_complete: 0,
+        finished: 0,
+        cut: 0,
+        withdrawn: 0,
+        disqualified: 0,
+        did_not_start: 0,
+      },
+    );
+
+    let playerFinishedNotifications = {
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
+    try {
+      const newlyCompletedRounds =
+        competitors.flatMap(
+          (competitor) => {
+            const playerId =
+              playerIdByEspnId.get(
+                competitor.espnPlayerId,
+              );
+
+            if (playerId === undefined) {
+              return [];
+            }
+
+            /*
+             * A golfer has newly finished Round N only when the
+             * persisted pre-refresh round was incomplete and the
+             * current provider round has reached all 18 holes.
+             *
+             * This is the actual golf event we care about.
+             */
+            return competitor.rounds.flatMap(
+              (round) => {
+                const roundNumber =
+                  Number(
+                    round.roundNumber,
+                  );
+
+                const currentHoles =
+                  Number(
+                    round.holesCompleted ??
+                      0,
+                  );
+
+                if (
+                  !Number.isInteger(
+                    roundNumber,
+                  ) ||
+                  roundNumber < 1 ||
+                  roundNumber >
+                    EXPECTED_TOURNAMENT_ROUNDS ||
+                  currentHoles < 18
+                ) {
+                  return [];
+                }
+
+                const previousHoles =
+                  previousRoundHolesByPlayerRound.get(
+                    `${playerId}:${roundNumber}`,
+                  ) ?? 0;
+
+                if (
+                  previousHoles >= 18
+                ) {
+                  return [];
+                }
+
+                return [
+                  {
+                    playerId,
+                    roundNumber,
+                    roundScore:
+                      round.scoreToPar ??
+                      null,
+                    fantasyPoints:
+                      competitor
+                        .officialScoreToPar,
+                  },
+                ];
+              },
+            );
+          },
+        );
+
+      await assertLease();
+      playerFinishedNotifications =
+        await notifyNewlyFinishedPlayers({
+          slate: {
+            id: slate.id,
+            date: slate.start_date,
+            start_date:
+              slate.start_date,
+            end_date:
+              slate.end_date,
+            sport: "golf",
+            display_name:
+              slate.display_name?.trim() ||
+              tournament.name,
+          },
+          players: competitors.map(
+            (competitor) => ({
+              id:
+                playerIdByEspnId.get(
+                  competitor.espnPlayerId,
+                )!,
+              name:
+                competitor.displayName,
+            }),
+          ),
+          lineups:
+            (lineupsData ?? []).map(
+              (lineup) => ({
+                team_id:
+                  Number(lineup.team_id),
+                lineup_players:
+                  lineup.lineup_players ??
+                  [],
+              }),
+            ),
+          previousStatuses:
+            newlyCompletedRounds.map(
+              (row) => ({
+                playerId:
+                  row.playerId,
+                gameStatus: 2,
+              }),
+            ),
+          currentStats:
+            newlyCompletedRounds.map(
+              (row) => ({
+                player_id:
+                  row.playerId,
+                fantasy_points:
+                  row.fantasyPoints,
+                game_status: 3,
+                round_number:
+                  row.roundNumber,
+                round_score:
+                  row.roundScore,
+                event_key_suffix:
+                  `round-${row.roundNumber}`,
+              }),
+            ),
+        });
+    } catch (notificationError) {
+      console.error(
+        "Golf stats saved, but round-complete notifications failed",
+        notificationError,
+      );
+    }
+
+    let slateAutoLocked = false;
+
+    let slateCompleteNotifications = {
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
+    /*
+     * A tournament is settled when ESPN explicitly reports Final,
+     * or when every golfer is in a terminal state.
+     *
+     * ESPN commonly leaves golfers who finish Sunday as
+     * "round_complete" instead of promoting them to "finished".
+     * Treat round_complete as terminal only when that golfer has
+     * completed the full four-round / 72-hole tournament.
+     *
+     * Cut, WD, DQ, and DNS golfers are already terminal states.
+     */
+    const finalRoundCompleteGolfers =
+      competitors.filter(
+        (competitor) =>
+          competitor.status === "round_complete",
+      );
+
+    const allRoundCompleteGolfersAreFinished =
+      finalRoundCompleteGolfers.every(
+        (competitor) =>
+          competitor.roundsCompleted >=
+            EXPECTED_TOURNAMENT_ROUNDS &&
+          competitor.holesCompleted >=
+            EXPECTED_TOURNAMENT_ROUNDS * 18,
+      );
+
+    const tournamentFieldIsSettled =
+      statusCounts.scheduled === 0 &&
+      statusCounts.active === 0 &&
+      allRoundCompleteGolfersAreFinished &&
+      (
+        statusCounts.finished > 0 ||
+        finalRoundCompleteGolfers.length > 0
+      );
+
+    const tournamentIsComplete =
+      tournament.completed ||
+      tournament.status === "final" ||
+      tournamentFieldIsSettled;
+
+    if (tournamentIsComplete) {
+      /*
+       * Send notifications before locking. If notification processing
+       * throws unexpectedly, leave the slate open so the next cron run
+       * can retry instead of permanently losing the final alert.
+       *
+       * sendLoggedNotification's event keys prevent duplicate pushes.
+       */
+      try {
+        await assertLease();
+        slateCompleteNotifications =
+          await notifyCompletedSlate({
+            slate: {
+              id: slate.id,
+              date: slate.start_date,
+              start_date:
+                slate.start_date,
+              end_date:
+                slate.end_date,
+              sport: "golf",
+              display_name:
+                slate.display_name?.trim() ||
+                tournament.name,
+            },
+            teamResults:
+              persistedTeamRows.map(
+                (row) => ({
+                  team_id:
+                    Number(row.team_id),
+                  fantasy_points:
+                    Number(
+                      row.fantasy_points ?? 0,
+                    ),
+                  finish_position:
+                    row.finish_position,
+                }),
+              ),
+          });
+      } catch (notificationError) {
+        console.error(
+          "Golf tournament is final, but final notifications failed",
+          notificationError,
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Golf results were saved, but final notifications failed. " +
+              "The slate was left open so the next refresh can retry.",
+            slateId,
+          },
+          { status: 500 },
+        );
+      }
+
+      await assertLease();
+      const {
+        error: lockError,
+      } = await supabaseAdmin
+        .from("slates")
+        .update({
+          is_locked: true,
+        })
+        .eq("id", slateId)
+        .eq("is_locked", false);
+
+      if (lockError) {
+        return NextResponse.json(
+          {
+            error:
+              "Golf results and final notifications were saved, " +
+              "but the slate could not be locked: " +
+              lockError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      slateAutoLocked = true;
+
+      console.log(
+        "Golf tournament finalized and slate locked",
+        {
+          slateId,
+          tournament:
+            slate.display_name ??
+            tournament.name,
+          winnerTeamId:
+            persistedTeamRows.find(
+              (row) =>
+                row.finish_position === 1,
+            )?.team_id ?? null,
+        },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      slateId,
+      refreshedAt,
+      tournament: {
+        eventId: tournament.espnEventId,
+        name: tournament.name,
+        status: tournament.status,
+        statusDescription: tournament.statusDescription,
+        currentRound: tournament.currentRound,
+        completed: tournament.completed,
+        startDate: tournament.startDate,
+        endDate: tournament.endDate,
+      },
+      scoring: {
+        expectedRounds: EXPECTED_TOURNAMENT_ROUNDS,
+        hasCut: slate.has_cut,
+        cutPenaltyPerRound: penaltyPerRound,
+      },
+      statusCounts,
+      normalizationCorrections,
+      fieldReconciliation: { removedBeforeStart: 0, playerIds: [], golfers: [] },
+      gamesFound: 1,
+      playersUpserted: identityReconciliation.counts.retained + identityReconciliation.counts.resolved + identityReconciliation.counts.created,
+      eventPlayersUpserted: eventPlayerRows.length,
+      playerStatsUpserted: eventPlayerRows.length,
+      teamResultsUpserted: accepted.teamWrites.length,
+      shotcastFailures,
+      acceptedRevision: accepted.revision,
+      scoringChanged: accepted.scoringChanged,
+      playerFinishedNotifications,
+      slateAutoLocked,
+      slateCompleteNotifications,
+      roundsInserted: roundRows.length,
+      holesInserted: holeRows.length,
+      courseHolesUpserted,
+      preview: competitors.slice(0, 10).map((competitor) => {
+        const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+
+        const eventRow = eventPlayerRows.find(
+          (row) => row.player_id === playerId,
+        );
+
+        return {
+          espnPlayerId: competitor.espnPlayerId,
+          displayName: competitor.displayName,
+          leaderboardOrder: competitor.leaderboardOrder,
+          officialScoreDisplay: competitor.officialScoreDisplay,
+          roundsCompleted: competitor.roundsCompleted,
+          holesCompleted: competitor.holesCompleted,
+          status: competitor.status,
+          penaltyStrokes: eventRow?.penalty_strokes ?? 0,
+          fantasyScore: eventRow?.fantasy_score ?? null,
+        };
+      }),
+    });
+  } catch (error) {
+    console.error("Unexpected Golf refresh error:", error);
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unexpected server error while refreshing Golf data.",
+      },
+      { status: 500 },
+    );
+  }
+}
