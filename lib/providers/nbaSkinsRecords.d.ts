@@ -25,6 +25,7 @@ export function espnSeasonForSkinsSeason(
 
 export function fetchNbaSkinsSeasonRecords(
   skinsSeason: number,
+  requestFetch?: typeof fetch,
 ): Promise<{
   skinsSeason: number;
   espnSeason: number;
@@ -33,6 +34,7 @@ export function fetchNbaSkinsSeasonRecords(
 
 export function fetchNbaSkinsSeasonProjections(
   skinsSeason: number,
+  requestFetch?: typeof fetch,
 ): Promise<{
   skinsSeason: number;
   espnSeason: number;

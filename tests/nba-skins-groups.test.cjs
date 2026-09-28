@@ -150,15 +150,13 @@ test("profile history remains active-league scoped and pre-2026 draft rounds rem
   assert.match(standings, /selectedSeason\.season >= 2026 \? pick\.draft_round : null/);
 });
 
-test("projection refresh updates every complete current-year Group season by season ID", () => {
-  const cron = source("app/api/cron/refresh-nba-skins/route.ts");
-  assert.match(cron, /findRefreshSeasons/);
-  assert.match(cron, /seasons\.flatMap/);
-  assert.match(cron, /season_id:\s*targetSeason\.id/);
-  assert.match(cron, /\.in\(\s*"season_id"/);
-  assert.match(cron, /season\.participant_count/);
-  assert.match(cron, /season\.nba_teams_per_participant/);
-  assert.doesNotMatch(cron, /count\s*===\s*28/);
+test("Skins worker uses frozen draft completion and season-scoped writes; old cron is retired", () => {
+  const sql = source("supabase/migrations/20261003000100_nba_background_orchestration.sql");
+  assert.match(sql, /s.participant_count\*s.nba_teams_per_participant/);
+  assert.match(sql, /newer.league_id=s.league_id/);
+  assert.match(sql, /p.season_id=p_season_id and t.season_id=p_season_id/);
+  assert.match(source("app/api/cron/refresh-nba-skins/route.ts"), /status: 410/);
+  assert.match(source("lib/nba/refreshSkins.server.ts"), /apply_nba_skins/);
 });
 
 test("phased migration adds scoped uniqueness before removing global uniqueness", () => {

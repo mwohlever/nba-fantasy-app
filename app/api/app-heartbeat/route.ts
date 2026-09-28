@@ -14,9 +14,6 @@ import {
   GET as checkNcaaReminders,
 } from "@/app/api/cron/ncaa-pickem-reminders/route";
 
-import {
-  GET as refreshNbaSkins,
-} from "@/app/api/cron/refresh-nba-skins/route";
 
 export const runtime =
   "nodejs";
@@ -169,34 +166,13 @@ export async function POST() {
   /*
    * NBA Skins is season-long rather than slate-based.
    *
-   * The refresh route itself skips automatically until a
+   * The NBA worker skips automatically until a
    * complete annual draft exists, so it is safe to include
    * in the same global heartbeat.
    */
   try {
-    const skinsResponse =
-      await refreshNbaSkins(
-        new Request(
-          "http://internal/api/cron/refresh-nba-skins",
-          {
-            method: "GET",
-            headers,
-          },
-        ),
-      );
-
-    try {
-      results.nbaSkinsRefresh =
-        await skinsResponse.json();
-    } catch {
-      results.nbaSkinsRefresh = {
-        success: false,
-        status:
-          skinsResponse.status,
-        error:
-          "Unreadable NBA Skins refresh response.",
-      };
-    }
+    const { runNbaWorker } = await import("@/lib/nba/backgroundWorker.server");
+    results.nbaSkinsRefresh = await runNbaWorker({ only: "skins", source: "heartbeat" });
   } catch (error) {
     console.error(
       "App heartbeat NBA Skins refresh failed",
