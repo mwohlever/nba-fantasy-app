@@ -338,6 +338,18 @@ body {
   }
 }
 
+/* Inline NBA replay must stick to the page viewport. overflow-x: hidden on
+ * main/body otherwise creates a vertical scroll container on mobile. Clip
+ * horizontal overflow without intercepting normal document scrolling. */
+@media (max-width: 639px) {
+  html:has(main.nba-live-page),
+  body:has(main.nba-live-page),
+  main.nba-live-page {
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+}
+
 /* Mobile modal safety for fixed bottom nav */
 @media (max-width: 639px) {
   .mobile-modal-safe {

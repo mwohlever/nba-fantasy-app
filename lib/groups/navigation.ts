@@ -1,3 +1,4 @@
+import { nbaLiveHref, parseNbaLiveState } from "../live-scores/urlState";
 import { sharesViewingContext } from "../viewing-context/context";
 
 export type GroupNavigationSport =
@@ -137,12 +138,18 @@ export function getGroupSwitchDestination({
       enabledSports,
     );
 
-  let destinationSearch = normalizedSearch;
-  // Live does not consume Skins seasons, including on a Group switch.
-  if (normalizedPathname === "/nba-skins/live") {
-    searchParams.delete("season");
-    destinationSearch = searchParams.toString();
+  // NBA ESPN events/dates are public provider context, not Group resource IDs.
+  // Whitelist the Live namespace, discarding slate/team/season/Group identifiers.
+  const nbaContext = normalizedPathname === "/nba-skins/live" ? "nba-skins"
+    : normalizedPathname === "/live-scores" && searchParams.get("sport") === "nba" ? "nba" : null;
+  if (nbaContext) {
+    if (!isEnabled(nbaContext, targetEnabledSports)) return fallback;
+    // Explicit old Group/league IDs are never transferred to another Group.
+    if (searchParams.has("groupId") || searchParams.has("leagueId")) return fallback;
+    return nbaLiveHref(parseNbaLiveState(nbaContext, normalizedSearch));
   }
+
+  let destinationSearch = normalizedSearch;
   const viewingGame = normalizedPathname.startsWith("/nba-skins") ? "nba-skins" : searchParams.get("sport");
   if (viewingGame && sharesViewingContext(normalizedPathname, viewingGame) &&
       (searchParams.has("slateId") || searchParams.has("season"))) {

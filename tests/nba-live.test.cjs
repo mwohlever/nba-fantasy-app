@@ -112,13 +112,13 @@ test('compact replay eligibility is mobile-only and supplements a hidden normal 
   assert.equal(shouldShowCompactNbaReplay(true, true), false);
   assert.equal(shouldShowCompactNbaReplay(true, false), true);
   assert.equal(shouldShowCompactNbaReplay(false, false), false);
-  const gameCenter = fs.readFileSync(path.join(root, 'components/live-scores/NbaGameCenterModal.tsx'), 'utf8');
+  const gameCenter = fs.readFileSync(path.join(root, 'components/live-scores/NbaGameCenter.tsx'), 'utf8');
   assert.match(gameCenter, /new IntersectionObserver/);
-  assert.match(gameCenter, /closest\("main"\)/);
+  assert.match(gameCenter, /presentation==="modal"\?region\?\.closest\("\[data-nba-modal-scroll\]"\):null/);
   assert.match(gameCenter, /shouldShowCompactNbaReplay\(narrow,normalReplayVisible\)/);
   assert.match(gameCenter, /replayEnabled=\{!compactVisible\}/);
   assert.match(gameCenter, /NbaPlayCourt compact play=\{selected\}/);
-  assert.match(gameCenter, /sticky top-\[-1rem\].*!mt-0/);
+  assert.match(gameCenter, /presentation==="inline"\?"top-0":"top-\[-1rem\]"/);
 });
 
 test('QA game shot transforms preserve ESPN rim distance for both display sides', () => {
@@ -164,7 +164,7 @@ test('supplemental NBA awards cannot block the scoped Home summary loading exit'
 });
 
 test('NBA player stats keeps one selected team table at a time', () => {
-  const gameCenter = fs.readFileSync(path.join(root, 'components/live-scores/NbaGameCenterModal.tsx'), 'utf8');
+  const gameCenter = fs.readFileSync(path.join(root, 'components/live-scores/NbaGameCenter.tsx'), 'utf8');
   assert.match(gameCenter, /selectedTeamId/);
   assert.match(gameCenter, /grid-cols-2/);
   assert.match(gameCenter, /teams\.find\(team=>String\(team\.team\?\.id\)===selectedTeamId\)/);
@@ -184,5 +184,15 @@ test('completed NBA detail preserves box score and play-by-play payloads', async
     assert.equal(detail.boxscore.players.length, 1);
     assert.equal(detail.plays.length, 1);
     assert.equal(detail.plays[0].coordinate.x, 20);
+  } finally { global.fetch = originalFetch; }
+});
+
+test('missing or wrong ESPN NBA event context is unavailable instead of an empty success', async () => {
+  const originalFetch = global.fetch;
+  try {
+    global.fetch = async () => Response.json({ header: null });
+    await assert.rejects(fetchNbaGameDetail('123'), /game is unavailable/);
+    global.fetch = async () => Response.json({ header: { id: '999', competitions: [{ competitors: [competitor('away', 'AWY', '1'), competitor('home', 'HME', '2')] }] } });
+    await assert.rejects(fetchNbaGameDetail('123'), /game is unavailable/);
   } finally { global.fetch = originalFetch; }
 });

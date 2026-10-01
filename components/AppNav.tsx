@@ -617,7 +617,7 @@ function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracke
     if (
       pathname === "/golf/live" ||
       pathname === "/nba-skins/live" ||
-      (pathname === "/live-scores" && activeSport === "nba")
+      pathname === "/live-scores"
     ) {
       return "live";
     }
@@ -864,11 +864,14 @@ function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracke
 
     if (
       usesDedicatedFallback ||
-      isNotificationAdminRoute
+      isNotificationAdminRoute ||
+      currentSection === "live"
     ) {
       /*
        * Navigate first and let routeSport synchronize selectedSport.
        *
+       * Live URLs change sport/app and discard incompatible detail parameters
+       * together; synchronize selectedSport only after that navigation.
        * Notification admin pages preserve their route across sports,
        * so updating selectedSport before the URL changes can race with
        * the still-stale ?sport= value and immediately switch back.

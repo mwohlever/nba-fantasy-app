@@ -12,6 +12,10 @@ export async function fetchNbaGameDetail(eventId: string) {
   const competitors = Array.isArray(competition?.competitors) ? competition.competitors : [];
   const away = competitors.find((team: any) => team.homeAway === "away");
   const home = competitors.find((team: any) => team.homeAway === "home");
+  if (!competition || !away?.team?.id || !home?.team?.id ||
+      (summary.header?.id && String(summary.header.id) !== eventId)) {
+    throw new Error("This NBA game is unavailable. Return to Games to choose another game.");
+  }
   return {
     success: true, eventId, header: summary.header ?? null, boxscore: summary.boxscore ?? null,
     leaders: Array.isArray(summary.leaders) ? summary.leaders : [], plays: normalizeNbaPlays(summary.plays),

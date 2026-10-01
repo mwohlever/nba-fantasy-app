@@ -76,8 +76,20 @@ test("Live Scores retain only enabled NCAA/NFL route context on Group switch", (
 
 
 test("NBA Skins Live remains in enabled destination Groups and drops historical seasons", () => {
-  assert.equal(destination('/nba-skins/live', '', { enabledSports: ['nba-skins'] }), '/nba-skins/live');
-  assert.equal(destination('/nba-skins/live', '?season=2025', { enabledSports: ['nba-skins'] }), '/nba-skins/live');
+  assert.match(destination('/nba-skins/live', '', { enabledSports: ['nba-skins'] }), /^\/nba-skins\/live\?date=\d{4}-\d{2}-\d{2}$/);
+  assert.match(destination('/nba-skins/live', '?season=2025', { enabledSports: ['nba-skins'] }), /^\/nba-skins\/live\?date=\d{4}-\d{2}-\d{2}$/);
   assert.equal(destination('/nba-skins/live', '', { enabledSports: ['nba'] }), targetHome);
   assert.equal(destination('/nba-skins/live', '?groupId=old-group'), targetHome);
+});
+
+test('NBA Live Group switches preserve public event/date/tab and clear fantasy or historical context', () => {
+  for (const mode of ['nba', 'nba-skins']) {
+    const path = mode === 'nba' ? '/live-scores' : '/nba-skins/live';
+    const query = `?${mode === 'nba' ? 'sport=nba&' : ''}date=2026-05-25&gameId=123&tab=pbp&slateId=9&season=2025&teamId=old`;
+    assert.equal(destination(path, query, { enabledSports: [mode] }), `${path}?${mode === 'nba' ? 'sport=nba&' : ''}date=2026-05-25&gameId=123&tab=pbp`);
+    assert.equal(destination(path, query, { enabledSports: [mode === 'nba' ? 'nba-skins' : 'nba'] }), targetHome);
+    assert.equal(destination(path, query + '&leagueId=old'), targetHome);
+    const direct = destination(path, `${mode === 'nba' ? '?sport=nba&' : '?'}gameId=123`);
+    assert.equal(new URL(direct, 'http://test').searchParams.has('date'), false);
+  }
 });

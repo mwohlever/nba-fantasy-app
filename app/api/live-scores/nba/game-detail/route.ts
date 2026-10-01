@@ -11,9 +11,15 @@ export async function GET(request: NextRequest) {
     const context = nbaLiveContext(request.nextUrl.searchParams.get("context"));
     const access = user ? await getNbaLiveAccess(user, context) : null;
     if (!access) return NextResponse.json({ error: `${context === "nba-skins" ? "NBA Skins" : "NBA"} is not enabled for this Group.` }, { status: 403 });
+    const requestedViewerId = request.nextUrl.searchParams.get("viewerId");
+    const requestedLeagueId = request.nextUrl.searchParams.get("leagueId");
+    if ((requestedViewerId && requestedViewerId !== user!.id) || (requestedLeagueId && requestedLeagueId !== access.league.id)) {
+      return NextResponse.json({ error: "The NBA Live viewing context changed. Return to Games and try again." }, { status: 409 });
+    }
     const requestedGroupId = request.nextUrl.searchParams.get("groupId");
     if (requestedGroupId && requestedGroupId !== access.context.group.id) return NextResponse.json({ error: "The selected Group changed. Refreshing NBA Game Center." }, { status: 409 });
     const eventId = request.nextUrl.searchParams.get("eventId") ?? "";
+    if (!/^\d+$/.test(eventId)) return NextResponse.json({ error: "Invalid NBA game ID. Return to Games to choose another game." }, { status: 400 });
     const detail = await fetchNbaGameDetail(eventId);
     // Skins shares the provider payload but never reads daily or annual rosters.
     if (context === "nba-skins") return NextResponse.json(detail, { headers: { "Cache-Control": "private, no-store" } });
