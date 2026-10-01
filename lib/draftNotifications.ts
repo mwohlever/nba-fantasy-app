@@ -11,6 +11,7 @@ import {
   getLeagueNotificationTemplate,
 } from "@/lib/leagueNotificationSettings";
 import { getSportConfig } from "@/lib/sports";
+import { draftUrl } from "@/lib/lineups/draftContext";
 import {
   getRosterSlotsFromRulesSnapshot,
 } from "@/lib/rules/leagueRules";
@@ -448,7 +449,7 @@ export async function notifyNextDrafter(
     leagueId,
     title: renderedTitle,
     body: renderedBody,
-    url: `/lineups/draft?slateId=${slateId}`,
+    url: draftUrl(sport, slateId),
     tag: `draft-turn-${slateId}`,
     metadata: {
       nextTeamName,

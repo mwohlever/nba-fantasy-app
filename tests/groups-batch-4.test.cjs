@@ -62,7 +62,8 @@ function setup({ group = 'a', role = 'member', signedIn = true } = {}) {
   const mocks = {'next/server': next, '@/lib/supabaseAdmin': {supabaseAdmin:db},
     '@/lib/auth': {getCurrentUser:async()=>user}, '@/lib/groups/context':{getGroupContextForUser:async()=>context}};
   const policy = load('lib/security/resourcePolicy.ts');
-  const auth = load('lib/security/resourceAuthorization.ts', {...mocks, '@/lib/security/resourcePolicy':policy});
+  const sportValidation = load('lib/security/slateSport.ts', { 'next/server': next, '@/lib/lineups/draftContext': load('lib/lineups/draftContext.ts') });
+  const auth = load('lib/security/resourceAuthorization.ts', {...mocks, '@/lib/security/resourcePolicy':policy, '@/lib/security/slateSport': sportValidation});
   mocks['@/lib/security/resourceAuthorization'] = auth;
   return { db, mocks, auth };
 }

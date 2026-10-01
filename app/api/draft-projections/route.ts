@@ -10,7 +10,9 @@ export async function GET(request: NextRequest) {
   if (!Number.isSafeInteger(slateId) || slateId <= 0) {
     return NextResponse.json({ error: "slateId must be a positive safe integer." }, { status: 400 });
   }
-  const authorization = await authorizeSlateResource(request, slateId);
+  const authorization = await authorizeSlateResource(request, slateId, {
+    expectedSport: request.nextUrl.searchParams.get("sport"),
+  });
   if (!authorization.ok) return authorization.response;
 
   const result = await supabaseAdmin
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
         : null,
     } as const;
     const projections = await getDraftProjectionsForSlate(slate);
-    return NextResponse.json({ slateId, ...projections }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+    return NextResponse.json({ slateId, groupId: authorization.target.groupId, ...projections }, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to load Draft projections." },

@@ -3,6 +3,7 @@ import { isMissingDraftInfrastructure, mutateFantasyDraft, readDraftHistory } fr
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentUser } from "@/lib/auth";
+import { validateExpectedSlateSport } from "@/lib/security/slateSport";
 import {
   getActiveSlateAccessForUser,
   teamBelongsToGroup,
@@ -19,6 +20,7 @@ import {
 type Sport = "nba" | "nfl" | "golf";
 
 type SaveLineupBody = {
+  sport?: string;
   slateId?: number;
   teamId?: number;
   playerIds?: number[];
@@ -239,6 +241,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const sportError = validateExpectedSlateSport(request.nextUrl.searchParams.get("sport"), slateAccess.slate.sport);
+    if (sportError) return sportError;
+
     // Optional Draft context is read-only and uses the same active-slate access check.
     let draftContext;
     if (request.nextUrl.searchParams.get("draft") === "true") {
@@ -287,6 +292,9 @@ export async function GET(request: NextRequest) {
     if (safeLineups.length === 0) {
       return NextResponse.json({
         success: true,
+        slateId,
+        sport: slateAccess.slate.sport,
+        groupId: slateAccess.context.group.id,
         lineups: [],
         draftContext,
       });
@@ -379,6 +387,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      slateId,
+      sport: slateAccess.slate.sport,
+      groupId: slateAccess.context.group.id,
       lineups: grouped,
       draftContext,
     });
@@ -505,6 +516,9 @@ export async function POST(request: Request) {
         },
       );
     }
+
+    const sportError = validateExpectedSlateSport(body.sport, slateAccess.slate.sport);
+    if (sportError) return sportError;
 
     const teamIsInGroup =
       await teamBelongsToGroup(

@@ -23,11 +23,14 @@ function fixture({authorized = true, failure = null, role = "player", canAdminis
   new Function('require', 'exports', source)(name => {
     if (name === 'next/server') return {NextResponse: {json: (body, options) => ({body, status: options?.status ?? 200})}};
     if (name.includes('supabaseAdmin')) return {supabaseAdmin: admin};
+    if (name.includes('security/slateSport')) {
+      const helper = {}; new Function('require', 'exports', ts.transpileModule(fs.readFileSync('lib/security/slateSport.ts','utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText)(id => id === 'next/server' ? {NextResponse: {json: (body, options) => ({body, status: options?.status ?? 200})}} : {isFantasySport: value => ['nba','nfl','golf'].includes(value)}, helper); return helper;
+    }
     if (name.includes('/auth')) return {getCurrentUser: async () => ({id: 'mark', role})};
     if (name.includes('draftPermissions')) {
       const helper = {}; new Function('exports', ts.transpileModule(fs.readFileSync('lib/lineups/draftPermissions.ts','utf8'), {compilerOptions: {module: ts.ModuleKind.CommonJS}}).outputText)(helper); return helper;
     }
-    if (name.includes('/groups/context')) return {getActiveSlateAccessForUser: async () => authorized ? {context: {group: {id: 'a'}, team: {id: 1}, canAdministerGroup}, league: {id: 'league-a'}} : null, teamBelongsToGroup: async () => teamInGroup};
+    if (name.includes('/groups/context')) return {getActiveSlateAccessForUser: async () => authorized ? {context: {group: {id: 'a'}, team: {id: 1}, canAdministerGroup}, league: {id: 'league-a'}, slate: {sport: 'nba'}} : null, teamBelongsToGroup: async () => teamInGroup};
     return {};
   }, exports);
   return {post: async (teamId) => { rows.slates = []; return exports.POST({json: async () => ({slateId: 1, teamId, playerIds: [10]})}); }, get: (draft = true) => exports.GET({nextUrl: new URL(`http://test/api/lineups?slateId=1${draft ? '&draft=true' : ''}`)}), calls};

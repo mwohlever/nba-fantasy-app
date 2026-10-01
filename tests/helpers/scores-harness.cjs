@@ -21,6 +21,7 @@ const mockedReact = { ...React,
     return host.values[i] ??= { current: initial };
   },
   useMemo(fn) { return current ? fn() : React.useMemo(fn, []); },
+  useCallback(fn, deps) { return current ? fn : React.useCallback(fn, deps); },
   useEffect(fn, deps) {
     if (!current) return React.useEffect(fn, deps);
     const host = current, i = host.cursor++;
@@ -34,11 +35,11 @@ const load = Module._load;
 Module._load = function(request, parent, ...rest) {
   if (request.includes('client/usePullToRefresh') && context.capturePull) return { usePullToRefresh: options => { context.pullOptions = options; return { distance: 0, armed: false }; } };
   if (request === 'react') return mockedReact;
-  if (request === 'next/navigation') return { usePathname: () => context.pathname, useSearchParams: () => new URLSearchParams({ sport: context.sport }) };
+  if (request === 'next/navigation') return { usePathname: () => context.pathname, useSearchParams: () => new URLSearchParams(context.search ?? { sport: context.sport }) };
   if (request.includes('providers/GroupProvider')) return { useGroupContext: () => ({
     groupContext: { group: { id: context.group }, team: context.team == null ? null : { id: context.team } }, isLoading: context.loading, isSwitchingGroup: context.switching,
   }) };
-  if (request.includes('providers/SportProvider')) return { useSelectedSport: () => ({ selectedSport: context.sport, setSelectedSport() {} }) };
+  if (request.includes('providers/SportProvider')) return { useSelectedSport: () => ({ selectedSport: context.sport, setSelectedSport(value) { context.onSportChange?.(value); } }) };
   return load.call(this, request.startsWith('@/') ? path.join(root, request.slice(2)) : request, parent, ...rest);
 };
 for (const extension of ['.ts', '.tsx']) require.extensions[extension] = (module, filename) => {

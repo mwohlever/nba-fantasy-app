@@ -547,7 +547,7 @@ function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracke
     const basePath = href.split("?")[0];
 
     if (sportScopedPaths.includes(basePath)) {
-      return appendSportParam(href, selectedSport);
+      return appendSportParam(href, activeSport);
     }
 
     return href;

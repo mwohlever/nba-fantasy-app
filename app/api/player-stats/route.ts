@@ -85,8 +85,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const authorization = await authorizeSlateResource(request, slateId);
+    const authorization = await authorizeSlateResource(request, slateId, {
+      expectedSport: request.nextUrl.searchParams.get("sport"),
+    });
     if (!authorization.ok) return authorization.response;
+    const responseContext = { slateId, groupId: authorization.target.groupId };
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")
@@ -255,6 +258,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
+          ...responseContext,
           sport,
           playerStats,
           acceptedRevision: Number([data?.golf_accepted_versions].flat()[0]?.revision ?? 0),
@@ -295,7 +299,7 @@ export async function GET(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { success: true, sport, playerStats: data ?? [] },
+        { success: true, ...responseContext, sport, playerStats: data ?? [] },
         { headers: noStoreHeaders() },
       );
     }
@@ -329,7 +333,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, sport, playerStats: data ?? [] },
+      { success: true, ...responseContext, sport, playerStats: data ?? [] },
       { headers: noStoreHeaders() },
     );
   } catch (error) {

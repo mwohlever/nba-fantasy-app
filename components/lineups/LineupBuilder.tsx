@@ -2,7 +2,8 @@
 import DraftOrder from "./DraftOrder";
 import { effectiveDraftPick, draftStateLabel, type DraftPick, type DraftHistory } from "@/lib/lineups/draftHistory";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { isFantasySport, matchesDraftResponse } from "@/lib/lineups/draftContext";
 import { useGroupContext } from "@/components/providers/GroupProvider";
 import { usePullToRefresh } from "@/lib/client/usePullToRefresh";
 import GolfSnakeWeekendLineups from "@/components/golf/GolfSnakeWeekendLineups";
@@ -74,7 +75,11 @@ export default function LineupBuilder({
   const pathname = usePathname();
   const isDraftPage = pathname === "/lineups/draft";
   const isScoresPage = pathname === "/lineups/scores";
+  const urlSport = useSearchParams().get("sport");
+  const draftSport = sport ?? selectedSport;
+  const draftRouteMatches = !isFantasySport(urlSport) || urlSport === draftSport;
   const { groupContext, isLoading: isGroupLoading, isSwitchingGroup } = useGroupContext();
+  const draftGroupId = groupContext?.group.id;
   const scoresSurfaceRef = useRef<HTMLDivElement>(null);
   const refreshScopeRef = useRef(createRefreshScope(""));
   const refreshMountedRef = useRef(true);
@@ -82,10 +87,10 @@ export default function LineupBuilder({
   const [refreshFeedback, setRefreshFeedback] = useState<{ scope: string; text: string } | null>(null);
 
   useEffect(() => {
-    if (sport && sport !== selectedSport) {
+    if (sport && sport !== selectedSport && (!isDraftPage || draftRouteMatches)) {
       setSelectedSport(sport);
     }
-  }, [sport]);
+  }, [sport, selectedSport, setSelectedSport, isDraftPage, draftRouteMatches]);
 
   const [selectedSlateId, setSelectedSlateId] = useState<string>(
     initialSelectedSlateId ? String(initialSelectedSlateId) : ""
@@ -106,7 +111,7 @@ export default function LineupBuilder({
     participants: Team[];
     canProxyDraft: boolean;
     gamesByTeam: Record<string, LiveScoreGame>;
-    slate: { id: number; is_locked: boolean; rules_snapshot?: Record<string, unknown> | null };
+    slate: { id: number; sport: string; is_locked: boolean; rules_snapshot?: Record<string, unknown> | null };
   } | null>(null);
   // Display-only intent; the server still determines every pick's chronology.
   const [editPicksScope, setEditPicksScope] = useState<string | null>(null);
@@ -225,16 +230,17 @@ export default function LineupBuilder({
     return slates.filter((slate) => {
       const date = slate.start_date ?? slate.date;
       const matchesSeason = date?.startsWith(selectedSeason);
-      const matchesSport = (slate.sport ?? "nba") === selectedSport;
+      const matchesSport = (slate.sport ?? "nba") === (isDraftPage ? draftSport : selectedSport);
       return matchesSeason && matchesSport;
     });
-  }, [slates, selectedSeason, selectedSport]);
+  }, [slates, selectedSeason, selectedSport, isDraftPage, draftSport]);
 
   const selectedSlateIdNumber = selectedSlateId ? Number(selectedSlateId) : null;
   activeGolfSlateRef.current = selectedSlateIdNumber;
   const baseSelectedSlate = slates.find((slate) => slate.id === selectedSlateIdNumber) ?? null;
   const scopeReady = Boolean(groupContext?.group.id && baseSelectedSlate) && !isGroupLoading && !isSwitchingGroup &&
-    (!sport || sport === selectedSport);
+    (!sport || sport === selectedSport) &&
+    (!isDraftPage || (draftRouteMatches && baseSelectedSlate?.sport === draftSport));
   const refreshScopeKey = JSON.stringify([groupContext?.group.id, selectedSport, sport,
     selectedSlateIdNumber, baseSelectedSlate?.sport, pathname, scopeReady]);
   const selectedSlate = isDraftPage && draftContext?.scope === refreshScopeKey
@@ -543,24 +549,29 @@ export default function LineupBuilder({
   const [playerProjections, setPlayerProjections] = useState<Record<number, DraftProjection>>({});
 
   useEffect(() => {
-    if (!isDraftPage || !selectedSlateIdNumber || (sport ?? selectedSport) === "golf") {
+    if (!isDraftPage || !scopeReady || !selectedSlateIdNumber || draftSport === "golf") {
       setPlayerProjections({});
       return;
     }
     let cancelled = false;
+    const isCurrent = refreshScopeRef.current.capture();
     setPlayerProjections({});
-    fetch(`/api/draft-projections?slateId=${selectedSlateIdNumber}`, { cache: "no-store" })
+    fetch(`/api/draft-projections?slateId=${selectedSlateIdNumber}&sport=${draftSport}`, { cache: "no-store" })
       .then(async (response) => ({ response, body: await response.json() }))
       .then(({ response, body }) => {
+        if (cancelled || !isCurrent()) return;
         if (!response.ok) throw new Error(body?.error || "Failed to load Draft projections");
-        if (!cancelled) setPlayerProjections(body.projections || {});
+        if (!matchesDraftResponse(body, { groupId: draftGroupId!, sport: draftSport, slateId: selectedSlateIdNumber })) {
+          throw new Error("Draft projection context does not match the selected slate.");
+        }
+        setPlayerProjections(body.projections || {});
       })
       .catch((error) => {
         console.error("Failed to load Draft projections", error);
-        if (!cancelled) setPlayerProjections({});
+        if (!cancelled && isCurrent()) setPlayerProjections({});
       });
     return () => { cancelled = true; };
-  }, [isDraftPage, selectedSlateIdNumber, selectedSport, sport]);
+  }, [isDraftPage, selectedSlateIdNumber, draftSport, scopeReady, refreshScopeKey, draftGroupId]);
 
   const playerAverageMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -1321,12 +1332,14 @@ export default function LineupBuilder({
     if (!routine) setIsSlateLoading(true);
     try {
       const isGolfDraft = (sport ?? selectedSport) === "golf";
+      const expected = { groupId: groupContext!.group.id, sport: draftSport, slateId };
+      const query = `slateId=${slateId}&sport=${draftSport}`;
       const responses = await Promise.all([
-        fetch(`/api/lineups?slateId=${slateId}&draft=true`, { cache: "no-store" }),
-        fetch(`/api/slate-availability?slateId=${slateId}`, { cache: "no-store" }),
+        fetch(`/api/lineups?${query}&draft=true`, { cache: "no-store" }),
+        fetch(`/api/slate-availability?${query}`, { cache: "no-store" }),
         ...(isGolfDraft ? [] : [
-          fetch(`/api/player-stats?slateId=${slateId}`, { cache: "no-store" }),
-          fetch(`/api/team-results?slateId=${slateId}`, { cache: "no-store" }),
+          fetch(`/api/player-stats?${query}`, { cache: "no-store" }),
+          fetch(`/api/team-results?${query}`, { cache: "no-store" }),
         ]),
         ...((sport ?? selectedSport) === "nfl" ? [fetch(`/api/lineups/nfl-games?slateId=${slateId}`, { cache: "no-store" })] : []),
       ]);
@@ -1334,10 +1347,11 @@ export default function LineupBuilder({
       const [lineups, availability, stats, results, games] = payloads;
       if (!valid()) return { status: "skipped" };
       if (responses.some(response => !response.ok) || !Array.isArray(lineups.lineups) ||
+        ![lineups, availability, ...(isGolfDraft ? [] : [stats, results])].every(body => matchesDraftResponse(body, expected)) ||
         !Array.isArray(lineups.draftContext?.participants) || !Array.isArray(availability.availablePlayerIds) ||
         (!isGolfDraft && (!Array.isArray(stats.playerStats) || !Array.isArray(results.teamResults))) ||
         lineups.draftContext.groupId !== groupContext?.group.id || lineups.draftContext.slateId !== slateId ||
-        lineups.draftContext.slate?.id !== slateId ||
+        lineups.draftContext.slate?.id !== slateId || lineups.draftContext.slate?.sport !== draftSport ||
         ((sport ?? selectedSport) === "nfl" && (games?.slateId !== slateId || !games?.gamesByTeam))) throw new Error("Could not refresh Draft. Try again.");
       setLineupsState(lineups.lineups);
       if (!isGolfDraft) {
@@ -1353,13 +1367,13 @@ export default function LineupBuilder({
         // Score reads are display-only. An unavailable or slow upcoming-score endpoint
         // must never hold the Golf acquisition roster in its loading state.
         void Promise.all([
-          fetch(`/api/player-stats?slateId=${slateId}`, { cache: "no-store" }),
-          fetch(`/api/team-results?slateId=${slateId}`, { cache: "no-store" }),
+          fetch(`/api/player-stats?${query}`, { cache: "no-store" }),
+          fetch(`/api/team-results?${query}`, { cache: "no-store" }),
         ]).then(async ([statsResponse, resultsResponse]) => {
           const [statsBody, resultsBody] = await Promise.all([statsResponse.json(), resultsResponse.json()]);
           if (!valid()) return;
-          if (statsResponse.ok && statsBody.sport === "golf") applyAcceptedGolfSnapshot(slateId, statsBody);
-          if (resultsResponse.ok) setTeamResultsState(resultsBody.teamResults ?? []);
+          if (statsResponse.ok && matchesDraftResponse(statsBody, expected)) applyAcceptedGolfSnapshot(slateId, statsBody);
+          if (resultsResponse.ok && matchesDraftResponse(resultsBody, expected)) setTeamResultsState(resultsBody.teamResults ?? []);
         }).catch(error => console.error("Failed to load optional Golf score state", error));
       }
       return { status: "success" };
@@ -1915,6 +1929,7 @@ export default function LineupBuilder({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slateId: selectedSlateIdNumber,
+          ...(isDraftPage ? { sport: draftSport } : {}),
           teamId,
           expectedPlayerIds: lineupsState.find(lineup => lineup.team_id === teamId)?.player_ids ?? [],
           playerIds:
@@ -2526,6 +2541,13 @@ export default function LineupBuilder({
       setSelectedSeason={setSelectedSeason}
     />
   );
+
+  // Server-owned players must never be presented through another sport's controls.
+  if (isDraftPage && (!draftRouteMatches || draftSport !== selectedSport || baseSelectedSlate?.sport !== draftSport)) {
+    return <section className="draft-workspace"><h1>Draft</h1><p role="status">
+      {!draftRouteMatches || draftSport !== selectedSport ? "Loading Draft…" : "No slate available for this sport."}
+    </p></section>;
+  }
 
   return (
     <NflFantasyGameCenter

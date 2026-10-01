@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const fs = require('node:fs');
@@ -34,10 +35,12 @@ async function setup(sport = 'nfl', user = { role: 'player', systemRole: 'user' 
   const respond = url => {
     if (url === '/api/me') return { user, groupContext: { team: { id: 1, name: 'Mark' } } };
     const id = Number(new URL(url, 'http://local').searchParams.get('slateId') ?? 1);
-    if (url.startsWith('/api/lineups?')) return { lineups: roster, draftContext: { history, canProxyDraft: user.role === "admin" || user.systemRole === "super_admin" || user.groupCommissioner === true, groupId: context.group, slateId: id, participants: id === 1 ? participants : [participants[2]], slate: { id, is_locked: false } } };
-    if (url.startsWith('/api/player-stats')) return { sport, playerStats: [], teamResults: [], acceptedRevision: 1 };
-    if (url.startsWith('/api/team-results')) return { teamResults: [] };
-    if (url.startsWith('/api/slate-availability')) return { availablePlayerIds: [10] };
+    const identity = { groupId: context.group, sport, slateId: id };
+    if (url.startsWith('/api/lineups?')) return { ...identity, lineups: roster, draftContext: { history, canProxyDraft: user.role === "admin" || user.systemRole === "super_admin" || user.groupCommissioner === true, groupId: context.group, slateId: id, participants: id === 1 ? participants : [participants[2]], slate: { id, sport, is_locked: false } } };
+    if (url.startsWith('/api/player-stats')) return { ...identity, playerStats: [], teamResults: [], acceptedRevision: 1 };
+    if (url.startsWith('/api/team-results')) return { ...identity, teamResults: [] };
+    if (url.startsWith('/api/slate-availability')) return { ...identity, availablePlayerIds: [10] };
+    if (url.startsWith('/api/draft-projections')) return { ...identity, projections: {} };
     if (url.startsWith('/api/lineups/nfl-games')) return { slateId: id, gamesByTeam: {} };
     return {};
   };
@@ -129,7 +132,7 @@ test('view and player pool identity/state survive selection and routine reload f
     assert.equal(find(after, Indicator).props.feedback, 'Updated just now');
     assert.ok(calls.every(([url]) => !/sync-players|refresh-stats|refresh-golf|reconcil/.test(url)));
     calls.length = 0; find(after, Refresh).props.onRefresh(); await tick();
-    assert.ok(calls.some(([url]) => url === '/api/lineups?slateId=1&draft=true'));
+    assert.ok(calls.some(([url]) => url === `/api/lineups?slateId=1&sport=${sport}&draft=true`));
     h.unmount();
   }
 });
@@ -475,6 +478,105 @@ test('ordinary member has no Edit Picks even on their own completed history',asy
   assert.equal(board.props.canEdit,false);
   assert.ok(!nodes(DraftOrder(board.props)).some(n=>n.props?.children==='Edit Picks'));
   h.unmount();
+});
+
+test('authoritative Draft sport recovers after actual provider storage hydration; incompatible controls never render', async () => {
+  const ts = require('typescript');
+  const providerExports = {};
+  new Function('require', 'exports', ts.transpileModule(read('components/providers/SportProvider.tsx'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText)(name => name === '@/lib/sports' ? require('../lib/sports.ts') : require(name), providerExports);
+  for (const sport of ['nba', 'nfl']) {
+    const original = await setup(sport); original.h.unmount();
+    const provider = host(providerExports.default), builder = host(Builder);
+    window.localStorage = { getItem: () => sport === 'nba' ? 'nfl' : 'nba', setItem() {} };
+    context.search = `sport=${sport}`;
+    let value = provider.render({ children: null }).props.value;
+    context.sport = value.selectedSport;
+    context.onSportChange = next => value.setSelectedSport(next);
+    // Real React mounts child passive effects before the Provider's storage effect.
+    builder.render(original.props, true);
+    provider.render({ children: null }, true);
+    value = provider.render({ children: null }).props.value;
+    context.sport = value.selectedSport;
+    assert.notEqual(context.sport, sport, 'storage recreated the original disagreement');
+    assert.equal(find(builder.render(original.props, true), Pool), undefined);
+    value = provider.render({ children: null }).props.value;
+    context.sport = value.selectedSport;
+    assert.equal(context.sport, sport);
+    const recovered = builder.render(original.props, true);
+    assert.deepEqual(find(recovered, Pool).props.players, original.props.players);
+    builder.unmount(); provider.unmount();
+    delete context.search; delete context.onSportChange;
+  }
+});
+
+test('sport switching rejects the old slate/pool until current server props and selection agree', async () => {
+  for (const [from, to] of [['nba', 'nfl'], ['nfl', 'nba']]) {
+    const { h, props, calls } = await setup(from);
+    context.search = `sport=${to}`; context.sport = to;
+    assert.equal(find(h.render(props, true), Pool), undefined, 'old server pool hidden after URL changes');
+    const nextProps = { ...props, sport: to,
+      players: [{ id: 20, name: `${to} player`, position_group: to === 'nfl' ? 'QB' : 'G', is_active: true }],
+      slates: [{ id: 3, sport: to, date: '2026-10-01', label: 'Current slate', is_locked: false }], initialSelectedSlateId: 3 };
+    calls.length = 0;
+    assert.equal(find(h.render(nextProps, true), Pool), undefined, 'old selected ID cannot render the new pool');
+    assert.ok(!calls.some(([url]) => /slateId=1/.test(url)));
+    const settled = h.render(nextProps, true);
+    assert.deepEqual(find(settled, Pool).props.players.map(p => p.name), [`${to} player`]);
+    h.unmount(); delete context.search;
+  }
+});
+
+test('a slate of the wrong sport never enables Draft rendering or data requests', async () => {
+  const { h, props, calls } = await setup('nfl');
+  const wrong = { ...props, slates: props.slates.map(s => ({ ...s, sport: 'nba' })) };
+  calls.length = 0;
+  const tree = h.render(wrong, true);
+  assert.equal(find(tree, Pool), undefined); assert.equal(context.pullOptions.enabled, false);
+  assert.ok(!calls.some(([url]) => /slateId=/.test(url)));
+  h.unmount();
+});
+
+test('Draft always sends expected sport and atomically rejects successful responses with wrong Group, sport, or slate', async () => {
+  for (const endpoint of ['/api/lineups?', '/api/slate-availability?', '/api/player-stats?', '/api/team-results?']) {
+    for (const field of ['groupId', 'sport', 'slateId']) {
+      const { h, props, respond, calls } = await setup('nfl');
+      global.fetch = async (url, options) => {
+        calls.push([url, options]);
+        const body = respond(url);
+        if (url.startsWith(endpoint)) {
+          body[field] = field === 'groupId' ? 'other' : field === 'sport' ? 'nba' : 999;
+          if (body.lineups) body.lineups = [];
+        }
+        return reply(body);
+      };
+      assert.equal((await context.pullOptions.onRefresh()).status, 'error');
+      assert.equal(find(h.render(props), Court).props.teamId, 1, 'valid participant state retained');
+      for (const [url] of calls.filter(([url]) => !url.startsWith('/api/lineups/nfl-games'))) {
+        assert.equal(new URL(url, 'http://test').searchParams.get('sport'), 'nfl');
+      }
+      h.unmount();
+    }
+  }
+});
+
+test('projections reject wrong sport/Group/slate and late responses after a context switch', async () => {
+  for (const field of ['groupId', 'sport', 'slateId', 'late']) {
+    const { h, props, respond } = await setup('nfl');
+    let resolveProjection;
+    global.fetch = async url => url.startsWith('/api/draft-projections')
+      ? new Promise(resolve => { resolveProjection = () => {
+        const body = { ...respond(url), projections: { 10: { projection: 999 } } };
+        if (field !== 'late') body[field] = field === 'sport' ? 'nba' : field === 'slateId' ? 999 : 'other';
+        resolve(reply(body));
+      }; }) : reply(respond(url));
+    context.group = 'b'; h.render(props, true);
+    if (field === 'late') { context.group = 'a'; h.render(props); }
+    resolveProjection(); await tick();
+    assert.deepEqual(find(h.render(props), Pool).props.playerProjections, {});
+    h.unmount();
+  }
 });
 
 test('NBA/NFL Projection cards select fixed targets; Info researches; normal pool opens the Draft flow',async()=>{

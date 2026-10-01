@@ -71,7 +71,7 @@ test('Draft integration explicitly reads only current frozen V2 cache versions a
   assert.match(server, /\.eq\("model_version", NFL_PROJECTION_V2\)/);
   assert.match(server, /scoreNbaDraftProjection\([\s\S]*slate\.rules_snapshot/);
   assert.match(server, /scoreNflDraftProjection\([\s\S]*slate\.rules_snapshot/);
-  assert.match(route, /authorizeSlateResource\(request, slateId\)/);
+  assert.match(route, /authorizeSlateResource\(request, slateId, \{/);
   assert.match(fallback, /source: "historical_fantasy_average"/);
   assert.match(pool, /setResearchMode\("projection"\)/);
   assert.match(pool, /<option value="projection">Projection<\/option>/);

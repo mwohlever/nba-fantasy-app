@@ -118,7 +118,8 @@ function routeFixture({role='player', commissioner=false, rpcError=null, sport='
   const route=load('app/api/lineups/route.ts',{
     'next/server':{NextResponse:{json:(body,options)=>({body,status:options?.status??200})}},
     '@/lib/supabaseAdmin':{supabaseAdmin:database},'@/lib/auth':{getCurrentUser:async()=>({id:'actor',role})},
-    '@/lib/groups/context':{getActiveSlateAccessForUser:async()=>({context:{group:{id:'g'},team:{id:1},canAdministerGroup:commissioner},league:{id:'l'},slate:{rulesSnapshot:null}}),teamBelongsToGroup:async()=>true},
+    '@/lib/groups/context':{getActiveSlateAccessForUser:async()=>({context:{group:{id:'g'},team:{id:1},canAdministerGroup:commissioner},league:{id:'l'},slate:{sport,rulesSnapshot:null}}),teamBelongsToGroup:async()=>true},
+    '@/lib/security/slateSport':load('lib/security/slateSport.ts', {'next/server':{NextResponse:{json:(body,options)=>({body,status:options?.status??200})}}, '@/lib/lineups/draftContext':load('lib/lineups/draftContext.ts')}),
     '@/lib/lineups/draftPermissions':load('lib/lineups/draftPermissions.ts'),
     '@/lib/rules/leagueRules':rules,'@/lib/playerProjections':{getPlayerProjectionsForSeason:async()=>({projections:{}})},
     '@/lib/draftNotifications':{notifyNextDrafter:async(...args)=>{notifications.push(args)}},

@@ -17,6 +17,7 @@ import {
 } from "@/lib/notificationHistoryScope";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { draftUrl, isFantasySport, type FantasySport } from "@/lib/lineups/draftContext";
 
 type RecoveryBody = {
   action?: unknown;
@@ -47,16 +48,16 @@ function deliveryStatus(
 
 function notificationUrl(
   notificationType: string,
-  slateId: number | null
+  slateId: number | null,
+  sport: FantasySport | null,
 ) {
   if (
     notificationType === "draft_turn" ||
     notificationType ===
       "draft_final_pick"
   ) {
-    return slateId
-      ? `/lineups/draft?slateId=${slateId}`
-      : "/lineups/draft";
+    if (!sport) throw new Error("Draft notification sport is unavailable.");
+    return draftUrl(sport, slateId);
   }
 
   if (slateId) {
@@ -212,6 +213,23 @@ async function retryHistoryRow(
     );
   }
 
+  let retrySport: FantasySport | null = null;
+  if (["draft_turn", "draft_final_pick"].includes(String(history.notification_type))) {
+    // Authorization above must succeed before reconstructing sport context.
+    const result = history.slate_id
+      ? await supabaseAdmin.from("slates").select("sport")
+          .eq("id", Number(history.slate_id)).eq("league_id", retryLeagueId)
+          .is("archived_at", null).maybeSingle()
+      : await supabaseAdmin.from("leagues").select("sport_key")
+          .eq("id", retryLeagueId).maybeSingle();
+    if (result.error) throw new Error(`Failed to resolve notification sport: ${result.error.message}`);
+    const value = result.data && ("sport" in result.data ? result.data.sport : result.data.sport_key);
+    if (!isFantasySport(value)) {
+      return NextResponse.json({ error: "Draft notification slate or sport is unavailable." }, { status: 409 });
+    }
+    retrySport = value;
+  }
+
   /*
    * Retry the existing event rather than inserting a second
    * notification_history row. This preserves the event-key
@@ -242,7 +260,8 @@ async function retryHistoryRow(
               ? null
               : Number(
                   history.slate_id
-                )
+                ),
+            retrySport,
           ),
           tag: notificationTag(
             history.event_key

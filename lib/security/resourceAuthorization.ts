@@ -10,10 +10,12 @@ import {
   hasValidInternalAuthorization,
 } from "@/lib/security/resourcePolicy";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { validateExpectedSlateSport } from "@/lib/security/slateSport";
 
 type ResourceAuthorizationOptions = {
   allowInternal?: boolean;
   requireCommissioner?: boolean;
+  expectedSport?: string | null;
 };
 
 type ResourceTarget = {
@@ -148,9 +150,11 @@ export async function authorizeSlateResource(
   slateId: number,
   options: ResourceAuthorizationOptions = {},
 ) {
-  const { data, error } = await supabaseAdmin
-    .from("slates")
-    .select("id, league_id")
+  const slateQuery = supabaseAdmin.from("slates");
+  const ownershipQuery = options.expectedSport
+    ? slateQuery.select("id, league_id, sport")
+    : slateQuery.select("id, league_id");
+  const { data, error } = await ownershipQuery
     .eq("id", slateId)
     .maybeSingle();
 
@@ -164,7 +168,7 @@ export async function authorizeSlateResource(
     ? await loadLeagueOwner(String(data.league_id))
     : null;
 
-  return authorizeTarget(
+  const authorization = await authorizeTarget(
     request,
     data && owner
       ? {
@@ -174,6 +178,13 @@ export async function authorizeSlateResource(
       : null,
     options,
   );
+  if (!authorization.ok) return authorization;
+  const sportError = validateExpectedSlateSport(
+    options.expectedSport,
+    data && "sport" in data ? data.sport : undefined,
+    owner?.sportKey,
+  );
+  return sportError ? { ok: false as const, response: sportError } : authorization;
 }
 
 export async function authorizeNcaaWeekResource(

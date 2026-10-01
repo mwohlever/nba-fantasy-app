@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { DEFAULT_SPORT } from "@/lib/sports";
 
 const SPORT_STORAGE_KEY = "111-fantasy-sport";
@@ -30,14 +30,14 @@ export default function SportProvider({ children }: { children: React.ReactNode 
     }
   }, []);
 
-  function setSelectedSport(sport: string) {
+  const setSelectedSport = useCallback((sport: string) => {
     setSelectedSportState(sport);
     try {
       window.localStorage.setItem(SPORT_STORAGE_KEY, sport);
     } catch (error) {
       console.error("Failed to persist selected sport", error);
     }
-  }
+  }, []);
 
   return (
     <SportContext.Provider value={{ selectedSport, setSelectedSport, isHydrated }}>

@@ -60,8 +60,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const authorization = await authorizeSlateResource(request, slateId);
+    const authorization = await authorizeSlateResource(request, slateId, {
+      expectedSport: request.nextUrl.searchParams.get("sport"),
+    });
     if (!authorization.ok) return authorization.response;
+    const responseContext = { groupId: authorization.target.groupId, sport: authorization.target.sportKey };
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")
@@ -107,6 +110,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
+          ...responseContext,
           slateId,
           startDate: safeSlate.start_date,
           endDate: safeSlate.end_date,
@@ -132,6 +136,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
+          ...responseContext,
           slateId,
           startDate: safeSlate.start_date,
           endDate: safeSlate.end_date,
@@ -175,6 +180,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
+        ...responseContext,
         slateId,
         startDate: safeSlate.start_date,
         endDate: safeSlate.end_date,

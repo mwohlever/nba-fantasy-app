@@ -77,6 +77,7 @@ function notificationModule(file, db, sends) {
     '@/lib/notificationTemplates': { renderNotificationTemplate: () => 'Rendered' },
     '@/lib/leagueNotificationSettings': { getLeagueNotificationTemplate: async () => ({ enabled: true, template: {} }) },
     '@/lib/sports': { getSportConfig: () => ({ emoji: '' }) },
+    '@/lib/lineups/draftContext': load('lib/lineups/draftContext.ts'),
     '@/lib/rules/leagueRules': { getRosterSlotsFromRulesSnapshot: () => [{ position: 'UTIL', slot_count: 2 }] },
   });
 }
@@ -95,6 +96,7 @@ for (const sport of ['nba','nfl']) {
     const tables = fixture(sport), db = database(tables), sends = [];
     await notificationModule('lib/draftNotifications.ts', db, sends).notifyNextDrafter(1);
     assert.equal(sends[0].userId, 'owner');
+    assert.equal(sends[0].url, `/lineups/draft?sport=${sport}&slateId=1`);
     const input = { slate: tables.slates[0], players: [{ id: 7, name: 'Player' }],
       lineups: [{ team_id: 11, lineup_players: [{ player_id: 7 }] }],
       previousStatuses: [], currentStats: [{ player_id: 7, fantasy_points: 15, game_status: 3 }] };
@@ -136,6 +138,21 @@ for (const sport of ['nba','nfl']) {
     assert.equal((await route.GET(request)).status, 404);
   });
 }
+test('Golf draft-turn notification retains its existing recipient flow with explicit sport context', async () => {
+  const tables = fixture('golf'), sends = [];
+  tables.app_users[0].team_id = 11;
+  await notificationModule('lib/draftNotifications.ts', database(tables), sends).notifyNextDrafter(1);
+  assert.equal(sends[0].notificationType, 'draft_turn');
+  assert.equal(sends[0].url, '/lineups/draft?sport=golf&slateId=1');
+});
+for (const sport of ['nba', 'nfl']) test(`${sport}: final-pick notification has explicit sport context`, async () => {
+  const tables = fixture(sport), sends = [];
+  tables.lineups = [{ slate_id: 1, team_id: 11, lineup_players: [{ player_id: 7 }] }];
+  tables[sport === 'nfl' ? 'players_nfl' : 'players'] = [{ id: 7, position: 'QB', position_group: 'G' }];
+  await notificationModule('lib/draftNotifications.ts', database(tables), sends).notifyNextDrafter(1);
+  assert.equal(sends[0].notificationType, 'draft_final_pick');
+  assert.equal(sends[0].url, `/lineups/draft?sport=${sport}&slateId=1`);
+});
 test('avatars follow team.user_id including historical owners and null fallback', async () => {
   const tables = fixture(), db = database(tables);
   const avatars = await identity.loadFantasyTeamAvatars(db, tables.teams.filter(t => t.group_id === 'g1'));

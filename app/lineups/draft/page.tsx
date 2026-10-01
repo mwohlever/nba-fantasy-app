@@ -6,8 +6,11 @@ import LineupBuilder from "@/components/lineups/LineupBuilder";
 import GolfSalaryCapBuilder from "@/components/lineups/GolfSalaryCapBuilder";
 import { formatFantasySlateLabel } from "@/lib/formatSlateLabel";
 import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { draftUrl, parseDraftSlateId } from "@/lib/lineups/draftContext";
 import {
   getActiveLeagueForSport,
+  getActiveSlateAccessForUser,
 } from "@/lib/groups/context";
 import {
   getRosterSlotsFromRulesSnapshot,
@@ -72,6 +75,23 @@ export default async function DraftLineupsPage({
 
   const currentUser =
     await getCurrentUser();
+
+  const requestedSlateId = parseDraftSlateId(slateParam);
+  // Old notifications omitted sport. Infer it only from an active-Group slate,
+  // never from an unrestricted ID lookup or a remembered browser selection.
+  if (sportParam === undefined && requestedSlateId && currentUser) {
+    const access = await getActiveSlateAccessForUser(currentUser, requestedSlateId);
+    if (access) {
+      const { data: availableSlate } = await supabaseAdmin
+        .from("slates")
+        .select("id")
+        .eq("id", requestedSlateId)
+        .eq("league_id", access.league.id)
+        .is("archived_at", null)
+        .maybeSingle();
+      if (availableSlate) redirect(draftUrl(access.slate.sport, requestedSlateId));
+    }
+  }
 
   const activeLeague =
     currentUser
@@ -340,7 +360,6 @@ export default async function DraftLineupsPage({
         : 0,
   }));
 
-  const requestedSlateId = Number(slateParam);
   const golfStartedOpenSlate = sport === "golf"
     ? safeSlates.find((slate) => !slate.is_locked && new Date(`${slate.start_date ?? slate.date}T00:00:00`).getTime() <= Date.now())
     : null;
@@ -615,6 +634,7 @@ export default async function DraftLineupsPage({
         <AppNav />
 
         <LineupBuilder
+          key={`${activeLeagueId}:${sport}`}
           players={normalizedPlayers}
           teams={teams ?? []}
           slates={safeSlates}

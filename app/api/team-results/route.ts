@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveSlateAccessForUser } from "@/lib/groups/context";
+import { validateExpectedSlateSport } from "@/lib/security/slateSport";
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,6 +71,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const sportError = validateExpectedSlateSport(request.nextUrl.searchParams.get("sport"), slateAccess.slate.sport);
+    if (sportError) return sportError;
+
     const { data, error } = await supabaseAdmin
       .from("team_slate_results")
       .select(
@@ -100,6 +104,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
+        slateId,
+        sport: slateAccess.slate.sport,
+        groupId: slateAccess.context.group.id,
 
         group: {
           id:
@@ -145,5 +152,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
 

@@ -70,6 +70,7 @@ function setup(sport, {group = 'a', role = 'member', signedIn = true, enabled = 
       group:{id:group}, canAdministerGroup:role === 'commissioner', leagues:[{id:`l${group}`,isEnabled:enabled}],
     } : null},
     '@/lib/security/resourcePolicy':load('lib/security/resourcePolicy.ts'),
+    '@/lib/security/slateSport':load('lib/security/slateSport.ts', { 'next/server': next, '@/lib/lineups/draftContext': load('lib/lineups/draftContext.ts') }),
   };
   mocks['@/lib/security/resourceAuthorization'] = load('lib/security/resourceAuthorization.ts',mocks);
   return {db,mocks};
