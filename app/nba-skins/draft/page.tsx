@@ -353,344 +353,125 @@ export default function NbaSkinsDraftPage() {
 
 
   return (
-    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-      <div className="mx-auto max-w-5xl space-y-5">
+    <main className="min-h-screen bg-[var(--background)] px-3 py-3 pb-24 text-[var(--app-text)] sm:px-4 sm:pb-6">
+      <div className="mx-auto max-w-5xl space-y-3">
         <AppNav />
 
-        <section className="rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-xl sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-300">
-                NBA Skins
-              </div>
-
-              <h1 className="mt-1 text-3xl font-black tracking-tight text-white">
-                Draft Sheet
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-                Fill out the full draft as picks are made. Each NBA team can
-                only be selected once.
-              </p>
-            </div>
-
-            {data ? (
-              <div className="flex gap-2">
-                <div className="rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-2 text-right">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                    Season
-                  </div>
-
-                  <div className="font-black text-white">
-                    {data.season.label}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-2 text-right">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                    Status
-                  </div>
-
-                  <div className="font-black text-blue-300">
-                    {statusLabel(
-                      data.season.status,
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </section>
-
+        <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h1 className="text-lg font-bold">NBA Skins Draft Sheet</h1>
+          {data ? (
+            <p className="text-xs text-[var(--app-text-muted)]">{data.season.label} · {statusLabel(data.season.status)}</p>
+          ) : null}
+          <p className="w-full text-xs leading-5 text-[var(--app-text-muted)]">
+            Fill out the full draft as picks are made. Each NBA team can only be selected once.
+          </p>
+        </header>
 
         {loading ? (
-          <section className="rounded-3xl border border-slate-700 bg-slate-900 p-8 text-center text-sm text-slate-400">
-            Loading draft sheet…
-          </section>
+          <p className="py-4 text-sm text-[var(--app-text-muted)]">Loading draft sheet…</p>
         ) : error && !data ? (
-          <section className="rounded-3xl border border-red-500/30 bg-red-950/20 p-5 text-sm text-red-200">
-            {error}
-          </section>
+          <p role="alert" className="py-3 text-sm text-red-600 dark:text-red-300">{error}</p>
         ) : data ? (
           <>
             {!data.hasValidDraftOrder ? (
-              <section className="rounded-3xl border border-amber-500/30 bg-amber-950/20 p-5">
-                <div className="font-black text-amber-200">
-                  Draft order not configured
-                </div>
-
-                <p className="mt-2 text-sm leading-6 text-amber-100/70">
-                  Set all {data.season.participantCount} participants in the NBA Skins admin page
-                  before filling out the draft.
+              <div className="border-l-2 border-amber-500 pl-3 text-sm">
+                <p className="font-semibold">Draft order not configured</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--app-text-muted)]">
+                  Set all {data.season.participantCount} participants in the NBA Skins admin page before filling out the draft.
                 </p>
-              </section>
+              </div>
             ) : (
               <>
-                <section className="rounded-3xl border border-slate-700 bg-slate-900 p-4 sm:p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <div className="text-xs font-black uppercase tracking-[0.16em] text-blue-300">
-                        Draft Order
-                      </div>
-
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {data.draftOrder.map(
-                          (team) => (
-                            <span
-                              key={team.teamId}
-                              className="rounded-full border border-blue-500/25 bg-blue-950/30 px-3 py-1.5 text-xs font-bold text-blue-100"
-                            >
-                              {team.draftPosition}.{" "}
-                              {team.teamName}
-                            </span>
-                          ),
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="text-sm font-bold tabular-nums text-slate-400">
-                      {completedCount}/{data.season.totalPicks} filled
-                    </div>
-                  </div>
+                <section className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-[var(--app-border)] pb-2 text-xs" aria-label="Draft order">
+                  <h2 className="font-semibold">Draft Order</h2>
+                  <ol className="flex min-w-0 flex-1 flex-wrap gap-x-3 gap-y-1">
+                    {data.draftOrder.map((team) => (
+                      <li key={team.teamId} className="break-words text-[var(--app-text-muted)]">{team.draftPosition}. {team.teamName}</li>
+                    ))}
+                  </ol>
+                  <span className="whitespace-nowrap font-semibold tabular-nums">{completedCount}/{data.season.totalPicks} filled</span>
                 </section>
 
+                {error ? <p role="alert" className="text-sm text-red-600 dark:text-red-300">{error}</p> : null}
+                {message ? <p role="status" className="text-sm text-emerald-700 dark:text-emerald-300">{message}</p> : null}
 
-                {error ? (
-                  <div className="rounded-2xl border border-red-500/30 bg-red-950/20 px-4 py-3 text-sm text-red-200">
-                    {error}
+                <section aria-label="Draft selections">
+                  <div aria-hidden="true" className="hidden grid-cols-[12rem_minmax(0,1fr)_7rem] gap-3 px-1 pb-1 text-xs text-[var(--app-text-muted)] lg:grid">
+                    <span>Pick / Participant</span><span>NBA Team</span><span>Selection</span>
                   </div>
-                ) : null}
-
-
-                {message ? (
-                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 px-4 py-3 text-sm text-emerald-200">
-                    {message}
-                  </div>
-                ) : null}
-
-
-                <section className="overflow-hidden rounded-3xl border border-slate-700 bg-slate-900">
-                  {picks.map(
-                    (
-                      pick,
-                      index,
-                    ) => {
-                      const isRoundStart =
-                        index === 0 ||
-                        picks[
-                          index - 1
-                        ].round !==
-                          pick.round;
-
-                      return (
-                        <div
-                          key={
-                            pick.pickNumber
-                          }
-                        >
-                          {isRoundStart ? (
-                            <div className="border-b border-slate-700 bg-blue-950/25 px-4 py-2.5 sm:px-5">
-                              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-300">
-                                Round{" "}
-                                {pick.round}
-                              </span>
-                            </div>
-                          ) : null}
-
-                          <div className="grid gap-3 border-b border-slate-800 px-4 py-4 last:border-b-0 sm:grid-cols-[80px_130px_minmax(220px,1fr)_150px] sm:items-center sm:px-5 sm:py-3">
-                            <div>
-                              <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                                Pick
-                              </div>
-
-                              <div className="mt-1 text-lg font-black tabular-nums text-blue-300">
-                                #
-                                {
-                                  pick.pickNumber
-                                }
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="text-[10px] font-black uppercase tracking-wider text-slate-500 sm:hidden">
-                                Owner
-                              </div>
-
-                              <div className="font-black text-white">
-                                {
-                                  pick.teamName
-                                }
-                              </div>
-                            </div>
-
-                            <label>
-                              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
-                                NBA Team
-                              </span>
-
-                              <select
-                                value={
-                                  pick.nbaTeamAbbreviation
-                                }
-                                disabled={
-                                  !data
-                                    .season
-                                    .editable
-                                }
-                                onChange={(
-                                  event,
-                                ) =>
-                                  updatePick(
-                                    index,
-                                    {
-                                      nbaTeamAbbreviation:
-                                        event
-                                          .target
-                                          .value,
-                                    },
-                                  )
-                                }
-                                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm font-bold text-white outline-none transition focus:border-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                <option value="">
-                                  Select NBA team…
-                                </option>
-
-                                {data.nbaTeams.map(
-                                  (
-                                    team,
-                                  ) => {
-                                    const usedElsewhere =
-                                      selectedCodes.has(
-                                        team.abbreviation,
-                                      ) &&
-                                      pick.nbaTeamAbbreviation !==
-                                        team.abbreviation;
-
-                                    return (
-                                      <option
-                                        key={
-                                          team.abbreviation
-                                        }
-                                        value={
-                                          team.abbreviation
-                                        }
-                                        disabled={
-                                          usedElsewhere
-                                        }
-                                      >
-                                        {
-                                          team.abbreviation
-                                        }{" "}
-                                        —{" "}
-                                        {
-                                          team.displayName
-                                        }
-                                        {usedElsewhere
-                                          ? " — Drafted"
-                                          : ""}
-                                      </option>
-                                    );
-                                  },
-                                )}
-                              </select>
-                            </label>
-
-                            <label>
-                              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-slate-500">
-                                Pick
-                              </span>
-
-                              <select
-                                value={
-                                  pick.pickType
-                                }
-                                disabled={
-                                  !data
-                                    .season
-                                    .editable
-                                }
-                                onChange={(
-                                  event,
-                                ) =>
-                                  updatePick(
-                                    index,
-                                    {
-                                      pickType:
-                                        event
-                                          .target
-                                          .value as PickType,
-                                    },
-                                  )
-                                }
-                                className={
-                                  pick.pickType ===
-                                  "wins"
-                                    ? "w-full rounded-xl border border-emerald-500/30 bg-emerald-950/30 px-3 py-2.5 text-sm font-black uppercase text-emerald-300 outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                                    : "w-full rounded-xl border border-rose-500/30 bg-rose-950/30 px-3 py-2.5 text-sm font-black uppercase text-rose-300 outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                                }
-                              >
-                                <option value="wins">
-                                  Wins
-                                </option>
-
-                                <option value="losses">
-                                  Losses
-                                </option>
-                              </select>
-                            </label>
+                  {picks.map((pick, index) => {
+                    const isRoundStart = index === 0 || picks[index - 1].round !== pick.round;
+                    return (
+                      <div key={pick.pickNumber}>
+                        {isRoundStart ? (
+                          <h2 className="border-y border-[var(--app-border)] bg-[var(--app-surface-soft)] px-1 py-1.5 text-xs font-semibold">
+                            Round {pick.round}
+                          </h2>
+                        ) : null}
+                        <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-x-3 gap-y-1.5 border-b border-[var(--app-border)] px-1 py-2 lg:grid-cols-[12rem_minmax(0,1fr)_7rem]">
+                          <div className="col-span-2 flex min-w-0 items-baseline gap-2 lg:col-span-1">
+                            <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--app-blue)]">#{pick.pickNumber}</span>
+                            <strong className="truncate text-sm" title={pick.teamName}>{pick.teamName}</strong>
                           </div>
+                          <label className="min-w-0">
+                            <span className="mb-1 block text-[10px] text-[var(--app-text-muted)] lg:sr-only">NBA Team</span>
+                            <select
+                              value={pick.nbaTeamAbbreviation}
+                              aria-label={`NBA team for pick ${pick.pickNumber}, ${pick.teamName}`}
+                              disabled={!data.season.editable}
+                              onChange={(event) => updatePick(index, { nbaTeamAbbreviation: event.target.value })}
+                              className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2 text-base text-[var(--app-text)] focus-visible:outline-2 focus-visible:outline-[var(--app-blue)] disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+                            >
+                              <option value="">Select NBA team…</option>
+                              {data.nbaTeams.map((team) => {
+                                const usedElsewhere = selectedCodes.has(team.abbreviation) && pick.nbaTeamAbbreviation !== team.abbreviation;
+                                return (
+                                  <option key={team.abbreviation} value={team.abbreviation} disabled={usedElsewhere}>
+                                    {team.abbreviation} — {team.displayName}{usedElsewhere ? " — Drafted" : ""}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </label>
+                          <label className="min-w-0">
+                            <span className="mb-1 block text-[10px] text-[var(--app-text-muted)] lg:sr-only">Selection</span>
+                            <select
+                              value={pick.pickType}
+                              aria-label={`Wins or Losses for pick ${pick.pickNumber}, ${pick.teamName}`}
+                              disabled={!data.season.editable}
+                              onChange={(event) => updatePick(index, { pickType: event.target.value as PickType })}
+                              className={`min-h-11 w-full min-w-0 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2 text-base font-semibold focus-visible:outline-2 focus-visible:outline-[var(--app-blue)] disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm ${pick.pickType === "wins" ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}
+                            >
+                              <option value="wins">Wins</option>
+                              <option value="losses">Losses</option>
+                            </select>
+                          </label>
                         </div>
-                      );
-                    },
-                  )}
+                      </div>
+                    );
+                  })}
                 </section>
 
-
-                <section className="rounded-3xl border border-slate-700 bg-slate-900 p-4 sm:p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <div className="font-black text-white">
-                        {data.season.editable
-                          ? "Ready to save?"
-                          : data.season.status ===
-                              "open"
-                            ? "View only"
-                            : `Draft ${statusLabel(
-                                data.season.status,
-                              ).toLowerCase()}`}
-                      </div>
-
-                      <div className="mt-1 text-sm text-slate-500">
-                        {data.season.editable
-                          ? `Saving replaces the current open-season draft with the ${data.season.totalPicks} selections above.`
-                          : data.season.status ===
-                              "open"
-                            ? "Only an admin can edit and save the draft sheet."
-                            : "The draft can no longer be edited unless the season is reopened from Admin."}
-                      </div>
-                    </div>
-
-                    {data.season.editable ? (
-                      <button
-                        type="button"
-                        onClick={
-                          saveDraft
-                        }
-                        disabled={
-                          saving ||
-                          completedCount !==
-                            data.season.totalPicks
-                        }
-                        className="rounded-xl border border-blue-400/40 bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        {saving
-                          ? "Saving…"
-                          : `Save Draft (${completedCount}/${data.season.totalPicks})`}
-                      </button>
-                    ) : null}
+                <footer className="flex flex-col gap-2 py-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">
+                      {data.season.editable ? "Ready to save?" : data.season.status === "open" ? "View only" : `Draft ${statusLabel(data.season.status).toLowerCase()}`}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-5 text-[var(--app-text-muted)]">
+                      {data.season.editable
+                        ? `Saving replaces the current open-season draft with the ${data.season.totalPicks} selections above.`
+                        : data.season.status === "open"
+                          ? "Only an admin can edit and save the draft sheet."
+                          : "The draft can no longer be edited unless the season is reopened from Admin."}
+                    </p>
                   </div>
-                </section>
+                  {data.season.editable ? (
+                    <button type="button" onClick={saveDraft} disabled={saving || completedCount !== data.season.totalPicks}
+                      className="min-h-11 shrink-0 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--app-blue)] disabled:cursor-not-allowed disabled:opacity-40">
+                      {saving ? "Saving…" : `Save Draft (${completedCount}/${data.season.totalPicks})`}
+                    </button>
+                  ) : null}
+                </footer>
               </>
             )}
           </>

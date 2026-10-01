@@ -1,6 +1,8 @@
 "use client";
 
 import AppNav from "@/components/AppNav";
+import TeamAvatar from "@/components/ui/TeamAvatar";
+import { useGroupContext } from "@/components/providers/GroupProvider";
 
 import Link from "next/link";
 
@@ -11,28 +13,6 @@ import {
 } from "react";
 
 import { getDefaultNbaSkinsRules } from "@/lib/rules/leagueRules";
-
-
-const FULL_SEASON_GAMES =
-  7 * 82;
-
-
-const TEAM_HEADSHOTS: Record<
-  string,
-  string
-> = {
-  Andy:
-    "/team-headshots/andy.webp",
-
-  Jon:
-    "/team-headshots/jon.webp",
-
-  Josh:
-    "/team-headshots/josh.webp",
-
-  Mark:
-    "/team-headshots/mark.webp",
-};
 
 
 type PickRecord = {
@@ -169,18 +149,6 @@ function seasonLabel(
 }
 
 
-function roundTo(
-  value: number,
-  digits = 1,
-) {
-  return Number(
-    value.toFixed(
-      digits,
-    ),
-  );
-}
-
-
 function formatNumber(
   value:
     | number
@@ -205,7 +173,9 @@ function formatNumber(
 
 function rowMetrics(
   standing: Standing,
+  teamsPerParticipant: number,
 ): HomeRow {
+  const fullSeasonGames = teamsPerParticipant * 82;
   let points = 0;
   let gamesPlayed = 0;
 
@@ -299,14 +269,14 @@ function rowMetrics(
       );
 
     gamesPlayed =
-      FULL_SEASON_GAMES;
+      fullSeasonGames;
   }
 
 
   const gamesLeft =
-    standing.pickCount === 7
+    standing.pickCount === teamsPerParticipant
       ? Math.max(
-          FULL_SEASON_GAMES -
+          fullSeasonGames -
             gamesPlayed,
           0,
         )
@@ -329,7 +299,7 @@ function rowMetrics(
           accuracy /
           100
         ) *
-        FULL_SEASON_GAMES
+        fullSeasonGames
       : null;
 
 
@@ -337,8 +307,8 @@ function rowMetrics(
    * Projected is intentionally NOT the same as Pace.
    *
    * Pace:
-   *   current Skins accuracy extrapolated across all 574
-   *   possible team-games.
+   *   current Skins accuracy extrapolated across the configured
+   *   full-season team-games.
    *
    * Projected:
    *   sum ESPN BPI projected final wins for each Wins pick
@@ -348,13 +318,13 @@ function rowMetrics(
    */
   const projected =
     gamesLeft === 0 &&
-    standing.pickCount === 7
+    standing.pickCount === teamsPerParticipant
       ? points
       : (
           standing.pickCount ===
-            7 &&
+            teamsPerParticipant &&
           projectedPickCount ===
-            7
+            teamsPerParticipant
         )
         ? projectedPoints
         : null;
@@ -383,6 +353,8 @@ function rowMetrics(
 
 
 export default function NbaSkinsHomePage() {
+  const { groupContext } = useGroupContext();
+  const [expansion, setExpansion] = useState<{ scope: string; ids: Array<number | string> }>({ scope: "", ids: [] });
   const [
     data,
     setData,
@@ -466,6 +438,17 @@ export default function NbaSkinsHomePage() {
   }, []);
 
 
+  const season =
+    data?.selectedSeason ??
+    null;
+
+
+  const teamsPerParticipant =
+    season?.nbaTeamsPerParticipant ??
+    data?.rules.nbaTeamsPerParticipant ??
+    getDefaultNbaSkinsRules().nbaTeamsPerParticipant;
+
+
   const rows =
     useMemo(
       () =>
@@ -479,7 +462,7 @@ export default function NbaSkinsHomePage() {
               0,
           )
           .map(
-            rowMetrics,
+            (standing) => rowMetrics(standing, teamsPerParticipant),
           )
           .sort(
             (a, b) => {
@@ -505,19 +488,8 @@ export default function NbaSkinsHomePage() {
               );
             },
           ),
-      [data],
+      [data, teamsPerParticipant],
     );
-
-
-  const season =
-    data?.selectedSeason ??
-    null;
-
-
-  const teamsPerParticipant =
-    season?.nbaTeamsPerParticipant ??
-    data?.rules.nbaTeamsPerParticipant ??
-    getDefaultNbaSkinsRules().nbaTeamsPerParticipant;
 
 
   const newestAvailableSeason =
@@ -542,249 +514,98 @@ export default function NbaSkinsHomePage() {
       season.season;
 
 
+  const expansionScope = `${groupContext?.group.id}:${season?.id}`;
+  const expandedIds = expansion.scope === expansionScope ? expansion.ids : [];
+  if (expansion.scope !== expansionScope) {
+    setExpansion({ scope: expansionScope, ids: [] });
+  }
+
   return (
-    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-      <div className="mx-auto max-w-7xl space-y-5">
+    <main className="min-h-screen bg-[var(--background)] px-3 py-3 pb-24 text-[var(--app-text)] sm:px-4 sm:pb-6">
+      <div className="mx-auto max-w-5xl space-y-3">
         <AppNav />
 
-
-        <section className="rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-xl sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-300">
-                NBA Skins
-              </div>
-
-              <h1 className="mt-1 text-3xl font-black tracking-tight text-white">
-                Season Standings
-              </h1>
-
-              <p className="mt-2 text-sm text-slate-400">
-                {showingPreviousSeason
-                  ? `Showing ${seasonLabel(
-                      season!.season,
-                    )} until the ${seasonLabel(
-                      newestAvailableSeason,
-                    )} draft is saved.`
-                  : `Points earned from each participant's ${teamsPerParticipant} Wins / Losses selections.`}
-              </p>
-            </div>
-
-            {season ? (
-              <div className="text-right">
-                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
-                  Season
-                </div>
-
-                <div className="mt-1 text-lg font-black text-white">
-                  {seasonLabel(
-                    season.season,
-                  )}
-                </div>
-
-                <div className="text-xs font-bold capitalize text-blue-300">
-                  {season.status}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </section>
-
+        <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h1 className="text-lg font-bold">NBA Skins</h1>
+          {season ? (
+            <p className="text-xs text-[var(--app-text-muted)]">
+              {seasonLabel(season.season)} · <span className="capitalize">{season.status}</span>
+            </p>
+          ) : null}
+          <p className="w-full text-xs leading-5 text-[var(--app-text-muted)]">
+            {showingPreviousSeason
+              ? `Showing ${seasonLabel(season!.season)} until the ${seasonLabel(newestAvailableSeason)} draft is saved.`
+              : "Points earned from each participant’s Wins / Losses selections."}
+          </p>
+        </header>
 
         {error ? (
-          <section className="rounded-3xl border border-red-500/30 bg-red-950/20 p-5 text-sm text-red-200">
-            {error}
-          </section>
+          <p role="alert" className="py-3 text-sm text-red-600 dark:text-red-300">{error}</p>
         ) : loading ? (
-          <section className="rounded-3xl border border-slate-700 bg-slate-900 p-8 text-center text-sm text-slate-400">
-            Loading NBA Skins…
-          </section>
+          <p className="py-4 text-sm text-[var(--app-text-muted)]">Loading NBA Skins…</p>
         ) : !season ? (
-          <section className="rounded-3xl border border-slate-700 bg-slate-900 p-8 text-center text-sm text-slate-400">
-            No NBA Skins season exists yet.
-          </section>
-        ) : rows.length ===
-          0 ? (
-          <section className="rounded-3xl border border-slate-700 bg-slate-900 p-8 text-center">
-            <div className="font-black text-white">
-              No draft saved yet
-            </div>
-
-            <p className="mt-2 text-sm text-slate-500">
-              The standings table will populate as soon as the season&apos;s
-              {season.totalPicks} picks are saved.
-            </p>
-          </section>
+          <p className="py-4 text-sm text-[var(--app-text-muted)]">No NBA Skins season exists yet.</p>
+        ) : rows.length === 0 ? (
+          <div className="py-4 text-sm">
+            <p className="font-semibold">No draft saved yet</p>
+            <p className="mt-1 text-[var(--app-text-muted)]">The standings table will populate as soon as the season’s draft is saved.</p>
+          </div>
         ) : (
-          <section className="overflow-hidden rounded-3xl border border-slate-700 bg-slate-900 shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] border-collapse text-sm">
-                <thead className="bg-blue-950/60 text-blue-100">
-                  <tr>
-                    <th className="px-5 py-3 text-left font-bold">
-                      Team
-                    </th>
-
-                    <th className="px-4 py-3 text-right font-bold">
-                      Points
-                    </th>
-
-                    <th className="px-4 py-3 text-right font-bold">
-                      Accuracy
-                    </th>
-
-                    <th className="px-4 py-3 text-right font-bold">
-                      Pace
-                    </th>
-
-                    <th className="px-4 py-3 text-right font-bold">
-                      Projected
-                    </th>
-
-                    <th className="px-4 py-3 text-right font-bold">
-                      Possible
-                    </th>
-
-                    <th className="px-5 py-3 text-right font-bold">
-                      Games Left
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {rows.map(
-                    (
-                      row,
-                      index,
-                    ) => {
-                      const avatar =
-                        row.avatarUrl ??
-                        TEAM_HEADSHOTS[
-                          row.ownerName
-                        ] ??
-                        null;
-
-                      const profileHref =
-                        row.leagueTeamId
-                          ? `/nba-skins/profile?teamId=${row.leagueTeamId}`
-                          : "/nba-skins/profile";
-
-                      return (
-                        <tr
-                          key={
-                            row.ownerName
-                          }
-                          className={`border-t border-slate-800 ${
-                            index === 0
-                              ? "bg-blue-950/45"
-                              : "bg-slate-900"
-                          }`}
-                        >
-                          <td className="px-5 py-4">
-                            <Link
-                              href={
-                                profileHref
-                              }
-                              className="inline-flex items-center gap-3 font-black text-white transition hover:text-blue-300"
-                              aria-label={`View ${row.ownerName}'s NBA Skins profile`}
-                            >
-                              {avatar ? (
-                                <img
-                                  src={
-                                    avatar
-                                  }
-                                  alt=""
-                                  className="h-10 w-10 rounded-full object-cover ring-1 ring-blue-400/20"
-                                />
-                              ) : (
-                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-950 font-black text-blue-200">
-                                  {row.ownerName.slice(
-                                    0,
-                                    1,
-                                  )}
-                                </span>
-                              )}
-
-                              <span>
-                                {
-                                  row.ownerName
-                                }
-
-                                {index ===
-                                0 ? (
-                                  <span className="ml-2 text-xs text-blue-300">
-                                    ›
-                                  </span>
-                                ) : (
-                                  <span className="ml-2 text-xs text-slate-500">
-                                    ›
-                                  </span>
-                                )}
-                              </span>
-                            </Link>
-                          </td>
-
-                          <td className="px-4 py-4 text-right text-lg font-black tabular-nums text-white">
-                            {
-                              row.points
-                            }
-                          </td>
-
-                          <td className="px-4 py-4 text-right font-bold tabular-nums text-slate-200">
-                            {row.accuracy ===
-                            null
-                              ? "—"
-                              : `${formatNumber(
-                                  row.accuracy,
-                                  1,
-                                )}%`}
-                          </td>
-
-                          <td className="px-4 py-4 text-right font-bold tabular-nums text-blue-200">
-                            {formatNumber(
-                              row.pace,
-                              1,
-                            )}
-                          </td>
-
-                          <td className="px-4 py-4 text-right font-bold tabular-nums text-slate-300">
-                            {formatNumber(
-                              row.projected,
-                              1,
-                            )}
-                          </td>
-
-                          <td className="px-4 py-4 text-right font-bold tabular-nums text-slate-200">
-                            {
-                              row.possible
-                            }
-                          </td>
-
-                          <td className="px-5 py-4 text-right font-bold tabular-nums text-slate-300">
-                            {
-                              row.gamesLeft
-                            }
-                          </td>
-                        </tr>
-                      );
-                    },
-                  )}
-                </tbody>
-              </table>
+          <section aria-label="NBA Skins season standings">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_2.75rem] items-center gap-2 border-b border-[var(--app-border)] px-1 py-1 text-xs text-[var(--app-text-muted)]">
+              <span>Team</span><span className="text-right">Points</span><span className="sr-only">Details</span>
             </div>
-
-
-            <div className="border-t border-slate-800 px-5 py-3 text-[11px] leading-5 text-slate-500">
-              <strong className="text-slate-400">
-                Pace
-              </strong>{" "}
-              extrapolates current accuracy across all 574 team-games.{" "}
-              <strong className="text-slate-400">
-                Projected
-              </strong>{" "}
-              uses ESPN BPI projected final NBA team records for each drafted
-              Wins / Losses selection.
-            </div>
+            {rows.map((row, index) => {
+              const teamId = row.leagueTeamId ?? `pick-${row.picks[0]?.id ?? index}`;
+              const expanded = expandedIds.includes(teamId);
+              const detailsId = `skins-metrics-${teamId}`;
+              const toggleId = `skins-metrics-toggle-${teamId}`;
+              const profileHref = row.leagueTeamId
+                ? `/nba-skins/profile?teamId=${row.leagueTeamId}`
+                : "/nba-skins/profile";
+              return (
+                <article key={teamId} className={`scores-standing${index === 0 ? " scores-standing--leader" : ""}`}>
+                  <div className={`grid grid-cols-[minmax(0,1fr)_auto_2.75rem] items-center gap-2 px-1 py-1${index === 0 ? " bg-[var(--app-surface-soft)]" : ""}`}>
+                    <Link href={profileHref} aria-label={`View ${row.ownerName}'s NBA Skins profile`}
+                      className="flex min-h-11 min-w-0 items-center gap-2 rounded font-bold hover:text-[var(--app-blue)] focus-visible:outline-2 focus-visible:outline-[var(--app-blue)]">
+                      <span aria-hidden="true"><TeamAvatar teamName={row.ownerName} avatarUrl={row.avatarUrl} size="xs" /></span>
+                      <span className="truncate text-sm" title={row.ownerName}>{row.ownerName}</span>
+                      <span aria-hidden="true" className="text-xs text-[var(--app-text-muted)]">›</span>
+                    </Link>
+                    <strong className="text-right tabular-nums">{row.points}</strong>
+                    <button type="button" id={toggleId} aria-label={`${expanded ? "Collapse" : "Expand"} ${row.ownerName}'s metrics`}
+                      aria-expanded={expanded} aria-controls={detailsId}
+                      onClick={() => setExpansion({ scope: expansionScope,
+                        ids: expanded ? expandedIds.filter((id) => id !== teamId) : [...expandedIds, teamId] })}
+                      className="flex h-11 w-11 items-center justify-center rounded text-[var(--app-text-muted)] hover:bg-[var(--app-surface-soft)] focus-visible:outline-2 focus-visible:outline-[var(--app-blue)]">
+                      <span aria-hidden="true">{expanded ? "▴" : "▾"}</span>
+                    </button>
+                  </div>
+                  <div id={detailsId} role="region" aria-labelledby={toggleId} hidden={!expanded}>
+                    {expanded ? (
+                      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[var(--app-border)] px-2 py-2 text-xs sm:grid-cols-5">
+                        {[
+                          ["Accuracy", row.accuracy === null ? "—" : `${formatNumber(row.accuracy, 1)}%`],
+                          ["Pace", formatNumber(row.pace, 1)],
+                          ["Projected", formatNumber(row.projected, 1)],
+                          ["Possible", row.possible],
+                          ["Games Left", row.gamesLeft],
+                        ].map(([label, value]) => (
+                          <div key={label}>
+                            <dt className="text-[var(--app-text-muted)]">{label}</dt>
+                            <dd className="mt-0.5 font-semibold tabular-nums">{value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })}
+            <p className="pt-2 text-xs leading-5 text-[var(--app-text-muted)]">
+              <strong>Pace</strong> extrapolates current accuracy across the season’s {teamsPerParticipant * 82} team-games.{" "}
+              <strong>Projected</strong> uses ESPN BPI projected final NBA team records for each drafted Wins / Losses selection.
+            </p>
           </section>
         )}
       </div>

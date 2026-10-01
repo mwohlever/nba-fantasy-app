@@ -207,14 +207,16 @@ test("active NBA Skins runtime uses season configuration instead of fixed draft 
   assert.match(draft, /getNbaSkinsTotalPicks/);
 });
 
-test("NBA Skins Home subtitle uses season or league configuration instead of a hardcoded seven", () => {
+test("NBA Skins Home metrics use season or league configuration without participant-count copy", () => {
   const standings = source("app/api/nba-skins/standings/route.ts");
   const home = source("app/nba-skins/page.tsx");
   assert.match(standings, /resolveNbaSkinsRules\(access\.league\.settings\)/);
   assert.match(standings, /selectedSeason:\s*null,[\s\S]*rules/);
   assert.match(home, /season\?\.nbaTeamsPerParticipant\s*\?\?/);
   assert.match(home, /data\?\.rules\.nbaTeamsPerParticipant/);
-  assert.match(home, /\$\{teamsPerParticipant\} Wins \/ Losses selections/);
+  assert.match(home, /rowMetrics\(standing, teamsPerParticipant\)/);
+  assert.match(home, /fullSeasonGames = teamsPerParticipant \* 82/);
+  assert.doesNotMatch(home, /\$\{teamsPerParticipant\} Wins \/ Losses selections/);
   assert.doesNotMatch(home, /nbaTeamsPerParticipant \?\? 7/);
 });
 

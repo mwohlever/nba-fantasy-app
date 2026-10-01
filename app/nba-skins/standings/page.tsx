@@ -1,6 +1,7 @@
 "use client";
 
 import AppNav from "@/components/AppNav";
+import { useGroupContext } from "@/components/providers/GroupProvider";
 import { useEffect, useMemo, useState } from "react";
 
 type SeasonOption = {
@@ -42,37 +43,6 @@ type StandingsResponse = {
   error?: string;
 };
 
-function ordinal(value: number) {
-  const remainder100 =
-    value % 100;
-
-  if (
-    remainder100 >= 11 &&
-    remainder100 <= 13
-  ) {
-    return `${value}th`;
-  }
-
-  switch (value % 10) {
-    case 1:
-      return `${value}st`;
-    case 2:
-      return `${value}nd`;
-    case 3:
-      return `${value}rd`;
-    default:
-      return `${value}th`;
-  }
-}
-
-function rankLabel(rank: number | null) {
-  if (rank === null) {
-    return "—";
-  }
-
-  return ordinal(rank);
-}
-
 function formatSeasonLabel(season: number) {
   const end =
     String(season + 1).slice(-2);
@@ -81,6 +51,8 @@ function formatSeasonLabel(season: number) {
 }
 
 export default function NbaSkinsStandingsPage() {
+  const { groupContext } = useGroupContext();
+  const [expansion, setExpansion] = useState<{ scope: string; ids: Array<number | string> }>({ scope: "", ids: [] });
   const [data, setData] =
     useState<StandingsResponse | null>(null);
 
@@ -178,268 +150,122 @@ export default function NbaSkinsStandingsPage() {
       [data],
     );
 
+  const expansionScope = `${groupContext?.group.id}:${selectedSeason}`;
+  const expandedIds = expansion.scope === expansionScope ? expansion.ids : [];
+  if (expansion.scope !== expansionScope) {
+    setExpansion({ scope: expansionScope, ids: [] });
+  }
+
   return (
-    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+    <main className="min-h-screen bg-[var(--background)] px-3 py-3 pb-24 text-[var(--app-text)] sm:px-4 sm:pb-6">
+      <div className="mx-auto max-w-5xl space-y-3">
         <AppNav />
 
-        <section className="rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-xl sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-300">
-                NBA Skins
-              </div>
-
-              <h1 className="mt-1 text-3xl font-black tracking-tight text-white">
-                Standings
-              </h1>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                Season results and all {selectedSeasonData?.nbaTeamsPerParticipant ?? 7} picks for each participant.
-              </p>
-            </div>
-
-            {data?.availableSeasons.length ? (
-              <label className="flex min-w-32 flex-col gap-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-                  Season
-                </span>
-
-                <select
-                  value={
-                    selectedSeason ??
-                    data.selectedSeason?.season ??
-                    ""
-                  }
-                  onChange={(event) =>
-                    setSelectedSeason(
-                      Number(
-                        event.target.value,
-                      ),
-                    )
-                  }
-                  className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-bold text-white outline-none transition focus:border-blue-500"
-                >
-                  {data.availableSeasons.map(
-                    (season) => (
-                      <option
-                        key={season.season}
-                        value={season.season}
-                      >
-                        {formatSeasonLabel(season.season)}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </label>
-            ) : null}
-          </div>
-        </section>
+        <header className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="text-lg font-bold">NBA Skins Standings</h1>
+          {data?.availableSeasons.length ? (
+            <label className="flex items-center gap-2 text-xs text-[var(--app-text-muted)]">
+              <span>Season</span>
+              <select
+                value={selectedSeason ?? data.selectedSeason?.season ?? ""}
+                onChange={(event) => setSelectedSeason(Number(event.target.value))}
+                className="min-h-11 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2 text-sm font-semibold text-[var(--app-text)] focus-visible:outline-2 focus-visible:outline-[var(--app-blue)]"
+              >
+                {data.availableSeasons.map((season) => (
+                  <option key={season.season} value={season.season}>
+                    {formatSeasonLabel(season.season)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </header>
 
         {loading ? (
-          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center text-sm text-slate-400">
-            Loading NBA Skins standings…
-          </section>
+          <p className="py-4 text-sm text-[var(--app-text-muted)]">Loading NBA Skins standings…</p>
         ) : error ? (
-          <section className="rounded-3xl border border-red-500/30 bg-red-950/20 p-6">
-            <div className="font-bold text-red-200">
-              Couldn&apos;t load NBA Skins standings
-            </div>
-
-            <div className="mt-2 text-sm text-red-300/80">
-              {error}
-            </div>
-          </section>
+          <div role="alert" className="py-3 text-sm text-red-600 dark:text-red-300">
+            <p className="font-semibold">Couldn&apos;t load NBA Skins standings</p>
+            <p>{error}</p>
+          </div>
         ) : !data?.selectedSeason ? (
-          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center text-sm text-slate-400">
-            No NBA Skins seasons found.
-          </section>
+          <p className="py-4 text-sm text-[var(--app-text-muted)]">No NBA Skins seasons found.</p>
         ) : (
           <>
             {!isCompleteSeason ? (
-              <section className="rounded-2xl border border-blue-500/20 bg-blue-950/20 px-4 py-3 text-sm text-blue-100">
+              <p className="border-l-2 border-[var(--app-blue)] pl-3 text-xs leading-5 text-[var(--app-text-muted)]">
                 {selectedSeasonData?.season === 2025
                   ? "2025 picks are imported, but final points are intentionally not populated yet. We’ll derive them from authoritative final NBA records."
                   : selectedSeasonData?.status === "open"
                     ? "This season is open. Final standings will appear as picks and results become available."
                     : "Complete final-point data is not available for this season yet."}
-              </section>
+              </p>
             ) : null}
 
-            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {data.standings.map(
-                (standing) => (
-                  <div
-                    key={standing.ownerName}
-                    className="rounded-3xl border border-blue-500/25 bg-gradient-to-br from-slate-900 to-blue-950/60 p-4 shadow-sm sm:p-5"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-xs font-black uppercase tracking-[0.16em] text-blue-300">
-                          {standing.rank !== null
-                            ? rankLabel(
-                                standing.rank,
-                              )
-                            : "NBA Skins"}
+            <section className="scores-standings" aria-label="NBA Skins standings">
+              {data.standings.length === 0 ? (
+                <p className="py-4 text-sm text-[var(--app-text-muted)]">No participants found for this season.</p>
+              ) : data.standings.map((standing, index) => {
+                // The API supplies Group team IDs; pick IDs retain a legacy fallback without using names.
+                const teamId = standing.leagueTeamId ?? `pick-${standing.picks[0]?.id ?? index}`;
+                const expanded = expandedIds.includes(teamId);
+                const headingId = `skins-standing-${teamId}`;
+                const detailsId = `skins-picks-${teamId}`;
+                return (
+                  <article key={teamId} className={`scores-standing${expanded ? " scores-standing--expanded" : ""}`}>
+                    <button
+                      type="button"
+                      id={headingId}
+                      className="scores-standing-toggle min-h-11 !grid-cols-[1.5rem_minmax(0,1fr)_auto_1rem]"
+                      aria-expanded={expanded}
+                      aria-controls={detailsId}
+                      onClick={() => setExpansion({
+                        scope: expansionScope,
+                        ids: expanded ? expandedIds.filter((id) => id !== teamId) : [...expandedIds, teamId],
+                      })}
+                    >
+                      <span className="scores-standing-rank" aria-label={`Rank ${standing.rank ?? "unavailable"}`}>{standing.rank ?? "—"}</span>
+                      <span className="scores-standing-name"><strong title={standing.ownerName}>{standing.ownerName}</strong></span>
+                      <span className="scores-standing-score text-right tabular-nums" aria-label={`${standing.finalTotal ?? "Unavailable"} points`}>{standing.finalTotal ?? "—"}</span>
+                      <span className="text-right text-[var(--app-text-muted)]" aria-hidden="true">{expanded ? "▴" : "▾"}</span>
+                    </button>
+                    <div id={detailsId} role="region" aria-labelledby={headingId} hidden={!expanded}>
+                      {expanded ? standing.picks.length === 0 ? (
+                        <p className="px-2 py-3 text-sm text-[var(--app-text-muted)]">No teams have been drafted for this season.</p>
+                      ) : (
+                        <div className="pb-2 text-xs">
+                          <div aria-hidden="true" className="hidden grid-cols-[3rem_minmax(0,1fr)_5rem_4rem_4rem] gap-2 border-t border-[var(--app-border)] px-2 py-1.5 text-[var(--app-text-muted)] sm:grid">
+                            <span>Round</span><span>NBA Team</span><span>Selection</span><span>Record</span><span className="text-right">Points</span>
+                          </div>
+                          {standing.picks.map((pick) => {
+                            const round = selectedSeasonData && selectedSeasonData.season >= 2026 ? pick.draftRound : null;
+                            const record = pick.record ? `${pick.record.wins}-${pick.record.losses}` : "—";
+                            const selection = pick.pickType === "wins" ? "Wins" : "Losses";
+                            return (
+                              <div key={pick.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 border-t border-[var(--app-border)] px-2 py-2 sm:grid-cols-[3rem_minmax(0,1fr)_5rem_4rem_4rem]">
+                                <span className="hidden text-[var(--app-text-muted)] sm:block">{round === null ? "—" : `R${round}`}</span>
+                                <div className="min-w-0">
+                                  <div className="flex min-w-0 items-baseline gap-2">
+                                    <strong className="shrink-0">{pick.nbaTeamAbbreviation}</strong>
+                                    <span className="truncate text-[var(--app-text-muted)]" title={pick.nbaTeamName}>{pick.nbaTeamName}</span>
+                                  </div>
+                                  <div className="mt-0.5 flex flex-wrap gap-x-1 text-[var(--app-text-muted)] sm:hidden">
+                                    {round !== null ? <span>R{round} ·</span> : null}
+                                    <span>{selection} ·</span><span>{record}</span>
+                                  </div>
+                                </div>
+                                <span className="hidden sm:block">{selection}</span>
+                                <span className="hidden tabular-nums text-[var(--app-text-muted)] sm:block">{record}</span>
+                                <strong className="text-right text-sm tabular-nums" aria-label={`${pick.finalPoints ?? "Unavailable"} points`}>{pick.finalPoints ?? "—"}</strong>
+                              </div>
+                            );
+                          })}
                         </div>
-
-                        <div className="mt-1 text-xl font-black text-white">
-                          {standing.ownerName}
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                          Points
-                        </div>
-
-                        <div className="mt-1 text-2xl font-black tabular-nums text-white">
-                          {standing.finalTotal ??
-                            "—"}
-                        </div>
-                      </div>
+                      ) : null}
                     </div>
-
-                    <div className="mt-4 border-t border-slate-800 pt-3 text-xs text-slate-400">
-                      {standing.pickCount}/{selectedSeasonData?.nbaTeamsPerParticipant ?? 7} picks
-                    </div>
-                  </div>
-                ),
-              )}
-            </section>
-
-            <section className="space-y-3">
-              {data.standings.map(
-                (standing) => (
-                  <article
-                    key={standing.ownerName}
-                    className="overflow-hidden rounded-3xl border border-slate-700 bg-slate-900 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between gap-4 border-b border-slate-800 px-4 py-3 sm:px-5">
-                      <div>
-                        <div className="text-lg font-black text-white">
-                          {standing.ownerName}
-                        </div>
-
-                        <div className="mt-1 text-xs text-slate-500">
-                          {standing.pickCount === 0
-                            ? "No picks yet"
-                            : `${standing.pickCount} of 7 teams`}
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                          Total
-                        </div>
-
-                        <div className="text-xl font-black tabular-nums text-white">
-                          {standing.finalTotal ??
-                            "—"}
-                        </div>
-                      </div>
-                    </div>
-
-                    {standing.picks.length ===
-                    0 ? (
-                      <div className="px-5 py-8 text-center text-sm text-slate-500">
-                        No teams have been drafted for this season.
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-slate-800">
-                        {standing.picks.map(
-                          (pick) => (
-                            <div
-                              key={pick.id}
-                              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[34px_minmax(0,1fr)_125px_64px] sm:px-5 sm:py-2.5"
-                            >
-                              <div className="hidden text-xs font-bold text-slate-500 sm:block">
-                                {pick.draftRound !==
-                                null
-                                  ? `R${pick.draftRound}`
-                                  : "—"}
-                              </div>
-
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="shrink-0 text-sm font-black text-white">
-                                    {
-                                      pick.nbaTeamAbbreviation
-                                    }
-                                  </span>
-
-                                  <span className="truncate text-xs text-slate-500 sm:text-sm">
-                                    {
-                                      pick.nbaTeamName
-                                    }
-                                  </span>
-                                </div>
-
-                                <div className="mt-1 flex items-center gap-2 sm:hidden">
-                                  {pick.draftRound !== null ? (
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                      Round {pick.draftRound}
-                                    </span>
-                                  ) : null}
-
-                                  {pick.record ? (
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                      {pick.record.wins}-{pick.record.losses}
-                                    </span>
-                                  ) : null}
-
-                                  <span
-                                    className={
-                                      pick.pickType ===
-                                      "wins"
-                                        ? "rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-300"
-                                        : "rounded-full border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-rose-300"
-                                    }
-                                  >
-                                    {pick.pickType}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="hidden sm:block">
-                                <div className="flex items-center gap-2">
-                                  {pick.record ? (
-                                    <span className="text-xs font-bold tabular-nums text-slate-500">
-                                      {pick.record.wins}-{pick.record.losses}
-                                    </span>
-                                  ) : null}
-
-                                  <span
-                                  className={
-                                    pick.pickType ===
-                                    "wins"
-                                      ? "inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-emerald-300"
-                                      : "inline-flex rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-rose-300"
-                                  }
-                                >
-                                    {pick.pickType}
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="text-right">
-                                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                                  Points
-                                </div>
-
-                                <div className="text-lg font-black tabular-nums text-white">
-                                  {pick.finalPoints ??
-                                    "—"}
-                                </div>
-                              </div>
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    )}
                   </article>
-                ),
-              )}
+                );
+              })}
             </section>
           </>
         )}
