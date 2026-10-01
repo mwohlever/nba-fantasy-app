@@ -73,7 +73,9 @@ async function loadDraft(access: NbaSkinsAccess, requestedSeason?: number) {
 
   const teams = access.teams.map((team) => ({ id: team.teamId, name: team.teamName }));
   const teamById = new Map(teams.map((team) => [team.id, team]));
-  const orderedTeams = ((draftOrderResult.data ?? []) as DraftOrderRow[])
+  // Pre-2026 imports include order/round/index fields, but these did not track
+  // real draft chronology. Only the selections themselves are authoritative.
+  const orderedTeams = ((selectedSeason.season >= 2026 ? draftOrderResult.data ?? [] : []) as DraftOrderRow[])
     .map((row) => {
       const team = teamById.get(Number(row.team_id));
       const draftPosition = getDraftPosition(row);
@@ -97,7 +99,16 @@ async function loadDraft(access: NbaSkinsAccess, requestedSeason?: number) {
     nbaTeams: (nbaTeamsResult.data ?? []).filter((team) => team.is_active !== false).map((team) => ({
       abbreviation: String(team.abbreviation), displayName: String(team.display_name),
     })),
-    slots: (hasValidDraftOrder
+    slots: selectedSeason.season < 2026 ? picks.filter((pick) => teamById.has(pick.team_id)).map((pick) => ({
+      pickId: pick.id,
+      pickNumber: null,
+      round: null,
+      roundPick: null,
+      teamId: pick.team_id,
+      teamName: teamById.get(pick.team_id)!.name,
+      nbaTeamAbbreviation: pick.nba_team_abbreviation,
+      pickType: pick.pick_type,
+    })) : (hasValidDraftOrder
       ? buildSnakeOwners(orderedTeams, Number(selectedSeason.nba_teams_per_participant))
       : []).map((slot) => {
       const savedPick = pickByTeamRound.get(`${slot.teamId}:${slot.round}`);

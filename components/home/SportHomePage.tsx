@@ -1,5 +1,9 @@
 "use client";
 
+import { useViewingContext } from "@/lib/viewing-context/useViewingContext";
+import { isFantasySport } from "@/lib/lineups/draftContext";
+import ViewingContextSelector from "@/components/ui/ViewingContextSelector";
+import type { ViewingOption } from "@/lib/viewing-context/context";
 import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
 
 import { usePullToRefresh } from "@/lib/client/usePullToRefresh";
@@ -109,6 +113,9 @@ type GolfTournamentLeaderboardRow = {
 
 type HomeSummaryResponse = {
   success: boolean;
+  groupId?: string;
+  sport?: string;
+  availableSlates?: ViewingOption[];
   latestSlate: LatestSlate | null;
   nextSlate: LatestSlate | null;
   latestSlateRows: LatestSlateRow[];
@@ -452,6 +459,9 @@ function HomePageContent() {
    */
   const [dataGroupId, setDataGroupId] = useState<string | null>(null);
   const [dataSport, setDataSport] = useState<string | null>(null);
+  const viewing = useViewingContext({ game: isFantasySport(sport) ? sport : "nba",
+    options: dataSport === sport && dataGroupId === activeGroupId ? data?.availableSlates : undefined,
+    fallback: data?.latestSlate?.id ?? null });
 
   /*
    * Also keep the current rendered sport in a ref so an older
@@ -511,9 +521,9 @@ function HomePageContent() {
   const homeMountedRef = useRef(true);
   const homeLoadRef = useRef(0);
   const homeDataScope = useRef(createRefreshScope(""));
-  homeDataScope.current.update(JSON.stringify([activeGroupId, sport, isHomeGroupContextPending, isSwitchingGroup]));
+  homeDataScope.current.update(JSON.stringify([activeGroupId, sport, viewing.value, isHomeGroupContextPending, isSwitchingGroup]));
   const homeRefreshScope = useRef(createRefreshScope(""));
-  const homeScopeKey = JSON.stringify([activeGroupId, sport, data?.latestSlate?.id, isHomeGroupContextPending, isSwitchingGroup]);
+  const homeScopeKey = JSON.stringify([activeGroupId, sport, viewing.value, data?.latestSlate?.id, isHomeGroupContextPending, isSwitchingGroup]);
   homeRefreshScope.current.update(homeScopeKey);
   const renderRefreshCurrent = homeRefreshScope.current.capture();
   const [homeFeedback, setHomeFeedback] = useState<{ scope: string; text: string } | null>(null);
@@ -646,7 +656,7 @@ function HomePageContent() {
       setMessage("");
 
       const response = await fetch(
-        `/api/home-summary?sport=${requestedSport}`,
+        `/api/home-summary?sport=${requestedSport}${viewing.value ? `&slateId=${viewing.value}` : ""}`,
         { cache: "no-store" }
       );
 
@@ -685,6 +695,8 @@ function HomePageContent() {
        * request was in flight.
        */
       const summary = result;
+      if ((summary.groupId && summary.groupId !== requestedGroupId) ||
+          (summary.sport && summary.sport !== requestedSport)) return { status: "skipped" };
       const latestSlateId = summary.latestSlate?.id ?? null;
       setData(summary);
       acknowledgeRequestScope();
@@ -788,7 +800,7 @@ function HomePageContent() {
 
     if (activeGroupId && !isSwitchingGroup) {
       void loadHomeSummary(homeDataScope.current.capture());
-    } else if (!isHomeGroupContextPending && !isSwitchingGroup) {
+    } else if (!activeGroupId && !isHomeGroupContextPending && !isSwitchingGroup) {
       /* A resolved absence of Group context is terminal, not a loading state. */
       setDataSport(sport);
       setDataGroupId(null);
@@ -798,6 +810,7 @@ function HomePageContent() {
   }, [
     sport,
     activeGroupId,
+    viewing.value,
     isHomeGroupContextPending,
     isSwitchingGroup,
   ]);
@@ -871,7 +884,7 @@ function HomePageContent() {
   const seasonSnapshot = data?.seasonSnapshot ?? [];
   const funFacts = data?.funFacts ?? [];
   const latestSeason = data?.latestSeason ?? new Date().getFullYear();
-  const isHomeScopeLoading = isLoading || isHomeGroupContextPending || isSwitchingGroup || dataSport !== sport || dataGroupId !== activeGroupId;
+  const isHomeScopeLoading = (viewing.ready && viewing.value !== (data?.latestSlate?.id ?? null)) || isLoading || isHomeGroupContextPending || isSwitchingGroup || dataSport !== sport || dataGroupId !== activeGroupId;
 
   const leader = latestSlateRows[0] ?? null;
 
@@ -1035,7 +1048,7 @@ function HomePageContent() {
     : "No slate";
 
   const homePullEnabled = (sport === "nba" || sport === "nfl" || sport === "golf") && Boolean(activeGroupId && latestSlate?.id) &&
-    dataSport === sport && dataGroupId === activeGroupId && !isLoading && !isHomeGroupContextPending && !isSwitchingGroup && !profileTeam && !activeFantasyProfile;
+    dataSport === sport && dataGroupId === activeGroupId && !isHomeScopeLoading && !isHomeGroupContextPending && !isSwitchingGroup && !profileTeam && !activeFantasyProfile;
   async function refreshHomeManually(): Promise<RefreshOutcome> {
     if (!homePullEnabled || !homeMountedRef.current || !renderRefreshCurrent() || homeGolfRefreshInFlightRef.current) return { status: "skipped" };
     const isCurrent = homeRefreshScope.current.capture();
@@ -1072,6 +1085,9 @@ function HomePageContent() {
         <AppNav />
 
         <FunFactCarousel facts={funFacts} sport={sport} />
+
+        <ViewingContextSelector label={isGolf ? "Tournament" : sport === "nfl" ? "Week" : "Slate"}
+          value={viewing.value} options={data?.availableSlates ?? []} onChange={viewing.select} disabled={!viewing.ready} />
 
         {message ? (
           <section className="rounded-3xl border border-orange-200 bg-orange-50 px-5 py-4 text-sm text-orange-800 shadow-sm">
@@ -1126,7 +1142,7 @@ function HomePageContent() {
             <ScoresRefreshButton label="Refresh" onRefresh={() => { void refreshHomeManually(); }}
               disabled={!homePullEnabled || isRefreshingHomeStats} isRefreshing={isRefreshingHomeStats} />
             <Link
-              href={`/lineups/scores?sport=${sport}`}
+              href={`/lineups/scores?sport=${sport}${latestSlate?.id ? `&slateId=${latestSlate.id}` : ""}`}
               className={`rounded-xl border px-4 py-2.5 text-sm font-medium transition ${isGolf ? "border-emerald-800 bg-slate-950 text-emerald-200 hover:bg-emerald-950" : "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50"}`}
             >
               View Scores
@@ -1213,10 +1229,10 @@ function HomePageContent() {
                   <p className="font-semibold text-white">Upcoming</p>
                   <p className="mt-1 text-xs text-slate-400">Fantasy scoring will appear when tournament results are available.</p>
                 </div>
-                <Link href="/lineups/draft?sport=golf" className="shrink-0 rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950">View Lineup</Link>
+                <Link href={`/lineups/draft?sport=golf${latestSlate?.id ? `&slateId=${latestSlate.id}` : ""}`} className="shrink-0 rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950">View Lineup</Link>
               </div>
               <div className="mt-3 flex gap-4 text-xs font-semibold text-emerald-300">
-                <Link href="/lineups/scores?sport=golf">View Scores</Link>
+                <Link href={`/lineups/scores?sport=golf${latestSlate?.id ? `&slateId=${latestSlate.id}` : ""}`}>View Scores</Link>
                 <Link href="/golf/live">Tournament Live</Link>
               </div>
             </div>
@@ -1405,8 +1421,8 @@ function HomePageContent() {
                     ))}
                   </div>
                   <div className="flex gap-4 px-3 pb-3 text-xs font-semibold text-emerald-300">
-                    <Link href="/lineups/scores?sport=golf">View Scores</Link>
-                    <Link href="/lineups/draft?sport=golf">Lineup</Link>
+                    <Link href={`/lineups/scores?sport=golf${latestSlate?.id ? `&slateId=${latestSlate.id}` : ""}`}>View Scores</Link>
+                    <Link href={`/lineups/draft?sport=golf${latestSlate?.id ? `&slateId=${latestSlate.id}` : ""}`}>Lineup</Link>
                   </div>
                 </div>
               ) : (

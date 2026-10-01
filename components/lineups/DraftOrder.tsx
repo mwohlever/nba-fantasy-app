@@ -1,7 +1,7 @@
 import { effectiveDraftPick, type DraftPick, type DraftHistory } from "@/lib/lineups/draftHistory";
 
-export default function DraftOrder({ history, teams, actionLabel, onMakePick, busy, canEdit, editing, onToggleEdit, onEdit, canEditPick, playerPosition }: { history: DraftHistory | null; teams: { id: number; name: string }[]; actionLabel?: string; onMakePick?: () => void; busy?: boolean; canEdit?: boolean; editing?: boolean; onToggleEdit?: () => void; onEdit?: (pick: DraftPick) => void; canEditPick?: (pick: DraftPick) => boolean; playerPosition?: (id: number) => string | undefined }) {
-  if (!history) return <p role="status" className="py-3 text-sm">Loading draft history…</p>;
+export default function DraftOrder({ history, loading = true, teams, actionLabel, onMakePick, busy, canEdit, editing, onToggleEdit, onEdit, canEditPick, playerPosition }: { history: DraftHistory | null; loading?: boolean; teams: { id: number; name: string }[]; actionLabel?: string; onMakePick?: () => void; busy?: boolean; canEdit?: boolean; editing?: boolean; onToggleEdit?: () => void; onEdit?: (pick: DraftPick) => void; canEditPick?: (pick: DraftPick) => boolean; playerPosition?: (id: number) => string | undefined }) {
+  if (!history) return <p role="status" className="py-3 text-sm">{loading ? "Loading draft history…" : "Draft history unavailable. Refresh to try again."}</p>;
   if (!history.available) return <p role="status" className="py-3 text-sm">Draft history setup is pending.</p>;
   const turn = history.turn;
   return <section aria-label="Draft order" className="py-2">

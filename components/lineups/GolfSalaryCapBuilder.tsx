@@ -50,10 +50,8 @@ function dollars(value: string | number) {
 }
 
 export default function GolfSalaryCapBuilder({
-  slates,
   initialSlateId,
 }: {
-  slates: Array<{ id: number; label: string }>;
   initialSlateId: number;
 }) {
   const { groupContext, isLoading: groupLoading, isSwitchingGroup } = useGroupContext();
@@ -209,13 +207,7 @@ export default function GolfSalaryCapBuilder({
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">Golf · Salary Cap</p>
           <h1 className="text-2xl font-bold tracking-tight text-white">Build your lineup</h1>
         </div>
-        <label className="text-xs font-semibold text-slate-300">
-          Tournament
-          <select className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" value={slateId}
-            onChange={event => { setPeriod(null); setSlateId(Number(event.target.value)); }}>
-            {slates.map(slate => <option key={slate.id} value={slate.id}>{slate.label}</option>)}
-          </select>
-        </label>
+
       </div>
 
       {board && board.periods.length > 1 && (

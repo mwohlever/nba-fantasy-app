@@ -104,7 +104,8 @@ test('controls retain settings and use a real keyboard refresh button with share
     refreshStatsForSelectedSlate: async () => ({ status: 'success' }), lastUpdatedAt: null };
   const tree = h.render(props), html = renderToStaticMarkup(tree);
   assert.match(html, /scores-compact-controls/); assert.match(html, /Upcoming/);
-  assert.match(html, /Season/); assert.match(html, /Auto-refresh every 30 seconds/); assert.match(html, /View standings/);
+  assert.doesNotMatch(html, /<select/); // The page boundary owns the shared selector.
+  assert.match(html, /Auto-refresh every 30 seconds/); assert.match(html, /View standings/);
   assert.ok(!html.includes('Change Slate &amp; Settings'));
   const fallback = nodes(tree).find(n => n.type === RefreshButton);
   let invoked = 0; const button = RefreshButton({ ...fallback.props, onRefresh: () => invoked++ });

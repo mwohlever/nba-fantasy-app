@@ -1,5 +1,7 @@
 "use client";
 
+import ViewingContextSelector from "@/components/ui/ViewingContextSelector";
+import { useViewingContext } from "@/lib/viewing-context/useViewingContext";
 import AppNav from "@/components/AppNav";
 import { useGroupContext } from "@/components/providers/GroupProvider";
 import { useEffect, useMemo, useState } from "react";
@@ -56,16 +58,19 @@ export default function NbaSkinsStandingsPage() {
   const [data, setData] =
     useState<StandingsResponse | null>(null);
 
-  const [selectedSeason, setSelectedSeason] =
-    useState<number | null>(null);
-
   const [loading, setLoading] =
     useState(true);
 
   const [error, setError] =
     useState<string | null>(null);
 
+  const viewing = useViewingContext({ game: "nba-skins",
+    options: data?.availableSeasons.map(row => ({ value: row.season, label: formatSeasonLabel(row.season) })),
+    fallback: data?.selectedSeason?.season ?? null });
+  const selectedSeason = viewing.value;
+
   useEffect(() => {
+    if (!viewing.hydrated) return;
     let cancelled = false;
 
     async function load() {
@@ -102,14 +107,6 @@ export default function NbaSkinsStandingsPage() {
 
         setData(body);
 
-        if (
-          selectedSeason === null &&
-          body.selectedSeason
-        ) {
-          setSelectedSeason(
-            body.selectedSeason.season,
-          );
-        }
       } catch (loadError) {
         if (cancelled) {
           return;
@@ -132,7 +129,7 @@ export default function NbaSkinsStandingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedSeason]);
+  }, [selectedSeason, viewing.hydrated]);
 
   const selectedSeasonData =
     data?.selectedSeason ?? null;
@@ -163,25 +160,14 @@ export default function NbaSkinsStandingsPage() {
 
         <header className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-lg font-bold">NBA Skins Standings</h1>
-          {data?.availableSeasons.length ? (
-            <label className="flex items-center gap-2 text-xs text-[var(--app-text-muted)]">
-              <span>Season</span>
-              <select
-                value={selectedSeason ?? data.selectedSeason?.season ?? ""}
-                onChange={(event) => setSelectedSeason(Number(event.target.value))}
-                className="min-h-11 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2 text-sm font-semibold text-[var(--app-text)] focus-visible:outline-2 focus-visible:outline-[var(--app-blue)]"
-              >
-                {data.availableSeasons.map((season) => (
-                  <option key={season.season} value={season.season}>
-                    {formatSeasonLabel(season.season)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
+          <ViewingContextSelector label="Season" value={viewing.value}
+            options={data?.availableSeasons.map(row => ({ value: row.season, label: formatSeasonLabel(row.season) })) ?? []}
+            onChange={viewing.select} disabled={!viewing.ready} />
         </header>
 
-        {loading ? (
+        {viewing.missingGroup ? (
+          <p role="alert" className="py-4 text-sm">No active Group is available.</p>
+        ) : loading || (viewing.ready && viewing.value !== (data?.selectedSeason?.season ?? null)) ? (
           <p className="py-4 text-sm text-[var(--app-text-muted)]">Loading NBA Skins standings…</p>
         ) : error ? (
           <div role="alert" className="py-3 text-sm text-red-600 dark:text-red-300">

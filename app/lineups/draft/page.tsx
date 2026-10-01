@@ -1,7 +1,9 @@
+import { slateViewingOptions } from "@/lib/viewing-context/context";
 export const dynamic = "force-dynamic";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AppNav from "@/components/AppNav";
+import SlateViewingBoundary from "@/components/lineups/SlateViewingBoundary";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
 import GolfSalaryCapBuilder from "@/components/lineups/GolfSalaryCapBuilder";
 import { formatFantasySlateLabel } from "@/lib/formatSlateLabel";
@@ -431,6 +433,7 @@ export default async function DraftLineupsPage({
         <div className="mx-auto max-w-[1600px] space-y-6">
           <AppNav />
 
+          <SlateViewingBoundary groupId={activeGroupId} sport={sport} options={[]} selectedId={null}>
           <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -448,6 +451,7 @@ export default async function DraftLineupsPage({
               first.
             </div>
           </section>
+          </SlateViewingBoundary>
         </div>
       </main>
     );
@@ -616,13 +620,13 @@ export default async function DraftLineupsPage({
       <main className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 sm:py-6">
         <div className="mx-auto max-w-[1600px] space-y-5">
           <AppNav />
+          <SlateViewingBoundary groupId={activeGroupId} sport={sport}
+            options={slateViewingOptions(safeSlates, sport)}
+            selectedId={selectedSlateId}>
           <GolfSalaryCapBuilder
-            slates={salaryCapSlates.map((slate) => ({
-              id: slate.id,
-              label: slate.label ?? slate.display_name ?? slate.date,
-            }))}
             initialSlateId={selectedSlateId}
           />
+          </SlateViewingBoundary>
         </div>
       </main>
     );
@@ -633,6 +637,9 @@ export default async function DraftLineupsPage({
       <div className="mx-auto max-w-[1600px] space-y-6">
         <AppNav />
 
+        <SlateViewingBoundary groupId={activeGroupId} sport={sport}
+          options={slateViewingOptions(safeSlates, sport)}
+          selectedId={selectedSlateId}>
         <LineupBuilder
           key={`${activeLeagueId}:${sport}`}
           players={normalizedPlayers}
@@ -648,6 +655,7 @@ export default async function DraftLineupsPage({
           defaultViewMode="draft"
           sport={sport}
         />
+        </SlateViewingBoundary>
       </div>
     </main>
   );

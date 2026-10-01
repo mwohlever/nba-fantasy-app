@@ -1,5 +1,7 @@
 "use client";
 
+import ViewingContextSelector from "@/components/ui/ViewingContextSelector";
+import { useViewingContext } from "@/lib/viewing-context/useViewingContext";
 import AppNav from "@/components/AppNav";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import { useGroupContext } from "@/components/providers/GroupProvider";
@@ -376,7 +378,12 @@ export default function NbaSkinsHomePage() {
     useState("");
 
 
+  const viewing = useViewingContext({ game: "nba-skins",
+    options: data?.availableSeasons.map(row => ({ value: row.season, label: seasonLabel(row.season) })),
+    fallback: data?.selectedSeason?.season ?? null });
+
   useEffect(() => {
+    if (!viewing.hydrated) return;
     let cancelled =
       false;
 
@@ -387,7 +394,7 @@ export default function NbaSkinsHomePage() {
 
         const response =
           await fetch(
-            "/api/nba-skins/standings?home=1",
+            `/api/nba-skins/standings?home=1${viewing.value ? `&season=${viewing.value}` : ""}`,
             {
               cache:
                 "no-store",
@@ -435,7 +442,7 @@ export default function NbaSkinsHomePage() {
       cancelled =
         true;
     };
-  }, []);
+  }, [viewing.value, viewing.hydrated]);
 
 
   const season =
@@ -527,6 +534,9 @@ export default function NbaSkinsHomePage() {
 
         <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <h1 className="text-lg font-bold">NBA Skins</h1>
+          <ViewingContextSelector label="Season" value={viewing.value}
+            options={data?.availableSeasons.map(row => ({ value: row.season, label: seasonLabel(row.season) })) ?? []}
+            onChange={viewing.select} disabled={!viewing.ready} />
           {season ? (
             <p className="text-xs text-[var(--app-text-muted)]">
               {seasonLabel(season.season)} · <span className="capitalize">{season.status}</span>
@@ -539,9 +549,9 @@ export default function NbaSkinsHomePage() {
           </p>
         </header>
 
-        {error ? (
-          <p role="alert" className="py-3 text-sm text-red-600 dark:text-red-300">{error}</p>
-        ) : loading ? (
+        {error || viewing.missingGroup ? (
+          <p role="alert" className="py-3 text-sm text-red-600 dark:text-red-300">{error || "No active Group is available."}</p>
+        ) : loading || (viewing.ready && viewing.value !== (data?.selectedSeason?.season ?? null)) ? (
           <p className="py-4 text-sm text-[var(--app-text-muted)]">Loading NBA Skins…</p>
         ) : !season ? (
           <p className="py-4 text-sm text-[var(--app-text-muted)]">No NBA Skins season exists yet.</p>

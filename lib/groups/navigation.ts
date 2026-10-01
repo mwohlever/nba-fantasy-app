@@ -1,3 +1,5 @@
+import { sharesViewingContext } from "../viewing-context/context";
+
 export type GroupNavigationSport =
   | "nba"
   | "nfl"
@@ -98,8 +100,8 @@ function hasGroupSpecificResource(
  * Resolve the one safe destination for a Group switch.
  *
  * Routes are preserved only when they have an explicit, reusable
- * Group-scoped meaning. Unknown routes and URLs carrying resource IDs
- * fall back to the target Group Home so identifiers cannot leak across
+ * Group-scoped meaning. Shared viewing IDs are cleared before resolving
+ * the destination. Other resource IDs and unknown routes fall back to the target Group Home so identifiers cannot leak across
  * Groups.
  */
 export function getGroupSwitchDestination({
@@ -135,6 +137,15 @@ export function getGroupSwitchDestination({
       enabledSports,
     );
 
+  let destinationSearch = normalizedSearch;
+  const viewingGame = normalizedPathname.startsWith("/nba-skins") ? "nba-skins" : searchParams.get("sport");
+  if (viewingGame && sharesViewingContext(normalizedPathname, viewingGame) &&
+      (searchParams.has("slateId") || searchParams.has("season"))) {
+    searchParams.delete("slateId");
+    searchParams.delete("season");
+    destinationSearch = searchParams.toString();
+  }
+
   if (
     hasGroupSpecificResource(
       searchParams,
@@ -153,7 +164,7 @@ export function getGroupSwitchDestination({
   const currentDestination =
     destinationWithSearch(
       normalizedPathname,
-      normalizedSearch,
+      destinationSearch,
     );
 
   if (

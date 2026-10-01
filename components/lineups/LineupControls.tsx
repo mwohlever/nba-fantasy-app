@@ -167,12 +167,6 @@ export default function LineupControls({
             <span aria-hidden="true">⚙</span>
           </summary>
           <div className="scores-settings-panel">
-            <label>Season<select value={selectedSeason} onChange={event => setSelectedSeason(event.target.value)}>
-              {seasons.map(season => <option key={season} value={season}>{season}</option>)}
-            </select></label>
-            <label>Slate<select value={selectedSlateId} onChange={event => setSelectedSlateId(event.target.value)}>
-              {slates.map(slate => <option key={slate.id} value={slate.id}>{slate.label ?? slate.date}{slate.is_locked ? " (Locked)" : ""}</option>)}
-            </select></label>
             <label className="scores-auto-refresh"><input type="checkbox" checked={autoRefreshEnabled}
               disabled={!selectedSlateIdNumber} onChange={event => setAutoRefreshEnabled(event.target.checked)} />
               Auto-refresh every 30 seconds

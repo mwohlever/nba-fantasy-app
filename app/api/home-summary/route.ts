@@ -1,3 +1,4 @@
+import { parseViewingValue, slateViewingOptions } from "@/lib/viewing-context/context";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getPlayerProjectionMapForSeason } from "@/lib/playerProjections";
@@ -166,6 +167,7 @@ export async function GET(request: Request) {
     if (sportParam === "golf") {
       return getGolfHomeSummary({
         liveOnly: searchParams.get("view") === "live",
+        requestedSlateId: parseViewingValue(searchParams.get("slateId")),
       });
     }
 
@@ -266,6 +268,7 @@ export async function GET(request: Request) {
         .select(
           "id, date, start_date, end_date, is_locked, display_name, first_game_start_time, tournament_analysis, show_tournament_analysis, league_id"
         )
+        .eq("sport", sport)
         .eq(
           "league_id",
           league.id,
@@ -634,6 +637,7 @@ export async function GET(request: Request) {
       : null;
 
     const latestSlate =
+      normalizedSlates.find(slate => slate.id === parseViewingValue(searchParams.get("slateId"))) ??
       nflScoresSlate ??
       liveSlate ??
       startedOpenSlate ??
@@ -1686,6 +1690,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
+      groupId: context.group.id,
+      sport,
+      availableSlates: slateViewingOptions(normalizedSlates, sport),
       latestSlate: latestSlate
         ? {
             id: latestSlate.id,

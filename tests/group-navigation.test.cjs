@@ -55,7 +55,8 @@ test("notification pages require permission and their selected sport", () => {
 });
 
 test("resource-bearing, unknown, and unclassified routes fall back safely", () => {
-  assert.equal(destination("/lineups/scores", "?sport=nba&slateId=167"), targetHome);
+  assert.equal(destination("/lineups/scores", "?sport=nba&slateId=167"), "/lineups/scores?sport=nba");
+  assert.equal(destination("/lineups/scores", "?sport=nba&slateId=167&teamId=1"), targetHome);
   assert.equal(destination("/admin/slates/167", "?sport=nba", { canAdministerGroup: true }), targetHome);
   assert.equal(destination("/something-new", ""), targetHome);
 });

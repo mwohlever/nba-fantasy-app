@@ -21,7 +21,12 @@ const mockedReact = { ...React,
     return host.values[i] ??= { current: initial };
   },
   useMemo(fn) { return current ? fn() : React.useMemo(fn, []); },
-  useCallback(fn, deps) { return current ? fn : React.useCallback(fn, deps); },
+  useCallback(fn, deps) {
+    if (!current) return React.useCallback(fn, deps);
+    const h = current, i = h.cursor++, previous = h.values[i];
+    if (!previous || deps.some((value, j) => !Object.is(value, previous.deps[j]))) h.values[i] = { deps, callback: fn };
+    return h.values[i].callback;
+  },
   useEffect(fn, deps) {
     if (!current) return React.useEffect(fn, deps);
     const host = current, i = host.cursor++;
@@ -35,7 +40,7 @@ const load = Module._load;
 Module._load = function(request, parent, ...rest) {
   if (request.includes('client/usePullToRefresh') && context.capturePull) return { usePullToRefresh: options => { context.pullOptions = options; return { distance: 0, armed: false }; } };
   if (request === 'react') return mockedReact;
-  if (request === 'next/navigation') return { usePathname: () => context.pathname, useSearchParams: () => new URLSearchParams(context.search ?? { sport: context.sport }) };
+  if (request === 'next/navigation') return { useRouter: () => ({ push: href => context.navigate?.(href, 'push'), replace: href => context.navigate?.(href, 'replace') }), usePathname: () => context.pathname, useSearchParams: () => new URLSearchParams(context.search ?? { sport: context.sport }) };
   if (request.includes('providers/GroupProvider')) return { useGroupContext: () => ({
     groupContext: { group: { id: context.group }, team: context.team == null ? null : { id: context.team } }, isLoading: context.loading, isSwitchingGroup: context.switching,
   }) };
@@ -58,12 +63,14 @@ function host(component) {
       if (effects) state.effects.forEach(fn => fn());
       return tree;
     },
+    remount(props, effects = true) {
+      this.unmount(); state.values = [];
+      return this.render(props, effects);
+    },
     strictReplayEffects() {
-      state.values.forEach(value => {
-        if (!value?.setup) return;
-        value.cleanup?.();
-        value.cleanup = value.setup();
-      });
+      const effects = state.values.filter(value => value?.setup);
+      effects.forEach(value => value.cleanup?.());
+      effects.forEach(value => { value.cleanup = value.setup(); });
     },
     unmount() { state.values.forEach(value => value?.cleanup?.()); },
   };
@@ -71,6 +78,7 @@ function host(component) {
 function nodes(tree) {
   if (Array.isArray(tree)) return tree.flatMap(nodes);
   if (!tree || typeof tree !== 'object') return [];
+  if (typeof tree.type === 'function' && tree.type.name === 'ViewingContextSelector') return [tree, ...nodes(tree.type(tree.props))];
   return [tree, ...nodes(tree.props?.children)];
 }
 module.exports = { host, nodes, context, React };

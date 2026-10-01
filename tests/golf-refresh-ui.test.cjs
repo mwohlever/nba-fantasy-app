@@ -184,9 +184,10 @@ test('Best Ball team avatars and hole replay links reuse existing identity and f
   h.unmount();
 });
 
-test('Golf Scores uses Tournaments while non-Golf Scores retains Slates', () => {
+test('Golf Scores uses the shared compact Tournament selector and keeps score settings separate', () => {
   const builder = require('node:fs').readFileSync('components/lineups/LineupBuilder.tsx', 'utf8');
-  assert.match(builder, /\? "Tournaments" : "Slates"/);
+  const boundary = require('node:fs').readFileSync('components/lineups/SlateViewingBoundary.tsx', 'utf8');
+  assert.match(boundary, /sport === "golf" \? "Tournament"/);
   assert.match(builder, /setIsGolfSlateMenuOpen\(true\)/);
 });
 

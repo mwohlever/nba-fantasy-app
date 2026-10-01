@@ -400,16 +400,12 @@ export default function LineupBuilder({
   }, []);
 
   useEffect(() => {
-    if (!filteredSlates.length) return;
-
-    const selectedStillInYear = filteredSlates.some(
-      (slate) => String(slate.id) === selectedSlateId
-    );
-
-    if (!selectedStillInYear) {
+    // Supported fantasy routes select through SlateViewingBoundary/server pages.
+    if (isDraftPage || isScoresPage || !filteredSlates.length) return;
+    if (!filteredSlates.some(slate => String(slate.id) === selectedSlateId)) {
       setSelectedSlateId(String(filteredSlates[0].id));
     }
-  }, [filteredSlates, selectedSlateId]);
+  }, [filteredSlates, selectedSlateId, isDraftPage, isScoresPage]);
 
   useEffect(() => {
     if (!draftingPlayer) {
@@ -535,7 +531,9 @@ export default function LineupBuilder({
       setDraftingPlayer(null); setTargetDraftSlot(null); setPendingRosterSlotChoice(null); setOrderPickTarget(null);
       setLeagueResearchPlayer(null); setProfilePlayer(null); setEditPicksScope(null); setCorrectionTarget(null);
     }
-    void loadSlateLineups(selectedSlateIdNumber);
+    // Mount-effect replay invalidates the previous request generation. Capture
+    // this committed effect's generation, rather than the pre-cleanup render.
+    void loadSlateLineups(selectedSlateIdNumber, refreshScopeRef.current.capture());
   }, [selectedSlateIdNumber, refreshScopeKey]);
 
   const playerStatsMap = useMemo(() => {
@@ -1324,8 +1322,8 @@ export default function LineupBuilder({
     finally { refreshInFlightRef.current = false; if (refreshMountedRef.current) setIsRefreshingStats(false); }
   }
 
-  async function loadDraftState(slateId: number, routine = false): Promise<RefreshOutcome> {
-    if (!scopeReady || !isRenderScopeCurrent()) return { status: "skipped" };
+  async function loadDraftState(slateId: number, routine = false, isScopeCurrent = isRenderScopeCurrent): Promise<RefreshOutcome> {
+    if (!refreshMountedRef.current || !scopeReady || !isScopeCurrent()) return { status: "skipped" };
     const loadId = ++latestSlateLoadRef.current;
     const isCurrent = refreshScopeRef.current.capture();
     const valid = () => refreshMountedRef.current && isCurrent() && loadId === latestSlateLoadRef.current;
@@ -1385,8 +1383,8 @@ export default function LineupBuilder({
     } finally { if (valid()) setIsSlateLoading(false); }
   }
 
-  async function loadSlateLineups(nextSlateId: number) {
-    if (isDraftPage) { await loadDraftState(nextSlateId); return; }
+  async function loadSlateLineups(nextSlateId: number, isScopeCurrent = isRenderScopeCurrent) {
+    if (isDraftPage) { await loadDraftState(nextSlateId, false, isScopeCurrent); return; }
     const loadId = ++latestSlateLoadRef.current;
     const isCurrent = refreshScopeRef.current.capture();
 
@@ -2311,6 +2309,7 @@ export default function LineupBuilder({
           <ScoresRefreshButton onRefresh={() => refreshStatsForSelectedSlate(false)}
             disabled={refreshUnavailable || isRefreshingStats} isRefreshing={isRefreshingStats} />
 
+
           <button
             type="button"
             onClick={() =>
@@ -2318,7 +2317,7 @@ export default function LineupBuilder({
             }
             className="flex shrink-0 items-center justify-center rounded-xl border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm font-black text-slate-100 transition hover:border-sky-500"
           >
-            {(selectedSlate?.sport ?? selectedSport) === "golf" ? "Tournaments" : "Slates"}
+            Settings
             <span
               aria-hidden="true"
               className="ml-1"
@@ -2367,7 +2366,7 @@ export default function LineupBuilder({
               <section
                 role="dialog"
                 aria-modal="true"
-                aria-label="Golf slate and score settings"
+                aria-label="Golf score settings"
                 className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 text-slate-100 shadow-2xl"
               >
                 <header className="flex items-center justify-between gap-4 border-b border-slate-800 px-5 py-4">
@@ -2377,7 +2376,7 @@ export default function LineupBuilder({
                     </span>
 
                     <h3 className="mt-1 text-xl font-black">
-                      Slate & Settings
+                      Score Settings
                     </h3>
                   </div>
 
@@ -2396,68 +2395,6 @@ export default function LineupBuilder({
                 </header>
 
                 <div className="space-y-4 p-5">
-                  <label className="block">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                      Season
-                    </span>
-
-                    <select
-                      value={selectedSeason}
-                      onChange={(event) =>
-                        setSelectedSeason(
-                          event.target.value,
-                        )
-                      }
-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base text-white"
-                    >
-                      {seasons.map(
-                        (season) => (
-                          <option
-                            key={season}
-                            value={season}
-                          >
-                            {season}
-                          </option>
-                        ),
-                      )}
-                    </select>
-                  </label>
-
-                  <label className="block">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                      Tournament
-                    </span>
-
-                    <select
-                      value={selectedSlateId}
-                      onChange={(event) => {
-                        setSelectedSlateId(
-                          event.target.value,
-                        );
-
-                        setIsGolfSlateMenuOpen(
-                          false,
-                        );
-                      }}
-                      disabled={isSlateLoading}
-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base text-white disabled:opacity-60"
-                    >
-                      {filteredSlates.map(
-                        (slate) => (
-                          <option
-                            key={slate.id}
-                            value={String(
-                              slate.id,
-                            )}
-                          >
-                            {slate.label ??
-                              slate.date}
-                          </option>
-                        ),
-                      )}
-                    </select>
-                  </label>
-
                   <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
                     <span>
                       <strong className="block text-sm">
@@ -2568,10 +2505,6 @@ export default function LineupBuilder({
               disabled={!scopeReady || isSlateLoading || isSaving || isAssigningPlayer || isRefreshingStats}
               isRefreshing={isRefreshingStats} />
             <SecondaryControlsPanel open={draftSettingsOpen} onOpenChange={setDraftSettingsOpen} label="Draft settings">
-              <label>Season<select value={selectedSeason} disabled={isSaving || isAssigningPlayer}
-                onChange={event => setSelectedSeason(event.target.value)}>{seasons.map(season => <option key={season}>{season}</option>)}</select></label>
-              <label>Slate<select value={selectedSlateId} disabled={isSaving || isAssigningPlayer}
-                onChange={event => setSelectedSlateId(event.target.value)}>{filteredSlates.map(slate => <option key={slate.id} value={slate.id}>{slate.label ?? slate.date}</option>)}</select></label>
               <Link href={`/standings?sport=${sport ?? selectedSport}`}>View Standings →</Link>
               {currentUser?.role === "admin" && viewMode === "draft" ? (
                 <section className="draft-admin-toggle">
@@ -2676,7 +2609,7 @@ export default function LineupBuilder({
           </section>
 
           {draftPageTab === "order" && (sport ?? selectedSport) !== "golf" &&
-            <DraftOrder history={draftContext?.scope === refreshScopeKey ? draftContext.history ?? null : null} teams={orderedTeamsForSlate}
+            <DraftOrder loading={isSlateLoading} history={draftContext?.scope === refreshScopeKey ? draftContext.history ?? null : null} teams={orderedTeamsForSlate}
               actionLabel={canEnterOrderPick ? orderTeam?.id === currentTeamId ? "Make My Pick" : `Make Pick for ${orderTeam?.name}` : undefined}
               canEdit={canEditPicks} editing={editingPicks} canEditPick={canEditPick} onEdit={beginCorrection}
               playerPosition={id => players.find(p => p.id === id)?.position_group}

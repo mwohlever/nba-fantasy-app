@@ -10,7 +10,9 @@ assert.ok(block.includes('const latestSlate ='));
 const compiled = ts.transpileModule(block + '\nreturn latestSlate;', {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText;
-const select = new Function('sport', 'safeSlates', 'safeResults', 'safePlayerSlateStats', 'Date', compiled);
+const evaluate = new Function('sport', 'safeSlates', 'safeResults', 'safePlayerSlateStats', 'Date', 'searchParams', 'parseViewingValue', compiled);
+const parseViewingValue = value => /^\d+$/.test(value ?? '') && Number(value) > 0 ? Number(value) : null;
+const select = (...args) => evaluate(...args, new URLSearchParams(), parseViewingValue);
 class FixedDate extends Date {
   constructor(...args) { super(...(args.length ? args : ['2026-09-26T12:00:00Z'])); }
 }
@@ -48,4 +50,15 @@ test('NBA retains its existing metadata/result-based selection even with newer p
   assert.equal(select('nba', [week3, week1], results, stats, FixedDate).id, 1);
   const liveResults = results.map(row => row.slate_id === 3 ? { ...row, games_in_progress: 1 } : row);
   assert.equal(select('nba', [week3, week1], liveResults, stats, FixedDate).id, 3);
+});
+
+
+test('Home explicit historical NFL/NBA URL selection wins; unavailable IDs preserve the existing default', () => {
+  for (const sport of ['nfl', 'nba']) {
+    assert.equal(evaluate(sport, [week1, week3], results, stats, FixedDate, new URLSearchParams('slateId=1'), parseViewingValue).id, 1);
+    for (const id of ['invalid', '999']) {
+      assert.equal(evaluate(sport, [week1, week3], results, stats, FixedDate, new URLSearchParams(`slateId=${id}`), parseViewingValue).id,
+        select(sport, [week1, week3], results, stats, FixedDate).id);
+    }
+  }
 });

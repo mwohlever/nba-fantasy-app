@@ -16,6 +16,8 @@ const Sync = require('../components/lineups/RefreshPlayersButton.tsx').default;
 const GameCenter = require('../components/lineups/NflFantasyGameCenter.tsx').NflFantasyGameCenter;
 const Indicator = require('../components/ui/PullToRefreshIndicator.tsx').default;
 const DraftOrder = require('../components/lineups/DraftOrder.tsx').default;
+const Boundary = require('../components/lineups/SlateViewingBoundary.tsx').default;
+const { installViewingBrowser } = require('./helpers/viewing-browser.cjs');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const reply = (body, ok = true) => ({ ok, json: async () => body });
 const find = (tree, type) => nodes(tree).find(n => n.type === type);
@@ -55,7 +57,7 @@ test('compact header/settings retain Week, status, controls and exact role gates
     const {h, props, tree} = await setup('nfl', {role, systemRole});
     assert.ok(nodes(tree).some(n => n.type === 'h1' && n.props.children === 'Draft'));
     const settings = find(tree, Panel); assert.equal(settings.props.open, false);
-    assert.equal(nodes(settings.props.children).filter(n => n.type === 'select').length, 2);
+    assert.equal(nodes(settings.props.children).filter(n => n.type === 'select').length, 0);
     assert.equal(Boolean(nodes(settings.props.children).find(n => n.props?.className === 'draft-admin-toggle')), role === 'admin');
     assert.equal(Boolean(find(settings.props.children, Sync)), systemRole === 'super_admin');
     assert.ok(nodes(settings.props.children).some(n => n.props?.href === '/standings?sport=nfl'));
@@ -143,7 +145,7 @@ test('refresh errors are atomic; Group A-B-A, slate switches and unmount reject 
     const pending = context.pullOptions.onRefresh();
     if (action === 'group') { context.group = 'b'; h.render(props); context.group = 'a'; h.render(props); }
     if (action === 'sport') { context.sport = 'nba'; h.render(props); }
-    if (action === 'slate') { nodes(find(h.render(props), Panel).props.children).filter(n => n.type === 'select')[1].props.onChange({target: {value: '2'}}); h.render(props); }
+    if (action === 'slate') { props.initialSelectedSlateId = 2; h.remount(props); }
     if (action === 'unmount') h.unmount();
     resolvers.forEach(resolve => resolve());
     assert.equal((await pending).status, action === 'error' ? 'error' : 'skipped');
@@ -152,10 +154,104 @@ test('refresh errors are atomic; Group A-B-A, slate switches and unmount reject 
   }
 });
 test('selected slate uses refreshed participants, never legacy or absent Group teams', async () => {
-  const {h, props, tree} = await setup();
-  nodes(find(tree, Panel).props.children).filter(n => n.type === 'select')[1].props.onChange({target: {value: '2'}});
+  const {h, props} = await setup();
+  props.initialSelectedSlateId = 2;
+  h.remount(props); // SlateViewingBoundary remounts the authorized server payload.
   h.render(props, true); await tick(); const next = h.render(props);
   assert.equal(find(next, Court).props.teamId, 3); assert.equal(find(next, Court).props.canDraft, false);
+  h.unmount();
+});
+for (const sport of ['nfl', 'golf', 'nba']) test(`${sport}: context remount and mount-effect replay load the selected historical slate in both directions`, async () => {
+  const { h, props, calls } = await setup(sport);
+  installViewingBrowser('/lineups/draft', `sport=${sport}&slateId=1`);
+  const boundary = host(Boundary);
+  const boundaryProps = { groupId: 'a', sport, options: [{ value: 1, label: 'Current' }, { value: 2, label: 'Historical' }], selectedId: 1, children: null };
+  const renderBoundary = () => {
+    for (let i = 0; i < 3; i++) boundary.render(boundaryProps, true);
+    return boundary.render(boundaryProps);
+  };
+  let boundaryTree = renderBoundary();
+  let key = boundaryTree.props.children[1].key;
+  for (const slateId of [2, 1]) {
+    nodes(boundaryTree).find(node => node.type === 'select').props.onChange({ target: { value: String(slateId) } });
+    assert.equal(new URLSearchParams(context.search).get('slateId'), String(slateId));
+    assert.match(renderBoundary().props.children[1].props.children.join(''), /Loading selected/,
+      'old server payload is hidden while the selected URL is resolved');
+    // Model the new authorized server payload delivered through the boundary.
+    boundaryProps.selectedId = slateId;
+    boundaryTree = renderBoundary();
+    assert.notEqual(boundaryTree.props.children[1].key, key);
+    key = boundaryTree.props.children[1].key;
+    props.initialSelectedSlateId = slateId;
+    h.remount(props);
+    h.strictReplayEffects();
+    assert.equal(calls.filter(([url]) => url === `/api/lineups?slateId=${slateId}&sport=${sport}&draft=true`).length, 2,
+      'effect replay starts a replacement request after invalidating the first');
+    await tick(); await tick();
+    const tree = h.render(props, true);
+    assert.equal(find(tree, Court)?.props.teamId, slateId === 2 ? 3 : 1);
+    assert.ok(!nodes(tree).some(node => node.props?.children === 'Loading roster…'));
+    if (sport !== 'golf') {
+      nodes(tree).find(node => node.type === 'button' && node.props.children?.props?.children === 'Draft Order').props.onClick();
+      assert.equal(find(h.render(props), DraftOrder).props.history.available, true);
+    }
+    calls.length = 0;
+  }
+  h.unmount(); boundary.unmount(); context.search = undefined;
+});
+
+for (const sport of ['nba', 'nfl', 'golf']) test(`${sport}: rapid A-B-A remounts reject pre-replay and obsolete responses`, async () => {
+  const { h, props, respond } = await setup(sport);
+  const pending = [];
+  global.fetch = url => {
+    const body = structuredClone(respond(url));
+    if (url.startsWith('/api/lineups?')) body.lineups = [{ team_id: 1, player_ids: [], player_slots: [] }];
+    return new Promise(resolve => pending.push({ url, body, resolve }));
+  };
+  for (const id of [1, 2, 1]) {
+    props.initialSelectedSlateId = id;
+    h.remount(props); h.strictReplayEffects();
+  }
+  const latest = pending.filter(request => request.url.startsWith('/api/lineups?')).at(-1);
+  latest.body.lineups = [{ team_id: 1, player_ids: [10], player_slots: [{ player_id: 10, roster_slot_position: props.players[0].position_group, roster_slot_index: 0 }] }];
+  // Resolve the final mount first, then every obsolete mount/replay request.
+  for (const request of [...pending].reverse()) request.resolve(reply(request.body));
+  await tick(); await tick();
+  const tree = h.render(props, true);
+  assert.deepEqual(find(tree, Court).props.players.map(player => player.id), [10]);
+  assert.equal(find(tree, Court).props.teamId, 1);
+  assert.ok(!nodes(tree).some(node => node.props?.children === 'Loading roster…'));
+  h.unmount();
+});
+
+for (const sport of ['nba', 'nfl', 'golf']) test(`${sport}: a remounted workspace completes loading on errors and empty historical records`, async () => {
+  const { h, props, respond } = await setup(sport);
+  for (const state of ['error', 'empty', 'missing-history']) {
+    global.fetch = async url => {
+      const body = respond(url);
+      if (url.startsWith('/api/lineups?')) {
+        body.lineups = [];
+        body.draftContext.history = state === 'missing-history' ? null : { available: true, initialized: true, picks: [], corrections: [], turn: { state: 'closed' } };
+      }
+      return reply(body, state !== 'error');
+    };
+    props.initialSelectedSlateId = 2;
+    h.remount(props); h.strictReplayEffects(); await tick(); await tick();
+    let tree = h.render(props, true);
+    assert.ok(!nodes(tree).some(node => node.props?.children === 'Loading roster…'));
+    if (state === 'error') {
+      assert.ok(nodes(tree).some(node => node.props?.children === 'Roster unavailable. Refresh to try again.'));
+      assert.equal(find(tree, Court), undefined);
+    } else assert.equal(find(tree, Court).props.players.length, 0);
+    if (sport !== 'golf') {
+      nodes(tree).find(node => node.type === 'button' && node.props.children?.props?.children === 'Draft Order').props.onClick();
+      tree = h.render(props);
+      const historyTree = DraftOrder(find(tree, DraftOrder).props);
+      assert.ok(!nodes(historyTree).some(node => node.props?.children === 'Loading draft history…'));
+      if (state === 'empty') assert.ok(nodes(historyTree).some(node => node.props?.children === 'No recorded picks.'));
+      else assert.match(historyTree.props.children, /unavailable/);
+    }
+  }
   h.unmount();
 });
 test('read-only empty slots cannot target draft; owned empty slots retain targeting across sports and custom slots', () => {
@@ -522,7 +618,7 @@ test('sport switching rejects the old slate/pool until current server props and 
     calls.length = 0;
     assert.equal(find(h.render(nextProps, true), Pool), undefined, 'old selected ID cannot render the new pool');
     assert.ok(!calls.some(([url]) => /slateId=1/.test(url)));
-    const settled = h.render(nextProps, true);
+    const settled = h.remount(nextProps); // New authorized sport/slate payload mounts at the page boundary.
     assert.deepEqual(find(settled, Pool).props.players.map(p => p.name), [`${to} player`]);
     h.unmount(); delete context.search;
   }

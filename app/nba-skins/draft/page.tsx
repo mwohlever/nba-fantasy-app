@@ -1,10 +1,14 @@
 "use client";
 
+import ViewingContextSelector from "@/components/ui/ViewingContextSelector";
+import { useViewingContext } from "@/lib/viewing-context/useViewingContext";
 import AppNav from "@/components/AppNav";
 
 import {
   useEffect,
+  useCallback,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -15,9 +19,10 @@ type PickType =
 
 
 type DraftPick = {
-  pickNumber: number;
-  round: number;
-  roundPick: number;
+  pickId?: number;
+  pickNumber: number | null;
+  round: number | null;
+  roundPick: number | null;
   teamId: number;
   teamName: string;
   nbaTeamAbbreviation: string;
@@ -147,14 +152,23 @@ export default function NbaSkinsDraftPage() {
     useState("");
 
 
-  async function loadDraft() {
+  const viewing = useViewingContext({ game: "nba-skins",
+    options: data?.availableSeasons.map(row => ({ value: row.season, label: row.label })),
+    fallback: data?.season.season ?? null });
+  const requestRef = useRef(0);
+
+  const loadDraft = useCallback(async () => {
+    if (!viewing.hydrated) return;
+    const requestId = ++requestRef.current;
+    const requestedSeason = viewing.value;
+    const current = () => requestRef.current === requestId;
     try {
       setLoading(true);
       setError("");
 
       const response =
         await fetch(
-          "/api/nba-skins/draft",
+          `/api/nba-skins/draft${requestedSeason ? `?season=${requestedSeason}` : ""}`,
           {
             cache:
               "no-store",
@@ -164,6 +178,7 @@ export default function NbaSkinsDraftPage() {
       const result =
         await response.json() as DraftResponse;
 
+      if (!current()) return;
       if (!response.ok) {
         throw new Error(
           result.error ??
@@ -181,6 +196,7 @@ export default function NbaSkinsDraftPage() {
     } catch (
       loadError
     ) {
+      if (!current()) return;
       setError(
         loadError instanceof
         Error
@@ -188,16 +204,17 @@ export default function NbaSkinsDraftPage() {
           : "Failed to load NBA Skins draft.",
       );
     } finally {
-      setLoading(
+      if (current()) setLoading(
         false,
       );
     }
-  }
+  }, [viewing.hydrated, viewing.value]);
 
 
   useEffect(() => {
     void loadDraft();
-  }, []);
+    return () => { requestRef.current += 1; };
+  }, [loadDraft]);
 
 
   const selectedCodes =
@@ -254,7 +271,7 @@ export default function NbaSkinsDraftPage() {
 
 
   async function saveDraft() {
-    if (!data) {
+    if (!data || loading || !viewing.ready || viewing.value !== data.season.season) {
       return;
     }
 
@@ -359,6 +376,9 @@ export default function NbaSkinsDraftPage() {
 
         <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <h1 className="text-lg font-bold">NBA Skins Draft Sheet</h1>
+          <ViewingContextSelector label="Season" value={viewing.value}
+            options={data?.availableSeasons.map(row => ({ value: row.season, label: row.label })) ?? []}
+            onChange={viewing.select} disabled={!viewing.ready || saving} />
           {data ? (
             <p className="text-xs text-[var(--app-text-muted)]">{data.season.label} · {statusLabel(data.season.status)}</p>
           ) : null}
@@ -367,13 +387,15 @@ export default function NbaSkinsDraftPage() {
           </p>
         </header>
 
-        {loading ? (
+        {viewing.missingGroup ? (
+          <p role="alert" className="py-4 text-sm">No active Group is available.</p>
+        ) : loading || (viewing.ready && viewing.value !== data?.season.season) ? (
           <p className="py-4 text-sm text-[var(--app-text-muted)]">Loading draft sheet…</p>
         ) : error && !data ? (
           <p role="alert" className="py-3 text-sm text-red-600 dark:text-red-300">{error}</p>
         ) : data ? (
           <>
-            {!data.hasValidDraftOrder ? (
+            {data.season.season >= 2026 && !data.hasValidDraftOrder ? (
               <div className="border-l-2 border-amber-500 pl-3 text-sm">
                 <p className="font-semibold">Draft order not configured</p>
                 <p className="mt-1 text-xs leading-5 text-[var(--app-text-muted)]">
@@ -382,13 +404,15 @@ export default function NbaSkinsDraftPage() {
               </div>
             ) : (
               <>
-                <section className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-[var(--app-border)] pb-2 text-xs" aria-label="Draft order">
+                <section className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-[var(--app-border)] pb-2 text-xs" aria-label="Draft summary">
+                  {data.season.season >= 2026 && data.hasValidDraftOrder ? <>
                   <h2 className="font-semibold">Draft Order</h2>
                   <ol className="flex min-w-0 flex-1 flex-wrap gap-x-3 gap-y-1">
                     {data.draftOrder.map((team) => (
                       <li key={team.teamId} className="break-words text-[var(--app-text-muted)]">{team.draftPosition}. {team.teamName}</li>
                     ))}
                   </ol>
+                  </> : <p className="min-w-0 flex-1 text-[var(--app-text-muted)]">Historical selections · Draft order was not recorded.</p>}
                   <span className="whitespace-nowrap font-semibold tabular-nums">{completedCount}/{data.season.totalPicks} filled</span>
                 </section>
 
@@ -397,12 +421,13 @@ export default function NbaSkinsDraftPage() {
 
                 <section aria-label="Draft selections">
                   <div aria-hidden="true" className="hidden grid-cols-[12rem_minmax(0,1fr)_7rem] gap-3 px-1 pb-1 text-xs text-[var(--app-text-muted)] lg:grid">
-                    <span>Pick / Participant</span><span>NBA Team</span><span>Selection</span>
+                    <span>{data.season.season >= 2026 ? "Pick / Participant" : "Participant"}</span><span>NBA Team</span><span>Selection</span>
                   </div>
                   {picks.map((pick, index) => {
-                    const isRoundStart = index === 0 || picks[index - 1].round !== pick.round;
+                    const isRoundStart = data.season.season >= 2026 && pick.round !== null && (index === 0 || picks[index - 1].round !== pick.round);
+                    const selectionLabel = data.season.season >= 2026 ? `pick ${pick.pickNumber}` : `selection ${index + 1}`;
                     return (
-                      <div key={pick.pickNumber}>
+                      <div key={pick.pickId ?? pick.pickNumber}>
                         {isRoundStart ? (
                           <h2 className="border-y border-[var(--app-border)] bg-[var(--app-surface-soft)] px-1 py-1.5 text-xs font-semibold">
                             Round {pick.round}
@@ -410,14 +435,14 @@ export default function NbaSkinsDraftPage() {
                         ) : null}
                         <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-x-3 gap-y-1.5 border-b border-[var(--app-border)] px-1 py-2 lg:grid-cols-[12rem_minmax(0,1fr)_7rem]">
                           <div className="col-span-2 flex min-w-0 items-baseline gap-2 lg:col-span-1">
-                            <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--app-blue)]">#{pick.pickNumber}</span>
+                            {data.season.season >= 2026 && pick.pickNumber !== null ? <span className="shrink-0 text-xs font-semibold tabular-nums text-[var(--app-blue)]">#{pick.pickNumber}</span> : null}
                             <strong className="truncate text-sm" title={pick.teamName}>{pick.teamName}</strong>
                           </div>
                           <label className="min-w-0">
                             <span className="mb-1 block text-[10px] text-[var(--app-text-muted)] lg:sr-only">NBA Team</span>
                             <select
                               value={pick.nbaTeamAbbreviation}
-                              aria-label={`NBA team for pick ${pick.pickNumber}, ${pick.teamName}`}
+                              aria-label={`NBA team for ${selectionLabel}, ${pick.teamName}`}
                               disabled={!data.season.editable}
                               onChange={(event) => updatePick(index, { nbaTeamAbbreviation: event.target.value })}
                               className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2 text-base text-[var(--app-text)] focus-visible:outline-2 focus-visible:outline-[var(--app-blue)] disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
@@ -437,7 +462,7 @@ export default function NbaSkinsDraftPage() {
                             <span className="mb-1 block text-[10px] text-[var(--app-text-muted)] lg:sr-only">Selection</span>
                             <select
                               value={pick.pickType}
-                              aria-label={`Wins or Losses for pick ${pick.pickNumber}, ${pick.teamName}`}
+                              aria-label={`Wins or Losses for ${selectionLabel}, ${pick.teamName}`}
                               disabled={!data.season.editable}
                               onChange={(event) => updatePick(index, { pickType: event.target.value as PickType })}
                               className={`min-h-11 w-full min-w-0 rounded-lg border border-[var(--app-border)] bg-[var(--app-surface)] px-2 text-base font-semibold focus-visible:outline-2 focus-visible:outline-[var(--app-blue)] disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm ${pick.pickType === "wins" ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}
@@ -460,6 +485,8 @@ export default function NbaSkinsDraftPage() {
                     <p className="mt-0.5 text-xs leading-5 text-[var(--app-text-muted)]">
                       {data.season.editable
                         ? `Saving replaces the current open-season draft with the ${data.season.totalPicks} selections above.`
+                        : data.season.season < 2026
+                          ? "Historical selections are view only."
                         : data.season.status === "open"
                           ? "Only an admin can edit and save the draft sheet."
                           : "The draft can no longer be edited unless the season is reopened from Admin."}

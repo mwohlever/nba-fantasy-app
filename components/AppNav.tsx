@@ -1,5 +1,6 @@
 "use client";
 
+import { viewingNavigationHref } from "@/lib/viewing-context/context";
 import Link from "next/link";
 import MobileAccountMenu from "@/components/MobileAccountMenu";
 import DarkModeToggle from "@/components/theme/DarkModeToggle";
@@ -546,11 +547,8 @@ function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracke
   function getLinkHref(href: string) {
     const basePath = href.split("?")[0];
 
-    if (sportScopedPaths.includes(basePath)) {
-      return appendSportParam(href, activeSport);
-    }
-
-    return href;
+    const destination = sportScopedPaths.includes(basePath) ? appendSportParam(href, activeSport) : href;
+    return viewingNavigationHref(destination, activeSport, pathname, searchParams.toString());
   }
 
   type SportSection =

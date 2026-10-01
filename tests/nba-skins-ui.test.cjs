@@ -5,6 +5,7 @@ const test = require('node:test');
 const Module = require('node:module');
 const { renderToStaticMarkup } = require('react-dom/server');
 const { host, nodes, context, React } = require('./helpers/scores-harness.cjs');
+const { installViewingBrowser } = require('./helpers/viewing-browser.cjs');
 
 const previousLoad = Module._load;
 Module._load = function (request, parent, ...rest) {
@@ -50,12 +51,10 @@ function standingsData(overrides = {}) {
 }
 async function mount(Component, data, fetcher) {
   context.group = 'skins-group-a';
+  installViewingBrowser(Component === Home ? '/nba-skins' : Component === Draft ? '/nba-skins/draft' : '/nba-skins/standings');
   global.fetch = fetcher ?? (async () => response(data));
   const h = host(Component);
-  h.render({}, true);
-  await settle();
-  h.render({}, true);
-  await settle();
+  for (let i = 0; i < 5; i++) { h.render({}, true); await settle(); }
   return { h, tree: h.render({}, true) };
 }
 
@@ -110,7 +109,7 @@ test('expanded Standings preserves names, rounds, selection, record and points w
   const expanded = html(h.render({}));
   for (const value of ['NBA Team', 'BOS Full NBA Team Name', 'R1', 'Wins', 'Losses', '10-10', '10 points']) assert.ok(expanded.includes(value), value);
   for (const value of ['Accuracy', 'Pace', 'Projected', 'Possible', 'Games Left', 'Result']) assert.ok(!expanded.includes(value), value);
-  const old = standingsData(); old.selectedSeason.season = 2024;
+  const old = standingsData(); old.selectedSeason.season = 2024; old.availableSeasons.push({ season: 2024, status: "final" });
   const mounted = await mount(Standings, old);
   toggles(mounted.h.render({}))[0].props.onClick();
   assert.doesNotMatch(html(mounted.h.render({})), />R[1-6]</);
@@ -249,6 +248,7 @@ test('Home and Standings preserve loading, errors and no-season states', async (
 
 function draftData(filled = false) {
   return {
+    availableSeasons: [{ season: 2026, label: '2026-27', status: 'open' }],
     season: { id: 601, season: 2026, label: '2026-27', status: 'open', editable: true, participantCount: 2, nbaTeamsPerParticipant: 3, totalPicks: 6 },
     draftOrder: [{ teamId: 101, teamName: 'Alpha', draftPosition: 1 }, { teamId: 102, teamName: 'Beta', draftPosition: 2 }],
     hasValidDraftOrder: true, nbaTeams: codes.map((code) => ({ abbreviation: code, displayName: `${code} Full Name` })),
@@ -301,7 +301,8 @@ test('Draft retains read-only permissions, locked/final messaging and unconfigur
   for (const status of ['open', 'locked', 'final']) {
     const data = draftData(true); data.season.editable = false; data.season.status = status;
     const { tree } = await mount(Draft, data);
-    assert.ok(selects(tree).every((select) => select.props.disabled));
+    assert.ok([...nbaSelects(tree), ...typeSelects(tree)].every((select) => select.props.disabled));
+    assert.equal(selects(tree).find(select => select.props['aria-label'] === 'Season').props.disabled, false);
     assert.equal(saveButton(tree), undefined);
     assert.match(html(tree), status === 'open' ? /Only an admin can edit/ : /season is reopened from Admin/);
     assert.match(html(tree), /6\/6 filled/);
@@ -309,7 +310,27 @@ test('Draft retains read-only permissions, locked/final messaging and unconfigur
   const data = draftData(); data.hasValidDraftOrder = false;
   const { tree } = await mount(Draft, data);
   assert.match(html(tree), /Draft order not configured/);
-  assert.equal(selects(tree).length, 0);
+  assert.equal(nbaSelects(tree).length, 0);
+  assert.ok(selects(tree).some(select => select.props['aria-label'] === 'Season'));
+});
+
+test('historical Draft displays saved selections without an invented participant order or pick chronology', async () => {
+  for (const importedOrder of [false, true]) {
+    const data = draftData(true);
+    data.availableSeasons = [{ season: 2025, label: '2025-26', status: 'final' }];
+    data.season = { ...data.season, season: 2025, label: '2025-26', status: 'final', editable: false };
+    data.hasValidDraftOrder = importedOrder;
+    if (!importedOrder) data.draftOrder = [];
+    data.picks = data.picks.map((pick, index) => ({ ...pick, pickId: index + 500, pickNumber: null, round: null, roundPick: null }));
+    const { tree } = await mount(Draft, data);
+    const markup = html(tree);
+    assert.doesNotMatch(markup, /<h2[^>]*>Draft Order|<ol|Round |#[0-9]|Draft order not configured|season is reopened/);
+    assert.match(markup, /Draft order was not recorded/);
+    assert.match(markup, /6\/6 filled/);
+    assert.deepEqual(nbaSelects(tree).map(select => select.props.value), codes);
+    assert.ok([...nbaSelects(tree), ...typeSelects(tree)].every(select => select.props.disabled));
+    assert.equal(saveButton(tree), undefined);
+  }
 });
 
 test('Draft preserves selection state and shows errors when saving fails', async () => {

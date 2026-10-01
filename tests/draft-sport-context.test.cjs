@@ -14,6 +14,7 @@ function load(file, mocks = {}) {
   new Function('require', 'exports', source)(name => {
     if (Object.hasOwn(mocks, name)) return mocks[name];
     if (name.startsWith('@/')) return load(path.join(process.cwd(), `${name.slice(2)}.ts`), mocks);
+    if (name.startsWith('.')) return load(path.resolve(path.dirname(file), `${name}.ts`), mocks);
     return require(name);
   }, exports);
   return exports;
@@ -96,6 +97,7 @@ function page(f) {
     'next/navigation': { redirect: url => { throw Object.assign(new Error('redirect'), { url }); } },
     '@/components/AppNav': marker(function Nav() {}),
     '@/components/lineups/LineupBuilder': marker(Builder),
+    '@/components/lineups/SlateViewingBoundary': marker(function Boundary() {}),
     '@/components/lineups/GolfSalaryCapBuilder': marker(function Golf() {}),
   }).default;
 }

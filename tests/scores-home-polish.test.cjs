@@ -8,6 +8,8 @@ const Home = require('../components/home/SportHomePage.tsx').default;
 const Standings = require('../components/home/FantasyHomeStandings.tsx').default;
 const Profile = require('../components/TeamProfileModal.tsx').default;
 const Controls = require('../components/lineups/LineupControls.tsx').default;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const Selector = require('../components/ui/ViewingContextSelector.tsx').default;
 const read = p => fs.readFileSync(p, 'utf8');
 const slate = { id: 1, sport: 'nfl', date: '2026-09-09', start_date: '2026-09-09', end_date: '2026-09-14', display_name: '2026 Week 1', is_locked: true };
 test('persisted NFL identity formats Week N without mutating provider windows or other sports', () => {
@@ -27,8 +29,9 @@ test('Scores heading/settings and Draft selectors consume normalized page labels
       selectedSlateDisplay: label, slates: [{ ...slate, label }], seasons: ['2026'], selectedSeason: '2026' });
     const html = renderToStaticMarkup(tree);
     assert.match(html, /Week 1/); assert.doesNotMatch(html, /2026 Week|September 9/);
-    assert.ok(nodes(tree).some(n => n.type === 'option' && n.props.value === '2026'));
-    assert.ok(nodes(tree).some(n => n.type === 'option' && n.props.value === 1));
+    const selector = Selector({ label: 'Week', value: 1, options: [{ value: 1, label }], onChange() {} });
+    assert.ok(nodes(selector).some(n => n.type === 'option' && n.props.value === 1));
+    assert.match(renderToStaticMarkup(selector), /Week 1/);
   }
   context.pathname = '/lineups/scores';
   for (const page of ['scores', 'draft']) {
@@ -82,7 +85,7 @@ test('NBA/NFL Home uses static current ranks/scores/counts, Scores navigation an
         context.group = 'group-a'; context.sport = sport; context.switching = false;
         assert.equal(nodes(h.render({}, true)).find(n => n.type === Profile).props.team, null);
       }
-      assert.ok(nodes(tree).some(n => n.props?.href === `/lineups/scores?sport=${sport}`));
+      assert.ok(nodes(tree).some(n => n.props?.href === `/lineups/scores?sport=${sport}&slateId=1`));
       const slateText = nodes(tree).find(n => typeof n.props?.children === 'string' && n.props.children === (sport === 'nfl' ? 'Week 1' : formatSlateDateLabel(slate)));
       assert.ok(slateText);
       assert.ok(nodes(tree).some(n => n.props?.label === 'Refresh'));

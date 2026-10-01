@@ -1,8 +1,11 @@
+import { slateViewingOptions } from "@/lib/viewing-context/context";
 import { loadFantasyTeamAvatars } from "@/lib/fantasyTeamIdentity";
 export const dynamic = "force-dynamic";
 
+import { parseDraftSlateId } from "@/lib/lineups/draftContext";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AppNav from "@/components/AppNav";
+import SlateViewingBoundary from "@/components/lineups/SlateViewingBoundary";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
 import { formatFantasySlateLabel } from "@/lib/formatSlateLabel";
 import { getCurrentUser } from "@/lib/auth";
@@ -52,7 +55,7 @@ type SlateTeamConfig = {
 export default async function ScoresLineupsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sport?: string | string[] }>;
+  searchParams: Promise<{ sport?: string | string[]; slateId?: string | string[] }>;
 }) {
   const resolvedSearchParams = await searchParams;
   const sportParam = Array.isArray(resolvedSearchParams?.sport)
@@ -64,6 +67,9 @@ export default async function ScoresLineupsPage({
       : sportParam === "golf"
         ? "golf"
         : "nba";
+
+  const slateParam = resolvedSearchParams.slateId;
+  const requestedSlateId = parseDraftSlateId(Array.isArray(slateParam) ? slateParam[0] : slateParam);
 
   const currentUser =
     await getCurrentUser();
@@ -343,6 +349,7 @@ export default async function ScoresLineupsPage({
         date: slate.date,
         start_date: startDate,
         end_date: endDate,
+        display_name: slate.display_name ?? null,
         label: formatFantasySlateLabel({ ...slate, sport, start_date: startDate, end_date: endDate }),
         is_locked: slate.is_locked,
         sport: slate.sport ?? "nba",
@@ -420,10 +427,9 @@ export default async function ScoresLineupsPage({
     hasAnyStatsForLatest = (latestStats ?? []).length > 0;
   }
 
-  let selectedSlateId =
-    !hasAnyStatsForLatest && previousSlate
-      ? previousSlate.id
-      : latestSlate?.id ?? null;
+  const selectedSlateId =
+    safeSlates.find(slate => slate.id === requestedSlateId)?.id ??
+    (!hasAnyStatsForLatest && previousSlate ? previousSlate.id : latestSlate?.id ?? null);
 
   if (!selectedSlateId && safeSlates.length === 0) {
     return (
@@ -431,6 +437,7 @@ export default async function ScoresLineupsPage({
         <div className="mx-auto max-w-[1600px] space-y-6">
           <AppNav />
 
+          <SlateViewingBoundary groupId={activeGroupId} sport={sport} options={[]} selectedId={null}>
           <section className="rounded-3xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center shadow-sm">
             <h1 className="text-2xl font-bold tracking-tight">
               No Scores Yet
@@ -440,6 +447,7 @@ export default async function ScoresLineupsPage({
               Create a slate before viewing fantasy scores.
             </p>
           </section>
+          </SlateViewingBoundary>
         </div>
       </main>
     );
@@ -639,6 +647,9 @@ export default async function ScoresLineupsPage({
       <div className="mx-auto max-w-[1600px] space-y-6">
         <AppNav />
 
+        <SlateViewingBoundary groupId={activeGroupId} sport={sport}
+          options={slateViewingOptions(safeSlates, sport)}
+          selectedId={selectedSlateId}>
         <LineupBuilder
           players={normalizedPlayers}
           teams={teamsWithAvatars}
@@ -653,6 +664,7 @@ export default async function ScoresLineupsPage({
           defaultViewMode="scoring"
           sport={sport}
         />
+        </SlateViewingBoundary>
       </div>
     </main>
   );

@@ -1,3 +1,4 @@
+import { slateViewingOptions } from "@/lib/viewing-context/context";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { formatGolfTeeTime, getGolfStatusMeta } from "@/lib/golf/status";
@@ -144,8 +145,10 @@ function isTerminalGolfStatus(
 
 export async function getGolfHomeSummary({
   liveOnly = false,
+  requestedSlateId = null,
 }: {
   liveOnly?: boolean;
+  requestedSlateId?: number | null;
 } = {}) {
   const user = await getCurrentUser();
 
@@ -465,6 +468,7 @@ export async function getGolfHomeSummary({
       })[0] ?? null;
 
   const latestSlate =
+    (!liveOnly ? normalizedSlates.find(slate => slate.id === requestedSlateId) : null) ??
     liveSlate ??
     startedOpenSlate ??
     nextSlate ??
@@ -1471,6 +1475,9 @@ export async function getGolfHomeSummary({
 
   return NextResponse.json({
     success: true,
+    groupId: context.group.id,
+    sport: "golf",
+    availableSlates: slateViewingOptions(normalizedSlates, "golf"),
     latestSlate:
       serializeSlate(latestSlate),
     latestGolfTournamentIsFinal,
