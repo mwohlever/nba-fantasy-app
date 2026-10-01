@@ -138,6 +138,11 @@ export function getGroupSwitchDestination({
     );
 
   let destinationSearch = normalizedSearch;
+  // Live does not consume Skins seasons, including on a Group switch.
+  if (normalizedPathname === "/nba-skins/live") {
+    searchParams.delete("season");
+    destinationSearch = searchParams.toString();
+  }
   const viewingGame = normalizedPathname.startsWith("/nba-skins") ? "nba-skins" : searchParams.get("sport");
   if (viewingGame && sharesViewingContext(normalizedPathname, viewingGame) &&
       (searchParams.has("slateId") || searchParams.has("season"))) {
@@ -183,6 +188,7 @@ export function getGroupSwitchDestination({
   if (
     normalizedPathname === "/nba-skins" ||
     normalizedPathname === "/nba-skins/draft" ||
+    normalizedPathname === "/nba-skins/live" ||
     normalizedPathname === "/nba-skins/profile" ||
     normalizedPathname === "/nba-skins/standings"
   ) {

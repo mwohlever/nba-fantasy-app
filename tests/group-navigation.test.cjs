@@ -73,3 +73,11 @@ test("Live Scores retain only enabled NCAA/NFL route context on Group switch", (
   assert.equal(destination('/ncaa-pickem/scores', '', { enabledSports: ['nfl'] }), targetHome);
   assert.equal(destination('/live-scores', '?sport=nfl&eventId=123'), targetHome);
 });
+
+
+test("NBA Skins Live remains in enabled destination Groups and drops historical seasons", () => {
+  assert.equal(destination('/nba-skins/live', '', { enabledSports: ['nba-skins'] }), '/nba-skins/live');
+  assert.equal(destination('/nba-skins/live', '?season=2025', { enabledSports: ['nba-skins'] }), '/nba-skins/live');
+  assert.equal(destination('/nba-skins/live', '', { enabledSports: ['nba'] }), targetHome);
+  assert.equal(destination('/nba-skins/live', '?groupId=old-group'), targetHome);
+});

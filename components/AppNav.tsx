@@ -442,6 +442,11 @@ function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracke
           icon: "✎",
         },
         {
+          href: "/nba-skins/live",
+          label: "Live",
+          icon: "◫",
+        },
+        {
           href: "/nba-skins/standings",
           label: "Standings",
           icon: "▦",
@@ -610,7 +615,9 @@ function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracke
     }
 
     if (
-      pathname === "/golf/live"
+      pathname === "/golf/live" ||
+      pathname === "/nba-skins/live" ||
+      (pathname === "/live-scores" && activeSport === "nba")
     ) {
       return "live";
     }
@@ -666,6 +673,7 @@ function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracke
       sportKey ===
       "nba-skins"
     ) {
+      if (section === "live") return "/nba-skins/live";
       if (
         section ===
         "profile"
@@ -736,6 +744,7 @@ function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracke
     ) {
       if (sportKey === "golf") return "/golf/live";
       if (sportKey === "nfl") return appendSportParam("/live-scores", "nfl");
+      if (sportKey === "nba") return appendSportParam("/live-scores", "nba");
       return appendSportParam("/lineups/scores", sportKey);
     }
 
@@ -1730,7 +1739,7 @@ function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracke
             isNcaaPickEm
               ? "grid-cols-3"
             : isNbaSkins
-                ? "grid-cols-3"
+                ? "grid-cols-4"
                 : isBracketChallenge
                   ? "grid-cols-4"
                 : activeSport === "nfl" || activeSport === "golf" || activeSport === "nba" ? "grid-cols-5" : "grid-cols-4"
