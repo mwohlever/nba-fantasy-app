@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AppNav from "@/components/AppNav";
 import LiveScoreCard from "@/components/live-scores/LiveScoreCard";
 import NflGameCenter from "./NflGameCenter";
+import LiveViewSelector from "./LiveViewSelector";
+import StandingsPanel from "./StandingsPanel";
 import { useNflLiveUrl } from "@/lib/live-scores/useNflLiveUrl";
 import { useNflLiveScope } from "@/lib/live-scores/useNflLiveScope";
 import { useLiveRequest } from "@/lib/live-scores/useLiveRequest";
@@ -233,6 +235,8 @@ export default function NflLiveScores({ viewerId }: { viewerId: string }) {
           viewerId={viewerId} eventId={state.gameId} tab={state.tab} period={state.period} statsTeam={state.statsTeam}
           onDetailChange={live.selectDetail} onBack={live.backToGames} onCalendar={live.resolveCalendar}
         /> : <>
+        <LiveViewSelector value={state.view} onChange={live.selectView} />
+        {state.view === "standings" ? <><h1 className="text-2xl font-black">NFL Live</h1><StandingsPanel sport="nfl" scope={scope} selection={state.standingsView} onChange={live.selectStandings} /></> : <>
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -338,6 +342,7 @@ export default function NflLiveScores({ viewerId }: { viewerId: string }) {
             ))}
           </section>
         )}
+        </>}
         </>}
       </div>
     </main>

@@ -1,5 +1,6 @@
 import { nbaLiveHref, parseNbaLiveState, nflLiveHref, parseNflLiveState } from "../live-scores/urlState";
 import { sharesViewingContext } from "../viewing-context/context";
+import { ncaaLiveOverviewHref, parseNcaaLiveOverview } from "../live-scores/ncaaUrlState";
 
 export type GroupNavigationSport =
   | "nba"
@@ -157,6 +158,10 @@ export function getGroupSwitchDestination({
   }
 
   let destinationSearch = normalizedSearch;
+  if (normalizedPathname === "/ncaa-pickem/scores" && searchParams.get("view") === "standings") {
+    if (!isEnabled("ncaa", targetEnabledSports) || searchParams.has("groupId") || searchParams.has("leagueId")) return fallback;
+    return ncaaLiveOverviewHref(parseNcaaLiveOverview(normalizedSearch));
+  }
   const viewingGame = normalizedPathname.startsWith("/nba-skins") ? "nba-skins" : searchParams.get("sport");
   if (viewingGame && sharesViewingContext(normalizedPathname, viewingGame) &&
       (searchParams.has("slateId") || searchParams.has("season"))) {

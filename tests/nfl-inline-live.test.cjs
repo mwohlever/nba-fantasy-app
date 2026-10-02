@@ -293,8 +293,8 @@ test('NFL inline team and quarter defaults correct by callback, modal shell/NCAA
 });
 
 test('mobile/desktop NFL Live highlighting and sport switching clear event/weekly/slate context atomically', () => {
-  for (const destination of ['NBA', 'NBA Skins', 'Golf']) {
-    const browser = reset(`${overview}&gameId=123&tab=pbp&period=1&slateId=8`); context.enabled = ['nba', 'nba_skins', 'nfl', 'golf'];
+  for (const suffix of ['gameId=123&tab=pbp&period=1&slateId=8', 'view=standings&standingsView=playoffs&conference=5']) for (const destination of ['NBA', 'NBA Skins', 'Golf']) {
+    const browser = reset(`${overview}&${suffix}`); context.enabled = ['nba', 'nba_skins', 'nfl', 'golf'];
     const h = host(Nav); let tree = h.render({});
     for (const activeClass of ['app-desktop-link-active', 'app-mobile-nav-active']) {
       assert.ok(nodes(tree).some(n => n.props?.className?.includes(activeClass) && n.props.href === '/live-scores?sport=nfl'));
@@ -302,7 +302,7 @@ test('mobile/desktop NFL Live highlighting and sport switching clear event/weekl
     find(tree, 'button', 'Switch sport, currently NFL').props.onClick(); tree = h.render({});
     const button = nodes(tree).find(n => n.type === 'button' && Array.isArray(n.props.children) && n.props.children.includes(destination));
     assert.ok(button); button.props.onClick(); const href = browser.navigation.at(-1).href;
-    assert.ok(!/gameId|period|week|slateId|statsTeam|seasonType/.test(href));
+    assert.ok(!/gameId|period|week|slateId|statsTeam|seasonType|view=standings|standingsView|conference/.test(href));
     assert.equal(href, destination === 'NBA' ? '/live-scores?sport=nba' : destination === 'NBA Skins' ? '/nba-skins/live' : '/golf/live');
     h.unmount();
   }

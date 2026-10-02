@@ -7,6 +7,7 @@ export type LiveRequestIdentity = Readonly<{
 } & (
   | { sport: "nba"; context: NbaLiveContext }
   | { sport: "nfl"; context: "nfl" }
+  | { sport: "ncaa"; context: "ncaa" }
   | { sport: "golf"; context: "golf" }
 )>;
 /** Each invocation has both an immutable identity and a monotonic generation.

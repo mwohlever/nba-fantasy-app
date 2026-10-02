@@ -36,7 +36,7 @@ test('uses the current scheduled regular-season week when the provider is outsid
 test('Live Scores initializes provider context once so manual week navigation survives refreshes', () => {
   for (const file of ['app/ncaa-pickem/scores/page.tsx']) {
     const source = fs.readFileSync(file, 'utf8').replace(/\s+/g, ' ');
-    assert.match(source, /const \[initialized, setInitialized\] = useState\(false\)/);
+    assert.match(source, /const \[initialized, setInitialized\] = useState\(Boolean\(live.state.calendar\)\)/);
     assert.match(source, /if \(!initialized\) \{[\s\S]*?setInitialized\(true\)/);
     assert.match(source, /initialized \? .*season=.*week=.*: .*scores/);
   }

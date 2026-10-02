@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { backToLiveGames, pushLiveGame, replaceLiveHref } from "./history";
-import { nflLiveHref, parseNflLiveState, type NflCalendarContext, type GameCenterTab } from "./urlState";
+import { nflLiveHref, parseNflLiveState, type NflCalendarContext, type GameCenterTab, type NflStandingsView } from "./urlState";
 
 export function useNflLiveUrl(scope: string) {
   const pathname = usePathname(), search = useSearchParams().toString();
@@ -40,5 +40,14 @@ export function useNflLiveUrl(scope: string) {
   function selectDetail(change: { tab?: GameCenterTab; period?: number | null; statsTeam?: string }) {
     if (routeMatches && state.view === "detail" && current.current.view === "detail" && current.current.gameId === state.gameId) replaceState({ ...current.current, ...change });
   }
-  return { state, routeMatches, openGame, backToGames, selectCalendar, resolveCalendar, selectDetail };
+  function selectView(view: "games" | "standings") {
+    if (!routeMatches || state.view === "detail" || state.view === view) return;
+    const next = view === "games" ? overview : nflLiveHref({ sport: "nfl", context: "nfl", calendar: state.calendar, view: "standings", standingsView: "afc" });
+    window.history.pushState(null, "", next);
+    window.scrollTo?.({ top: 0 });
+  }
+  function selectStandings(standingsView: NflStandingsView) {
+    if (routeMatches && state.view === "standings") replaceState({ ...state, standingsView });
+  }
+  return { state, routeMatches, openGame, backToGames, selectCalendar, resolveCalendar, selectDetail, selectView, selectStandings };
 }

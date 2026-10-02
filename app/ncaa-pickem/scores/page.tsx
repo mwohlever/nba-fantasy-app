@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import AppNav from "@/components/AppNav";
+import LiveViewSelector from "@/components/live-scores/LiveViewSelector";
+import StandingsPanel from "@/components/live-scores/StandingsPanel";
+import { useNcaaLiveUrl } from "@/lib/live-scores/useNcaaLiveUrl";
+import { useNcaaStandingsScope } from "@/lib/live-scores/useNcaaStandingsScope";
 import NcaaScoreCard from "@/components/ncaa/NcaaScoreCard";
 import NcaaGameCenterModal from "@/components/ncaa/NcaaGameCenterModal";
 
@@ -79,9 +83,16 @@ const CONFERENCES = [
 ];
 
 export default function NcaaScoresPage() {
-  const [season, setSeason] = useState(2026);
-  const [week, setWeek] = useState(1);
-  const [initialized, setInitialized] = useState(false);
+  return <Suspense fallback={<main className="min-h-screen bg-slate-50 p-4 pb-24 text-sm text-slate-500">Loading NCAA scores…</main>}><NcaaScoresContent /></Suspense>;
+}
+
+function NcaaScoresContent() {
+  const live = useNcaaLiveUrl();
+  const { scope, waitingForScope } = useNcaaStandingsScope();
+  const gamesView = live.routeMatches && live.state.view === "games";
+  const [season, setSeason] = useState(live.state.calendar?.season ?? 2026);
+  const [week, setWeek] = useState(live.state.calendar?.week ?? 1);
+  const [initialized, setInitialized] = useState(Boolean(live.state.calendar));
   const [filter, setFilter] = useState("top25");
   const [games, setGames] = useState<Game[]>([]);
   const [favoriteTeamIds, setFavoriteTeamIds] = useState<Set<string>>(
@@ -92,6 +103,7 @@ export default function NcaaScoresPage() {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
 
   useEffect(() => {
+    if (!gamesView) return;
     let cancelled = false;
 
     async function loadFavorites() {
@@ -119,7 +131,7 @@ export default function NcaaScoresPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [gamesView]);
 
   async function toggleFavorite(teamId: string) {
     const wasFavorite = favoriteTeamIds.has(teamId);
@@ -164,6 +176,9 @@ export default function NcaaScoresPage() {
   }
 
   useEffect(() => {
+    if (!gamesView) return;
+    // Back/Forward can restore a different week before local controls sync.
+    if (live.state.calendar && (live.state.calendar.season !== season || live.state.calendar.week !== week)) return;
     let cancelled = false;
 
     async function loadScores() {
@@ -212,7 +227,15 @@ export default function NcaaScoresPage() {
     return () => {
       cancelled = true;
     };
-  }, [season, week, initialized]);
+  }, [season, week, initialized, gamesView, live.state.calendar?.season, live.state.calendar?.week]);
+
+  useEffect(() => {
+    if (gamesView && live.state.calendar) {
+      setSeason(live.state.calendar.season);
+      setWeek(live.state.calendar.week);
+      setInitialized(true);
+    }
+  }, [gamesView, live.state.calendar?.season, live.state.calendar?.week]);
 
   const filteredGames = useMemo(() => {
     if (filter === "top25") {
@@ -304,9 +327,11 @@ export default function NcaaScoresPage() {
     CONFERENCES.find((item) => item.id === filter)?.label ?? "Scores";
 
   return (
-    <main className="min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
+    <main className={`${live.state.view === "standings" ? "ncaa-standings-page " : ""}min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6`}>
       <div className="mx-auto max-w-5xl space-y-4">
         <AppNav />
+        <LiveViewSelector value={live.state.view} onChange={view => { setSelectedGame(null); live.selectView(view, initialized ? { season, week } : null); }} />
+        {live.state.view === "standings" ? <><h1 className="text-2xl font-black">NCAA Football Live</h1><StandingsPanel sport="ncaa" scope={scope} waitingForScope={waitingForScope} selection={live.state.selection} onChange={live.selectStandings} /></> : <>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -315,7 +340,7 @@ export default function NcaaScoresPage() {
                 NCAA Football
               </div>
               <h1 className="mt-1 text-2xl font-black tracking-tight">
-                Scores
+                NCAA Football Live
               </h1>
               <p className="mt-1 text-sm text-slate-500">
                 Live scores and schedules from around college football.
@@ -351,6 +376,7 @@ export default function NcaaScoresPage() {
                   value={week}
                   onChange={(event) => {
                     setWeek(Number(event.target.value));
+                    live.selectCalendar({ season, week: Number(event.target.value) });
                     event.currentTarget.blur();
                   }}
                   className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
@@ -424,8 +450,9 @@ export default function NcaaScoresPage() {
             ))}
           </section>
         )}
+        </>}
       </div>
-      {selectedGame ? (
+      {gamesView && selectedGame ? (
         <NcaaGameCenterModal
           game={selectedGame}
           onClose={() => setSelectedGame(null)}

@@ -42,7 +42,9 @@ Module._load = function(request, parent, ...rest) {
   if (request === 'react') return mockedReact;
   if (request === 'next/navigation') return { useRouter: () => ({ push: href => context.navigate?.(href, 'push'), replace: href => context.navigate?.(href, 'replace') }), usePathname: () => context.pathname, useSearchParams: () => new URLSearchParams(context.search ?? { sport: context.sport }) };
   if (request.includes('providers/GroupProvider')) return { useGroupContext: () => ({
-    groupContext: { group: { id: context.group }, team: context.team == null ? null : { id: context.team } }, isLoading: context.loading, isSwitchingGroup: context.switching,
+    groupContext: { group: { id: context.group }, team: context.team == null ? null : { id: context.team },
+      membership: { id: `member-${context.group}`, isActive: true, role: 'member' },
+      leagues: (context.enabled ?? ['nba', 'nfl', 'ncaa_pickem']).map(sportKey => ({ id: `${sportKey}-${context.group}`, sportKey, gameMode: 'standard', isEnabled: true })) }, isLoading: context.loading, isSwitchingGroup: context.switching,
   }) };
   if (request.includes('providers/SportProvider')) return { useSelectedSport: () => ({ selectedSport: context.sport, setSelectedSport(value) { context.onSportChange?.(value); } }) };
   return load.call(this, request.startsWith('@/') ? path.join(root, request.slice(2)) : request, parent, ...rest);

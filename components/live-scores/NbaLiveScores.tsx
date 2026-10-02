@@ -9,6 +9,8 @@ import { useNbaLiveUrl } from "@/lib/live-scores/useNbaLiveUrl";
 import { useLiveRequest } from "@/lib/live-scores/useLiveRequest";
 import { useNbaLiveScope } from "@/lib/live-scores/useNbaLiveScope";
 import NbaGameCenter from "./NbaGameCenter";
+import LiveViewSelector from "./LiveViewSelector";
+import StandingsPanel from "./StandingsPanel";
 
 const EMPTY_GAMES: NbaLiveGame[] = [];
 const line = (game: NbaLiveGame) => { const odds = game.odds; if (!odds) return null; const favorite = odds.favoriteTeamId === game.awayTeam.id ? game.awayTeam.abbreviation : odds.favoriteTeamId === game.homeTeam.id ? game.homeTeam.abbreviation : null; return [favorite && odds.spread !== null ? `${favorite} ${odds.spread}` : "", odds.overUnder !== null ? `O/U ${odds.overUnder}` : ""].filter(Boolean).join(" · ") || null; };
@@ -36,8 +38,11 @@ export default function NbaLiveScores({ context = "nba", viewerId }: { context?:
   const move = (days: number) => { const date = selectedDate && shiftNbaDate(selectedDate, days); if (date) live.selectDate(date); };
   return <main className="nba-live-page min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6"><div className="mx-auto max-w-5xl space-y-4"><AppNav />
     {!live.routeMatches ? null : state.view === "detail" ? <NbaGameCenter key={`${viewerId}:${scope?.groupId}:${scope?.leagueId}:${context}:${state.gameId}`} viewerId={viewerId} context={context} eventId={state.gameId} tab={state.tab} onTabChange={live.selectTab} onBack={live.backToGames} onEventDate={live.resolveEventDate}/> : <>
+      <LiveViewSelector value={state.view} onChange={live.selectView} />
+      {state.view === "standings" ? <><h1 className="text-2xl font-black">{context === "nba-skins" ? "NBA Skins Live" : "NBA Live"}</h1><StandingsPanel sport="nba" scope={scope} selection={state.standingsView} onChange={live.selectStandings} /></> : <>
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-end justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-600">{context === "nba-skins" ? "NBA Skins" : "NBA"}</p><h1 className="mt-1 text-2xl font-black tracking-tight">Live</h1><p className="mt-1 text-sm text-slate-500">Real-world NBA scores, game action, and box scores.</p></div><button type="button" onClick={() => void load()} disabled={!ready || request.refreshing} className="text-xl text-slate-500 disabled:opacity-40" aria-label="Refresh NBA scores">↻</button></div><div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 p-1"><button type="button" onClick={() => move(-1)} className="rounded-lg px-3 py-2 text-sm font-bold text-slate-600" aria-label="Previous day">←</button><input type="date" aria-label="NBA schedule date" value={state.date} onChange={event => live.selectDate(event.target.value)} className="min-w-0 bg-transparent px-2 py-2 text-center text-sm font-black text-slate-800" /><button type="button" onClick={() => move(1)} className="rounded-lg px-3 py-2 text-sm font-bold text-slate-600" aria-label="Next day">→</button></div></section>
       {!ready || request.loading ? <p className="py-8 text-center text-sm text-slate-500">Loading NBA games…</p> : request.error ? <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{request.error}</p> : ordered.length ? <section className="space-y-2">{ordered.map(game => <GameCard key={game.espnEventId} game={game} onClick={() => live.openGame(game.espnEventId)} />)}</section> : <p className="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">No NBA games scheduled for this date.</p>}
+    </>}
     </>}
   </div></main>;
 }

@@ -61,8 +61,8 @@ test('future Live contract allows basketball/football standings, with Golf leade
   const checkFile = '/tmp/111-live-state-typecheck.ts';
   // Compile a virtual consumer alongside the real contract; no generated workspace files.
   const source = `import type { LiveState } from '${filename.replace(/\.ts$/, '')}';
-const nba: LiveState = {sport:'nba',context:'nba-skins',view:'standings',leagueSeason:2026};
-const nfl: LiveState = {sport:'nfl',context:'nfl',view:'standings',season:2025};
+const nba: LiveState = {sport:'nba',context:'nba-skins',view:'standings',date:'2026-05-25',standingsView:'east'};
+const nfl: LiveState = {sport:'nfl',context:'nfl',view:'standings',calendar:null,standingsView:'afc'};
 const golf: LiveState = {sport:'golf',context:'golf',view:'detail',tournamentId:'1',golferId:'2'};
 // @ts-expect-error Golf does not have standings
 const wrongGolf: LiveState = {sport:'golf',context:'golf',view:'standings',tournamentId:'1',season:2026};

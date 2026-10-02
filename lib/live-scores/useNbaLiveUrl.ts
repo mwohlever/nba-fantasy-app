@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { easternToday, nbaDateKey } from "./nbaDate";
 import type { NbaLiveContext } from "./nbaContext";
-import { nbaLiveHref, parseNbaLiveState, type GameCenterTab, type LiveOverviewEntry } from "./urlState";
+import { nbaLiveHref, parseNbaLiveState, type GameCenterTab, type LiveOverviewEntry, type NbaStandingsView } from "./urlState";
 import { replaceLiveHref as replace, pushLiveGame, backToLiveGames } from "./history";
 export function useNbaLiveUrl(context: NbaLiveContext, scope: string) {
   const pathname = usePathname();
@@ -36,5 +36,14 @@ export function useNbaLiveUrl(context: NbaLiveContext, scope: string) {
   function resolveEventDate(date: string) {
     if (routeMatches && state.view === "detail" && !state.date) replace(nbaLiveHref({ ...state, date }));
   }
-  return { state, routeMatches, openGame, backToGames, selectDate, selectTab, resolveEventDate };
+  function selectView(view: "games" | "standings") {
+    if (!routeMatches || state.view === "detail" || state.view === view) return;
+    const next = view === "games" ? overview : nbaLiveHref({ sport: "nba", context, date: state.date, view: "standings", standingsView: "east" });
+    window.history.pushState(null, "", next);
+    window.scrollTo?.({ top: 0 });
+  }
+  function selectStandings(standingsView: NbaStandingsView) {
+    if (routeMatches && state.view === "standings" && state.standingsView !== standingsView) replace(nbaLiveHref({ ...state, standingsView }));
+  }
+  return { state, routeMatches, openGame, backToGames, selectDate, selectTab, resolveEventDate, selectView, selectStandings };
 }

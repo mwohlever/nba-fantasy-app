@@ -361,6 +361,16 @@ body {
   }
 }
 
+/* NCAA standings use document scrolling; its existing Games modal is unchanged. */
+@media (max-width: 639px) {
+  html:has(main.ncaa-standings-page),
+  body:has(main.ncaa-standings-page),
+  main.ncaa-standings-page {
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+}
+
 /* Mobile modal safety for fixed bottom nav */
 @media (max-width: 639px) {
   .mobile-modal-safe {
