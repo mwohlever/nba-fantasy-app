@@ -3,14 +3,8 @@ import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { easternToday, nbaDateKey } from "./nbaDate";
 import type { NbaLiveContext } from "./nbaContext";
-import { liveBackMatches, nbaLiveHref, parseNbaLiveState, type GameCenterTab, type LiveOverviewEntry } from "./urlState";
-
-const markerKey = "sports111LiveOverview";
-/** Native history updates are supported by Next and synchronize useSearchParams.
- * Keep only our own marker; Next copies its internal router fields itself. */
-function replace(href: string) {
-  window.history.replaceState({ [markerKey]: window.history.state?.[markerKey] ?? null }, "", href);
-}
+import { nbaLiveHref, parseNbaLiveState, type GameCenterTab, type LiveOverviewEntry } from "./urlState";
+import { replaceLiveHref as replace, pushLiveGame, backToLiveGames } from "./history";
 export function useNbaLiveUrl(context: NbaLiveContext, scope: string) {
   const pathname = usePathname();
   const search = useSearchParams().toString();
@@ -26,14 +20,10 @@ export function useNbaLiveUrl(context: NbaLiveContext, scope: string) {
   function openGame(gameId: string) {
     if (!routeMatches || state.view !== "games") return;
     const entry: LiveOverviewEntry = { overview, gameId, scope };
-    window.history.pushState({ [markerKey]: entry }, "", nbaLiveHref({ ...state, view: "detail", gameId, tab: "summary" }));
-    window.scrollTo?.({ top: 0 });
+    pushLiveGame(nbaLiveHref({ ...state, view: "detail", gameId, tab: "summary" }), entry);
   }
   function backToGames() {
-    const entry = window.history.state?.[markerKey] as LiveOverviewEntry | undefined;
-    if (state.view === "detail" && liveBackMatches(entry, overview, state.gameId, scope)) window.history.back();
-    else window.history.replaceState(null, "", overview);
-    window.scrollTo?.({ top: 0 });
+    backToLiveGames(overview, state.view === "detail" ? state.gameId : "", scope);
   }
   function selectDate(date: string) {
     if (!routeMatches || state.view !== "games" || !nbaDateKey(date)) return;

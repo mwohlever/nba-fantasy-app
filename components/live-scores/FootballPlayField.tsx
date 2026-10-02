@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { footballEndZoneLabels, footballPuntCoordinates, footballPuntSvgGeometry, footballSelectedPlayContext, footballTeamAttackDirection, type FootballFieldTeam, type FootballVisualizationPlay } from "@/lib/live-scores/footballPlayVisualization";
+import { footballEndZoneLabels, footballPlayYardage, footballPuntCoordinates, footballPuntSvgGeometry, footballSelectedPlayContext, footballTeamAttackDirection, type FootballAttackDirection, type FootballFieldTeam, type FootballVisualizationPlay } from "@/lib/live-scores/footballPlayVisualization";
 
 const x = (yard: number) => 18 + yard * 2.84;
-function resultLabel(play: FootballVisualizationPlay) {
+function yardageLabel(play: FootballVisualizationPlay, direction: FootballAttackDirection | null) {
+  const yards = footballPlayYardage(play, direction);
+  return yards === null ? null : `${yards >= 0 ? "+" : ""}${yards} YDS`;
+}
+function resultLabel(play: FootballVisualizationPlay, direction: FootballAttackDirection | null) {
   if (play.renderMode === "semantic") return play.semanticLabel ?? "GAME EVENT";
   if (play.family === "punt") return play.punt?.outcome ? play.punt.outcome.replace(/-/g, " ").toUpperCase() : "PUNT";
   if (play.scoring === "touchdown") return "TOUCHDOWN";
@@ -12,9 +16,9 @@ function resultLabel(play: FootballVisualizationPlay) {
   if (play.scoring === "field-goal-missed") return "FIELD GOAL · NO GOOD";
   if (play.animation === "incomplete") return "INCOMPLETE";
   if (play.possessionChanged) return "POSSESSION RESULT";
-  return play.end !== null && play.start !== null ? `${play.end - play.start >= 0 ? "+" : ""}${play.end - play.start} YDS` : "PLAY RESULT";
+  return yardageLabel(play, direction) ?? "PLAY RESULT";
 }
-function secondaryLabel(play: FootballVisualizationPlay) {
+function secondaryLabel(play: FootballVisualizationPlay, direction: FootballAttackDirection | null) {
   if (play.renderMode === "semantic") return play.semanticLabel ?? "GAME EVENT";
   if (play.family === "punt") {
     const outcome = play.punt?.outcome ? play.punt.outcome.replace(/-/g, " ").toUpperCase() : null;
@@ -24,7 +28,7 @@ function secondaryLabel(play: FootballVisualizationPlay) {
   if (play.scoring === "touchdown") parts.push("TD");
   else if (play.scoring === "field-goal-good") parts.push("GOOD");
   else if (play.scoring === "field-goal-missed") parts.push("NO GOOD");
-  else if (play.start !== null && play.end !== null && !play.possessionChanged) parts.push(`${play.end - play.start >= 0 ? "+" : ""}${play.end - play.start} YDS`);
+  else if (play.start !== null && play.end !== null && !play.possessionChanged) parts.push(yardageLabel(play, direction));
   else if (play.resultOnly) parts.push("RESULT ONLY");
   return parts.filter(Boolean).join(" · ");
 }
@@ -70,5 +74,5 @@ export default function FootballPlayField({ play, offense, homeTeam, awayTeam, c
   const { left: leftLabel, right: rightLabel } = footballEndZoneLabels(homeTeam, awayTeam);
   const displayPlay = play;
   const context = footballSelectedPlayContext(play, offense, direction);
-  return <section className={compact ? "rounded-xl border border-slate-700 bg-slate-950/90 px-2 py-1.5 shadow-sm backdrop-blur" : "rounded-xl border border-slate-200 bg-slate-50 p-3"} aria-label="Selected football play replay"><div className={`mb-1 flex items-center justify-between gap-2 text-[10px] font-bold ${compact ? "text-slate-200" : "text-slate-500"}`}><span className="truncate">{compact ? context || "Selected play" : "SELECTED PLAY"}</span>{!compact ? <span className="shrink min-w-0 truncate text-right">{context}</span> : null}</div><svg viewBox="0 0 320 66" className={`block w-full ${height} rounded bg-emerald-950`} role="img" aria-label="Football field with stable matchup orientation"><rect x="0" y="6" width="18" height="54" fill="#14532d" /><rect x="302" y="6" width="18" height="54" fill="#14532d" /><rect x="18" y="6" width="284" height="54" fill="none" stroke="#bbf7d0" strokeOpacity=".65" />{[10,20,30,40,50,60,70,80,90].map(yard => <g key={yard}><line x1={x(yard)} x2={x(yard)} y1="6" y2="60" stroke="#bbf7d0" strokeOpacity=".22" /><text x={x(yard)} y="16" textAnchor="middle" fill="#d1fae5" fontSize="6">{yard <= 50 ? yard : 100-yard}</text></g>)}<text x="9" y="36" textAnchor="middle" fill="#d1fae5" fontSize="6" transform="rotate(-90 9 36)">{leftLabel}</text><text x="311" y="36" textAnchor="middle" fill="#d1fae5" fontSize="6" transform="rotate(90 311 36)">{rightLabel}</text>{displayPlay?.start !== null && displayPlay?.start !== undefined ? <line x1={x(displayPlay.start)} x2={x(displayPlay.start)} y1="7" y2="59" stroke="#38bdf8" strokeWidth="2" /> : null}{displayPlay?.firstDown !== null && displayPlay?.firstDown !== undefined ? <line x1={x(displayPlay.firstDown)} x2={x(displayPlay.firstDown)} y1="7" y2="59" stroke="#fbbf24" strokeWidth="1.8" strokeDasharray="4 2" /> : null}{displayPlay ? <Replay play={displayPlay} compact={compact} enabled={replayEnabled} reducedMotion={reducedMotion} direction={direction} /> : null}</svg>{!compact ? <div className="mt-2"><p className="text-sm font-semibold leading-snug text-slate-800">{play?.text ?? "Select a play to inspect it."}</p>{play ? <div className="mt-1 flex items-center justify-between gap-2 text-[10px] font-bold text-slate-500"><span>{secondaryLabel(play)}</span><span>{resultLabel(play)}</span></div> : null}{play?.renderMode !== "semantic" ? <p className="mt-1 text-[10px] text-slate-500">Solid: LOS · Dashed: 1st down</p> : null}</div> : null}</section>;
+  return <section className={compact ? "rounded-xl border border-slate-700 bg-slate-950/90 px-2 py-1.5 shadow-sm backdrop-blur" : "rounded-xl border border-slate-200 bg-slate-50 p-3"} aria-label="Selected football play replay"><div className={`mb-1 flex items-center justify-between gap-2 text-[10px] font-bold ${compact ? "text-slate-200" : "text-slate-500"}`}><span className="truncate">{compact ? context || "Selected play" : "SELECTED PLAY"}</span>{!compact ? <span className="shrink min-w-0 truncate text-right">{context}</span> : null}</div><svg viewBox="0 0 320 66" className={`block w-full ${height} rounded bg-emerald-950`} role="img" aria-label="Football field with stable matchup orientation"><rect x="0" y="6" width="18" height="54" fill="#14532d" /><rect x="302" y="6" width="18" height="54" fill="#14532d" /><rect x="18" y="6" width="284" height="54" fill="none" stroke="#bbf7d0" strokeOpacity=".65" />{[10,20,30,40,50,60,70,80,90].map(yard => <g key={yard}><line x1={x(yard)} x2={x(yard)} y1="6" y2="60" stroke="#bbf7d0" strokeOpacity=".22" /><text x={x(yard)} y="16" textAnchor="middle" fill="#d1fae5" fontSize="6">{yard <= 50 ? yard : 100-yard}</text></g>)}<text x="9" y="36" textAnchor="middle" fill="#d1fae5" fontSize="6" transform="rotate(-90 9 36)">{leftLabel}</text><text x="311" y="36" textAnchor="middle" fill="#d1fae5" fontSize="6" transform="rotate(90 311 36)">{rightLabel}</text>{displayPlay?.start !== null && displayPlay?.start !== undefined ? <line x1={x(displayPlay.start)} x2={x(displayPlay.start)} y1="7" y2="59" stroke="#38bdf8" strokeWidth="2" /> : null}{displayPlay?.firstDown !== null && displayPlay?.firstDown !== undefined ? <line x1={x(displayPlay.firstDown)} x2={x(displayPlay.firstDown)} y1="7" y2="59" stroke="#fbbf24" strokeWidth="1.8" strokeDasharray="4 2" /> : null}{displayPlay ? <Replay play={displayPlay} compact={compact} enabled={replayEnabled} reducedMotion={reducedMotion} direction={direction} /> : null}</svg>{!compact ? <div className="mt-2"><p className="text-sm font-semibold leading-snug text-slate-800">{play?.text ?? "Select a play to inspect it."}</p>{play ? <div className="mt-1 flex items-center justify-between gap-2 text-[10px] font-bold text-slate-500"><span>{secondaryLabel(play, direction)}</span><span>{resultLabel(play, direction)}</span></div> : null}{play?.renderMode !== "semantic" ? <p className="mt-1 text-[10px] text-slate-500">Solid: LOS · Dashed: 1st down</p> : null}</div> : null}</section>;
 }

@@ -213,8 +213,8 @@ function modalHarness(run) {
   React.useState = initial => { const i = cursor++; if (!(i in states)) states[i] = initial; const set = value => states[i] = typeof value === 'function' ? value(states[i]) : value; setters[i] = set; return [states[i], set]; };
   React.useRef = initial => refs[refCursor++] ??= { current: initial };
   React.useMemo = fn => fn(); React.useCallback = fn => fn; React.useEffect = fn => effects.push(fn);
-  delete require.cache[require.resolve('../components/live-scores/GameCenterModal.tsx')];
-  const Modal = require('../components/live-scores/GameCenterModal.tsx').default;
+  delete require.cache[require.resolve('../components/live-scores/FootballGameCenter.tsx')];
+  const Modal = require('../components/live-scores/FootballGameCenter.tsx').default;
   const game = { espnEventId: '99', kickoffAt: '2026-09-13T17:00Z', status: 'in', awayTeam: { id: '1', displayName: 'AAA' }, homeTeam: { id: '2', displayName: 'BBB' } };
   const props = { game, apiBase: '/api/live-scores/nfl', fantasyScope: { groupId: 'A', leagueId: 'nfl-A' }, onClose() {} };
   const draw = (overrides = {}) => { cursor = 0; refCursor = 0; effects = []; return Modal({ ...props, ...overrides }); };
@@ -274,13 +274,14 @@ test('captured ESPN final stays hidden; recorded home and away yardsToEndzone no
 });
 
 test('NFL endpoint keeps one provider request, gates ownership by authorized client Group, and tolerates roster errors', async () => {
-  const files = ['../lib/auth.ts','../lib/live-scores/access.ts','../lib/live-scores/nflOwnership.server.ts','../lib/live-scores/game-detail.ts','../app/api/live-scores/nfl/game-detail/route.ts'];
+  const files = ['../lib/auth.ts','../lib/live-scores/access.ts','../lib/live-scores/nflOwnership.server.ts','../lib/live-scores/game-detail.ts','../app/api/live-scores/nfl/game-detail/route.ts','../lib/supabaseAdmin.ts'];
   const paths = files.map(file => require.resolve(file)); const saved = paths.map(p => require.cache[p]);
   const oldFetch = global.fetch; let providerCalls = 0, rosterCalls = 0, fail = false, allowed = true;
   const access = { context: { group: { id:'A' } }, league: { id:'nfl-A' } };
   require.cache[paths[0]] = { exports: { getCurrentUser: async () => ({ id:'user' }) } };
   require.cache[paths[1]] = { exports: { getNflLiveAccess: async () => allowed ? access : null } };
   require.cache[paths[2]] = { exports: { loadNflOwnership: async received => { rosterCalls++; assert.equal(received, access); if (fail) throw Error('Unavailable'); return detail().ownership; } } };
+  require.cache[paths[5]] = { exports: { supabaseAdmin: {} } }; // No real credentials/DB access in this fixture test.
   delete require.cache[paths[3]]; delete require.cache[paths[4]];
   global.fetch = async url => { providerCalls++; assert.match(String(url), /\/nfl\/summary\?event=99$/); return Response.json(require('./fixtures/nfl-field-401772936.json')); };
   try {

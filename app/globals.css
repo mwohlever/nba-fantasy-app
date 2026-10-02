@@ -350,6 +350,17 @@ body {
   }
 }
 
+/* NFL inline replay needs the same viewport scrolling as NBA. Keep the
+ * football exception scoped so other football modal consumers are unchanged. */
+@media (max-width: 639px) {
+  html:has(main.nfl-live-page),
+  body:has(main.nfl-live-page),
+  main.nfl-live-page {
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+}
+
 /* Mobile modal safety for fixed bottom nav */
 @media (max-width: 639px) {
   .mobile-modal-safe {

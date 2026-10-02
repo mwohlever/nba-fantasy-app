@@ -72,7 +72,15 @@ export function namedYardlineToMatchupPosition(teamAbbreviation: string, yard: n
 }
 
 export function footballEndZoneLabels(homeTeam?: FootballFieldTeam, awayTeam?: FootballFieldTeam) {
-  return { left: homeTeam?.abbreviation || "END", right: awayTeam?.abbreviation || "END" };
+  // Home attacks left and away attacks right: each destination is the
+  // opponent's end zone. Keep labels in the same space as the replay.
+  return { left: awayTeam?.abbreviation || "END", right: homeTeam?.abbreviation || "END" };
+}
+
+/** Display movement is signed in screen space; yardage is signed for the offense. */
+export function footballPlayYardage(play: FootballVisualizationPlay, direction: FootballAttackDirection | null) {
+  if (play.start === null || play.end === null || play.possessionChanged) return null;
+  return (play.end - play.start) * (direction === "left" ? -1 : 1);
 }
 
 export function footballSelectedPlayContext(play: FootballVisualizationPlay | null, offense: string | null | undefined, direction: FootballAttackDirection | null) {
@@ -241,9 +249,15 @@ export function normalizeFootballVisualizationPlay(play: FootballRawPlay, index 
   const structuredPosition = (value: unknown) => footballStablePosition(spot(value), direction);
   const start = semanticLabel ? null : family === "punt" ? spot(play.start?.yardsToEndzone) : structuredPosition(play.start?.yardsToEndzone);
   // ESPN end.yardsToEndzone is receiver-relative after a possession change.
+  // Convert using that receiving team, rather than treating its raw value as
+  // a display coordinate (which reverses home punts' return paths).
+  const receivingDirection = footballTeamAttackDirection(endTeam, context?.homeTeamId, context?.awayTeamId);
+  const receivingEnd = receivingDirection
+    ? footballStablePosition(spot(play.end?.yardsToEndzone), receivingDirection)
+    : number(play.end?.yardsToEndzone);
   const ordinaryEnd = family === "punt" ? spot(play.end?.yardsToEndzone) : structuredPosition(play.end?.yardsToEndzone);
   const end = semanticLabel ? null : touchdown ? direction === "left" ? 0 : 100 : possessionChanged
-    ? (number(play.end?.yardsToEndzone) ?? null)
+    ? receivingEnd
     : ordinaryEnd;
   const animation: FootballAnimationFamily = semanticLabel ? "none" : family === "run" || family === "scramble" ? "run"
     : family === "sack" ? "sack" : family === "pass" ? "pass" : family === "incomplete" ? "incomplete"
@@ -258,11 +272,11 @@ export function normalizeFootballVisualizationPlay(play: FootballRawPlay, index 
   const staticLabel = family === "other" && end !== null ? /fumble/.test(lower) ? "FUMBLE" : /interception|intercepted/.test(lower) ? "TURNOVER" : /kickoff/.test(lower) ? "KICKOFF" : null : null;
   const renderMode = semanticLabel ? "semantic" as const : animate ? "animated" as const : "static" as const;
   const parsedPunt = family === "punt" ? puntDetails(text, context) : null;
-  // Named punt landings are parsed as matchup-absolute first, then converted
-  // once into the same team-relative presentation space as the kick start.
-  const punt = parsedPunt?.destinationAbsolute !== undefined
-    ? { ...parsedPunt, destination: footballStablePosition(parsedPunt.destinationAbsolute, direction) }
-    : parsedPunt;
+  // Named yardlines use home-at-zero provider space. The stable replay has
+  // home at the right end zone, regardless of which team is kicking.
+  const punt = parsedPunt?.destinationAbsolute != null
+    ? { ...parsedPunt, destination: direction ? 100 - parsedPunt.destinationAbsolute : parsedPunt.destinationAbsolute }
+    : parsedPunt && direction ? { ...parsedPunt, destination: footballStablePosition(parsedPunt.destination, direction) } : parsedPunt;
   return {
     id: footballPlayId(play, index), text, family, animation, offenseTeamId: startTeam,
     period: number(play.period?.number), clock: play.clock?.displayValue ?? null, start, end,

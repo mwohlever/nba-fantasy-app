@@ -1,0 +1,192 @@
+{
+  "sourceCommit": "a75e39778693fd8ffd6ed733c46e06908babd17f",
+  "fields": [
+    "id",
+    "offenseTeamId",
+    "period",
+    "start",
+    "end",
+    "firstDown",
+    "animation",
+    "possessionChanged",
+    "semanticLabel"
+  ],
+  "plays": [
+    {
+      "id": "40187294863",
+      "offenseTeamId": "1",
+      "period": 1,
+      "start": 30,
+      "end": 34,
+      "firstDown": 40,
+      "animation": "run",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "40187294885",
+      "offenseTeamId": "1",
+      "period": 1,
+      "start": 34,
+      "end": 51,
+      "firstDown": 40,
+      "animation": "pass",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "401872948160",
+      "offenseTeamId": "9",
+      "period": 1,
+      "start": 55,
+      "end": 49,
+      "firstDown": 45,
+      "animation": "pass",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "401872948420",
+      "offenseTeamId": "9",
+      "period": 1,
+      "start": 87,
+      "end": 88,
+      "firstDown": 77,
+      "animation": "run",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729481148",
+      "offenseTeamId": "1",
+      "period": 2,
+      "start": 17,
+      "end": 24,
+      "firstDown": 27,
+      "animation": "pass",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729481173",
+      "offenseTeamId": "1",
+      "period": 2,
+      "start": 24,
+      "end": 28,
+      "firstDown": 27,
+      "animation": "run",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729481337",
+      "offenseTeamId": "9",
+      "period": 2,
+      "start": 89,
+      "end": 88,
+      "firstDown": 79,
+      "animation": "run",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729482124",
+      "offenseTeamId": "9",
+      "period": 2,
+      "start": 67,
+      "end": 59,
+      "firstDown": 57,
+      "animation": "pass",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729482380",
+      "offenseTeamId": "9",
+      "period": 3,
+      "start": 70,
+      "end": 69,
+      "firstDown": 60,
+      "animation": "run",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729482402",
+      "offenseTeamId": "9",
+      "period": 3,
+      "start": 69,
+      "end": 62,
+      "firstDown": 60,
+      "animation": "pass",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729482645",
+      "offenseTeamId": "1",
+      "period": 3,
+      "start": 8,
+      "end": 14,
+      "firstDown": 18,
+      "animation": "run",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729482801",
+      "offenseTeamId": "1",
+      "period": 3,
+      "start": 66,
+      "end": 68,
+      "firstDown": 75,
+      "animation": "pass",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729483095",
+      "offenseTeamId": "9",
+      "period": 3,
+      "start": 47,
+      "end": 48,
+      "firstDown": 37,
+      "animation": "sack",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729483268",
+      "offenseTeamId": "1",
+      "period": 4,
+      "start": 13,
+      "end": 16,
+      "firstDown": 18,
+      "animation": "run",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729483290",
+      "offenseTeamId": "1",
+      "period": 4,
+      "start": 16,
+      "end": 84,
+      "firstDown": 18,
+      "animation": "pass",
+      "possessionChanged": false,
+      "semanticLabel": null
+    },
+    {
+      "id": "4018729483531",
+      "offenseTeamId": "9",
+      "period": 4,
+      "start": 76,
+      "end": 42,
+      "firstDown": 66,
+      "animation": "pass",
+      "possessionChanged": false,
+      "semanticLabel": null
+    }
+  ]
+}

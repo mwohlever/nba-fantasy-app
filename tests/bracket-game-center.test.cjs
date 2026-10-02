@@ -83,7 +83,7 @@ test("Bracket wrapper and valid score cards reuse shared GameCenterModal without
 });
 
 test("shared Game Center polling and mobile replay structure remain untouched", () => {
-  const modal = fs.readFileSync(path.join(root, "components/live-scores/GameCenterModal.tsx"), "utf8");
+  const modal = fs.readFileSync(path.join(root, "components/live-scores/FootballGameCenter.tsx"), "utf8");
   const plays = fs.readFileSync(path.join(root, "components/live-scores/FootballPlayByPlay.tsx"), "utf8");
   assert.match(modal, /window\.setInterval\(\(\) => \{\s*void loadGameDetail\(\);\s*\}, 15000\)/);
   assert.match(modal, /FootballPlayByPlay/);

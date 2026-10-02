@@ -4,7 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import AppNav from "@/components/AppNav";
 import LiveScoreCard from "@/components/live-scores/LiveScoreCard";
-import GameCenterModal from "@/components/live-scores/NflGameCenterModal";
+import NflGameCenter from "./NflGameCenter";
+import { useNflLiveUrl } from "@/lib/live-scores/useNflLiveUrl";
+import { useNflLiveScope } from "@/lib/live-scores/useNflLiveScope";
+import { useLiveRequest } from "@/lib/live-scores/useLiveRequest";
+import { parseNflCalendar } from "@/lib/live-scores/urlState";
 
 type Game = import("./LiveScoreCard").LiveScoreGame;
 
@@ -18,6 +22,11 @@ type ScoresResponse = {
   games?: Game[];
   error?: string;
 };
+
+function validateScores(body: ScoresResponse) {
+  return parseNflCalendar(new URLSearchParams({ season: String(body.season), seasonType: String(body.seasonType), week: String(body.week) }))
+    ? null : "NFL schedule context is unavailable. Please try again.";
+}
 
 function gameDateKey(game: Game) {
   return new Date(game.kickoffAt).toLocaleDateString("en-US", {
@@ -35,21 +44,29 @@ function gameDateLabel(game: Game) {
   });
 }
 
-export default function NflLiveScores() {
-  const [season, setSeason] = useState(new Date().getFullYear());
-  const [week, setWeek] = useState(1);
-  const [seasonType, setSeasonType] = useState(2);
-  const [calendar, setCalendar] = useState<import("@/lib/providers/nflLiveScores").NflCalendar>([]);
-  const [initialized, setInitialized] = useState(false);
+export default function NflLiveScores({ viewerId }: { viewerId: string }) {
+  const scope = useNflLiveScope(viewerId);
+  const live = useNflLiveUrl(JSON.stringify(scope));
+  const { state } = live;
+  const ready = live.routeMatches && state.view === "games" && Boolean(scope);
+  const params = state.calendar ? new URLSearchParams(Object.entries(state.calendar).map(([key, value]) => [key, String(value)])) : null;
+  const url = ready && scope ? `/api/live-scores/nfl/scores?${params ? `${params}&` : ""}groupId=${encodeURIComponent(scope.groupId)}&leagueId=${encodeURIComponent(scope.leagueId)}&viewerId=${encodeURIComponent(viewerId)}` : null;
+  const request = useLiveRequest<ScoresResponse>(scope ? { ...scope, resource: `scores:${params ?? "current"}` } : null, url, validateScores);
+  const games = request.data?.games ?? [];
+  const calendar = request.data?.calendar ?? [];
+  const loading = request.loading || (ready && !state.calendar && !request.error);
+  const error = request.error;
+  const { season, seasonType, week } = state.calendar ?? { season: new Date().getFullYear(), seasonType: 2, week: 1 };
   const pendingFavorites = useRef(new Set<string>());
   const [favoriteError, setFavoriteError] = useState("");
-  const [games, setGames] = useState<Game[]>([]);
-  const [favoriteTeamIds, setFavoriteTeamIds] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [favoriteTeamIds, setFavoriteTeamIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    if (!request.data || state.calendar || !ready) return;
+    const { season, seasonType, week } = request.data;
+    const calendar = parseNflCalendar(new URLSearchParams({ season: String(season), seasonType: String(seasonType), week: String(week) }));
+    if (calendar) live.resolveCalendar(calendar);
+  }, [request.data, state.calendar, ready, live]);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,57 +146,6 @@ export default function NflLiveScores() {
     }
   }
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadScores() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const response = await fetch(
-          initialized ? `/api/live-scores/nfl/scores?season=${season}&seasonType=${seasonType}&week=${week}` : "/api/live-scores/nfl/scores",
-          { cache: "no-store" },
-        );
-
-        const data = (await response.json()) as ScoresResponse;
-
-        if (!response.ok) {
-          throw new Error(data.error || "Unable to load NFL scores.");
-        }
-
-        if (!cancelled) {
-          setGames(data.games ?? []);
-          setCalendar(data.calendar ?? []);
-          if (!initialized) {
-            setSeason(data.season ?? season);
-            setSeasonType(data.seasonType ?? 2);
-            setWeek(data.week ?? 1);
-            setInitialized(true);
-          }
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to load NFL scores.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadScores();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [season, seasonType, week, initialized]);
-
   const filteredGames = games;
 
   const favoriteGames = useMemo(() => {
@@ -255,13 +221,18 @@ export default function NflLiveScores() {
   const filterLabel = calendar.find((part) => Number(part.value) === seasonType)?.label ?? "NFL";
   const weeks = calendar.find((part) => Number(part.value) === seasonType)?.entries ?? [];
   const weekLabel = weeks.find((entry) => Number(entry.value) === week)?.label ?? `Week ${week}`;
-  function changeContext(change: () => void) { setSelectedGame(null); setGames([]); change(); }
+
 
   return (
-    <main className="min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
+    <main className="nfl-live-page min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
       <div className="mx-auto max-w-5xl space-y-4">
         <AppNav />
 
+        {!live.routeMatches ? null : state.view === "detail" ? <NflGameCenter
+          key={`${viewerId}:${scope?.groupId}:${scope?.leagueId}:${state.gameId}`}
+          viewerId={viewerId} eventId={state.gameId} tab={state.tab} period={state.period} statsTeam={state.statsTeam}
+          onDetailChange={live.selectDetail} onBack={live.backToGames} onCalendar={live.resolveCalendar}
+        /> : <>
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -279,13 +250,13 @@ export default function NflLiveScores() {
             <div className="flex flex-wrap gap-2">
               <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
                 Season
-                <select aria-label="Season" value={season} onChange={(event) => changeContext(() => { setSeason(Number(event.target.value)); setWeek(1); })} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">
-                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => <option key={year} value={year}>{year}</option>)}
+                <select aria-label="Season" value={season} onChange={(event) => live.selectCalendar({ season: Number(event.target.value), seasonType, week: 1 })} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">
+                  {Array.from(new Set([season, ...Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)])).sort((a, b) => b - a).map((year) => <option key={year} value={year}>{year}</option>)}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
                 Season type
-                <select aria-label="Season type" value={seasonType} onChange={(event) => changeContext(() => { setSeasonType(Number(event.target.value)); setWeek(1); })} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">
+                <select aria-label="Season type" value={seasonType} onChange={(event) => live.selectCalendar({ season, seasonType: Number(event.target.value), week: 1 })} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">
                   {calendar.map((part) => <option key={part.value} value={part.value}>{part.label}</option>)}
                 </select>
               </label>
@@ -297,7 +268,7 @@ export default function NflLiveScores() {
                 <select
                   value={week}
                   onChange={(event) => {
-                    changeContext(() => setWeek(Number(event.target.value)));
+                    live.selectCalendar({ season, seasonType, week: Number(event.target.value) });
                     event.currentTarget.blur();
                   }}
                   className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
@@ -336,7 +307,7 @@ export default function NflLiveScores() {
                     <LiveScoreCard
                       key={`favorite-${game.espnEventId}`}
                       game={game}
-                      onClick={() => setSelectedGame(game)}
+                      onClick={() => live.openGame(game.espnEventId)}
                       favoriteTeamIds={favoriteTeamIds}
                       onToggleFavorite={toggleFavorite}
                     />
@@ -357,7 +328,7 @@ export default function NflLiveScores() {
                     <LiveScoreCard
                       key={game.espnEventId}
                       game={game}
-                      onClick={() => setSelectedGame(game)}
+                      onClick={() => live.openGame(game.espnEventId)}
                       favoriteTeamIds={favoriteTeamIds}
                       onToggleFavorite={toggleFavorite}
                     />
@@ -367,14 +338,8 @@ export default function NflLiveScores() {
             ))}
           </section>
         )}
+        </>}
       </div>
-      {selectedGame ? (
-        <GameCenterModal
-          key={selectedGame.espnEventId}
-          game={selectedGame}
-          onClose={() => setSelectedGame(null)}
-        />
-      ) : null}
     </main>
   );
 }

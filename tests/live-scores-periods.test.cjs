@@ -34,10 +34,19 @@ test('uses the current scheduled regular-season week when the provider is outsid
 });
 
 test('Live Scores initializes provider context once so manual week navigation survives refreshes', () => {
-  for (const file of ['app/ncaa-pickem/scores/page.tsx', 'components/live-scores/NflLiveScores.tsx']) {
+  for (const file of ['app/ncaa-pickem/scores/page.tsx']) {
     const source = fs.readFileSync(file, 'utf8').replace(/\s+/g, ' ');
     assert.match(source, /const \[initialized, setInitialized\] = useState\(false\)/);
     assert.match(source, /if \(!initialized\) \{[\s\S]*?setInitialized\(true\)/);
     assert.match(source, /initialized \? .*season=.*week=.*: .*scores/);
   }
+});
+
+// NFL now persists the authoritative week in the URL rather than local initialization.
+test('NFL calendar navigation uses URL state and resolves a missing context from the provider', () => {
+  const source = fs.readFileSync('components/live-scores/NflLiveScores.tsx', 'utf8');
+  assert.match(source, /useNflLiveUrl/);
+  assert.match(source, /live.resolveCalendar\(calendar\)/);
+  assert.match(source, /live.selectCalendar/);
+  assert.doesNotMatch(source, /setWeek|setSeason|setInitialized/);
 });

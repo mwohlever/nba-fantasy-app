@@ -6,7 +6,7 @@ import type { AppUser } from "@/lib/auth";
 import { possessionTeamId } from "./possession";
 import { normalizeNflField } from "./nflField";
 
-export function createFootballGameDetailHandler<Access>(league: "college-football" | "nfl", getAccess: (user: AppUser) => Promise<Access>, enrich?: (summary: any, access: NonNullable<Access>, request: NextRequest) => Promise<Record<string, unknown>>) {
+export function createFootballGameDetailHandler<Access>(league: "college-football" | "nfl", getAccess: (user: AppUser) => Promise<Access>, enrich?: (summary: any, access: NonNullable<Access>, request: NextRequest) => Promise<Record<string, unknown>>, validateScope?: (user: AppUser, access: NonNullable<Access>, request: NextRequest) => string | null) {
 
 const ESPN_FOOTBALL_BASE =
   `https://site.api.espn.com/apis/site/v2/sports/football/${league}`;
@@ -429,6 +429,9 @@ return async function GET(request: NextRequest) {
         { status: 404 },
       );
     }
+
+    const scopeError = validateScope?.(user, access, request);
+    if (scopeError) return NextResponse.json({ error: scopeError }, { status: 409 });
 
     const params = new URL(request.url).searchParams;
     const id = eventId(params.get("eventId"));

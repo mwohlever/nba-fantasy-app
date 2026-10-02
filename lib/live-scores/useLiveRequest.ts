@@ -28,13 +28,13 @@ export function useLiveRequest<T>(identity: LiveRequestIdentity | null, url: str
     try {
       const response = await fetch(url, { cache: "no-store", signal: controller.signal });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "Unable to load NBA Live.");
+      if (!response.ok) throw new Error(body.error || "Unable to load Live scores.");
       const invalid = validate?.(body as T);
       if (invalid) throw new Error(invalid);
       if (matches()) setResult({ key, data: body as T, error: "", pending: false });
     } catch (reason) {
       if (matches()) setResult(previous => ({ key, data: previous?.key === key ? previous.data : null,
-        error: reason instanceof Error ? reason.message : "Unable to load NBA Live.", pending: false }));
+        error: reason instanceof Error ? reason.message : "Unable to load Live scores.", pending: false }));
     } finally { if (matches()) abort.current = null; }
   }, [key, url, validate]);
   const cancel = useCallback(() => {

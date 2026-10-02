@@ -11,5 +11,5 @@ export default async function LiveScoresPage({ searchParams }: { searchParams: P
   const user = await getCurrentUser();
   const access = user ? sport === "nba" ? await getActiveLeagueForSport(user, "nba") : await getNflLiveAccess(user) : null;
   if (!access) return <main className="p-4 pb-24"><AppNav /><p>{user ? `${sport === "nba" ? "NBA" : "NFL"} is not enabled for this Group.` : "Log in to view Live Scores."}</p></main>;
-  return sport === "nba" ? <NbaLiveScores viewerId={user!.id} key={`${user!.id}:${access.context.group.id}`} /> : <NflLiveScores key={`${user!.id}:${access.context.group.id}`} />;
+  return sport === "nba" ? <NbaLiveScores viewerId={user!.id} key={`${user!.id}:${access.context.group.id}`} /> : <NflLiveScores viewerId={user!.id} key={`${user!.id}:${access.context.group.id}`} />;
 }

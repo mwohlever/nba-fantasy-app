@@ -3,7 +3,7 @@ const assert = require('node:assert/strict'); const test = require('node:test');
 const root = path.resolve(__dirname, '..'); const resolve = Module._resolveFilename;
 Module._resolveFilename = function(request, parent, ...args) { return resolve.call(this, request.startsWith('@/') ? path.join(root, request.slice(2)) : request, parent, ...args); };
 for (const ext of ['.ts', '.tsx']) require.extensions[ext] = function(module, filename) { module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true }, fileName: filename }).outputText, filename); };
-const { normalizeFootballVisualizationPlay, footballEndZoneLabels, footballPuntCoordinates, footballPuntSvgGeometry, footballSelectedPlayContext, footballTeamAttackDirection, namedYardlineToMatchupPosition, nextFootballResultingState, orientFootballVisualizationPlay, withFootballResultingState } = require('../lib/live-scores/footballPlayVisualization.ts');
+const { normalizeFootballVisualizationPlay, footballPlayYardage, footballEndZoneLabels, footballPuntCoordinates, footballPuntSvgGeometry, footballSelectedPlayContext, footballTeamAttackDirection, namedYardlineToMatchupPosition, nextFootballResultingState, orientFootballVisualizationPlay, withFootballResultingState } = require('../lib/live-scores/footballPlayVisualization.ts');
 const play = (overrides = {}) => ({ id: 'nfl-1', type: { id: '5', text: 'Rush' }, text: 'Runner left tackle for 7 yards', period: { number: 2 }, clock: { displayValue: '8:42' }, start: { team: { id: '1' }, yardsToEndzone: 66, down: 2, distance: 7, shortDownDistanceText: '2nd & 7' }, end: { team: { id: '1' }, yardsToEndzone: 59 }, ...overrides });
 
 test('shared football model uses yardsToEndzone and builds factual run/sack coordinates', () => {
@@ -48,8 +48,8 @@ test('stable matchup orientation mirrors provider facts only for the home offens
   assert.deepEqual([orientFootballVisualizationPlay(td, 'left').start, orientFootballVisualizationPlay(td, 'left').end], [3, 0]);
 });
 test('matchup labels and selected-play context are stable, selected-play-specific, and conservative', () => {
-  assert.deepEqual(footballEndZoneLabels({ id: 'home', abbreviation: 'LAR' }, { id: 'away', abbreviation: 'NYG' }), { left: 'LAR', right: 'NYG' });
-  assert.equal(footballEndZoneLabels({ abbreviation: 'LAR' }, undefined).right, 'END');
+  assert.deepEqual(footballEndZoneLabels({ id: 'home', abbreviation: 'LAR' }, { id: 'away', abbreviation: 'NYG' }), { left: 'NYG', right: 'LAR' });
+  assert.equal(footballEndZoneLabels({ abbreviation: 'LAR' }, undefined).left, 'END');
   const historical = normalizeFootballVisualizationPlay(play({ id: 'historical', period: { number: 1 }, clock: { displayValue: '10:02' }, start: { team: { id: 'home' }, yardsToEndzone: 66, down: 3, distance: 5, shortDownDistanceText: '3rd & 5' } }));
   const latest = normalizeFootballVisualizationPlay(play({ id: 'latest', period: { number: 2 }, clock: { displayValue: '4:31' }, start: { team: { id: 'away' }, yardsToEndzone: 66, down: 2, distance: 7, shortDownDistanceText: '2nd & 7' } }));
   assert.equal(footballSelectedPlayContext(historical, 'LAR', 'left'), '← LAR · 3RD & 5 · Q1 · 10:02');
@@ -85,7 +85,7 @@ test('exact NYG at LAR fair-catch punt numeric trace uses NYG 47 once', () => {
   // This is the selected-play boundary used before FootballPlayByPlay passes props to FootballPlayField.
   const display = withFootballResultingState(normalized, null);
   assert.equal(raw.start.yardsToEndzone, 15); assert.equal(raw.end.yardsToEndzone, 53);
-  assert.equal(normalized.start, 85); assert.equal(normalized.end, 53);
+  assert.equal(normalized.start, 85); assert.equal(normalized.end, 47);
   assert.equal(normalized.punt.destination, 47); assert.equal(normalized.punt.destinationAbsolute, 53);
   assert.equal(display.start, 85); assert.equal(display.punt.destination, 47);
   assert.ok(display.punt.destination < display.start); // SVG x increases with the stable display coordinate.
@@ -111,7 +111,7 @@ test('NYG at LAR scrimmage coordinates convert once while the verified punt sour
   const geometry = footballPuntSvgGeometry(evans.start, evans.punt.destination, 0);
   assert.ok(geometry.svgStartX > geometry.svgEndX);
   const awayPunt = normalizeFootballVisualizationPlay(play({ id: 'nyg-fair-catch', type: { text: 'Punt' }, text: 'N.Punter punts 32 yards to LAR 47, fair catch.', start: { team: { id: '19' }, yardsToEndzone: 85, down: 4, distance: 5 }, end: { team: { id: '14' }, yardsToEndzone: 47 } }), 0, { ...matchup, offenseAbbreviation: 'NYG' });
-  assert.deepEqual([awayPunt.start, awayPunt.punt.destination], [15, 47]);
+  assert.deepEqual([awayPunt.start, awayPunt.punt.destination], [15, 53]);
   assert.ok(footballPuntSvgGeometry(awayPunt.start, awayPunt.punt.destination, 0).svgStartX < footballPuntSvgGeometry(awayPunt.start, awayPunt.punt.destination, 0).svgEndX);
 });
 test('penalty semantics use only explicit provider prose and the narrow shared DPI first-down rule', () => {
@@ -218,10 +218,88 @@ test('shared PBP keeps one selection model for full and sticky replay', () => {
   assert.match(field, /TOUCHDOWN/); assert.match(field, /progress >= 1/); assert.match(field, /reducedMotion \|\| progress >= 1/); assert.match(field, /compact \? "10" : "13"/);
   assert.match(field, /footballTeamAttackDirection/); assert.doesNotMatch(field, /orientFootballVisualizationPlay/); assert.match(field, /footballEndZoneLabels/); assert.match(field, /footballSelectedPlayContext/);
   assert.doesNotMatch(source, /orientFootballVisualizationForMatchup/); assert.match(source, /const selected = selectedWithState/);
-  const modal = fs.readFileSync(path.join(root, 'components/live-scores/GameCenterModal.tsx'), 'utf8');
+  const modal = fs.readFileSync(path.join(root, 'components/live-scores/FootballGameCenter.tsx'), 'utf8');
   assert.doesNotMatch(modal, /<FootballLiveField field=\{detail\?\.field\}/);
   assert.match(modal, /homeTeam=\{footballHomeTeam\} awayTeam=\{footballAwayTeam\}/);
   const nflModal = fs.readFileSync(path.join(root, 'components/live-scores/NflGameCenterModal.tsx'), 'utf8');
   const ncaaModal = fs.readFileSync(path.join(root, 'components/ncaa/NcaaGameCenterModal.tsx'), 'utf8');
   assert.match(nflModal, /GameCenterModal/); assert.match(ncaaModal, /GameCenterModal/);
+});
+
+
+test('Falcons–Packers Week 3 captured passes/runs keep baseline coordinates across both offenses, drives and quarters', () => {
+  const fixture = require('./fixtures/nfl-field-401872948.json');
+  const context = { homeTeamId: fixture.homeTeam.id, awayTeamId: fixture.awayTeam.id, homeAbbreviation: 'GB', awayAbbreviation: 'ATL' };
+  const covered = new Set();
+  for (const drive of fixture.drives) for (const raw of drive.plays) {
+    const play = normalizeFootballVisualizationPlay(raw, 0, context);
+    const home = raw.start.team.id === '9';
+    assert.equal(play.offenseTeamId, drive.team.id);
+    assert.equal(play.start, home ? raw.start.yardsToEndzone : 100 - raw.start.yardsToEndzone);
+    assert.equal(play.end, home ? raw.end.yardsToEndzone : 100 - raw.end.yardsToEndzone);
+    const direction = footballTeamAttackDirection(play.offenseTeamId, '9', '1');
+    assert.equal(direction, home ? 'left' : 'right');
+    assert.equal(footballPlayYardage(play, direction), raw.statYardage, raw.id);
+    if (raw.statYardage > 0) assert.equal(play.end < play.start, home, raw.id);
+    if (raw.statYardage < 0) assert.equal(play.end > play.start, home, raw.id);
+    covered.add(`${raw.start.team.id}:${raw.period.number}:${play.family}`);
+  }
+  for (const team of ['9', '1']) {
+    for (const period of [1, 2, 3, 4]) assert.ok([...covered].some(key => key.startsWith(`${team}:${period}:`)));
+    for (const family of ['pass', 'run']) assert.ok([...covered].some(key => key.startsWith(`${team}:`) && key.endsWith(`:${family}`)));
+  }
+});
+
+test('captured scrimmage and turnover replays preserve a75e397 normalization for both teams across quarters', () => {
+  const baseline = require('./fixtures/nfl-scrimmage-a75e397.json');
+  const fixture = require('./fixtures/nfl-field-401872948.json');
+  const context = { homeTeamId: '9', awayTeamId: '1', homeAbbreviation: 'GB', awayAbbreviation: 'ATL' };
+  for (const drive of fixture.drives) for (const raw of drive.plays) {
+    const current = normalizeFootballVisualizationPlay(raw, 0, context);
+    assert.deepEqual(Object.fromEntries(baseline.fields.map(key => [key, current[key]])), baseline.plays.find(p => p.id === raw.id));
+  }
+  for (const team of ['9', '1']) for (const quarter of [1, 2, 3, 4, 5]) {
+    for (const text of ['Pass intercepted', 'Runner fumbles, recovered by opponent']) {
+      const raw = play({ text, isTurnover: true, period: { number: quarter },
+        start: { team: { id: team }, yardsToEndzone: 60, down: 1, distance: 10 },
+        end: { team: { id: team === '9' ? '1' : '9' }, yardsToEndzone: 30 } });
+      const current = normalizeFootballVisualizationPlay(raw, 0, context);
+      assert.equal(current.offenseTeamId, team); assert.equal(current.period, quarter);
+      assert.equal(current.possessionChanged, true); assert.equal(current.animate, false);
+      assert.equal(current.start, null); assert.equal(current.end, null);
+    }
+  }
+});
+
+test('home-left and away-right replays attack the opponent end zone and label gains/losses for the offense', () => {
+  const React = require('react'), { renderToStaticMarkup } = require('react-dom/server');
+  const Field = require('../components/live-scores/FootballPlayField.tsx').default;
+  const homeTeam = { id: '9', abbreviation: 'GB' }, awayTeam = { id: '1', abbreviation: 'ATL' };
+  assert.deepEqual(footballEndZoneLabels(homeTeam, awayTeam), { left: 'ATL', right: 'GB' });
+  for (const offense of ['9', '1']) for (const gain of [7, -4]) {
+    const context = { homeTeamId: '9', awayTeamId: '1' };
+    const normalized = normalizeFootballVisualizationPlay(play({ start: { team: { id: offense }, yardsToEndzone: 66, down: 2, distance: 7 }, end: { team: { id: offense }, yardsToEndzone: 66 - gain } }), 0, context);
+    const html = renderToStaticMarkup(React.createElement(Field, { play: normalized, homeTeam, awayTeam }));
+    assert.ok(html.includes(`${gain > 0 ? '+' : ''}${gain} YDS`));
+    assert.match(html, /rotate\(-90 9 36\)">ATL/); assert.match(html, /rotate\(90 311 36\)">GB/);
+  }
+});
+
+
+test('captured Falcons–Packers punts and returns share the same field direction as passes/runs', () => {
+  const fixture = require('./fixtures/nfl-field-401872948.json');
+  for (const raw of fixture.punts) {
+    const home = raw.start.team.id === '9';
+    const context = { homeTeamId: '9', awayTeamId: '1', homeAbbreviation: 'GB', awayAbbreviation: 'ATL', offenseAbbreviation: home ? 'GB' : 'ATL' };
+    const normalized = normalizeFootballVisualizationPlay(raw, 0, context);
+    const { kickEnd, returnEnd } = footballPuntCoordinates(normalized);
+    assert.equal(kickEnd < normalized.start, home, raw.id);
+    assert.equal(Math.abs(kickEnd - normalized.start), normalized.punt.puntYards, raw.id);
+    if (normalized.punt.outcome === 'fair-catch') assert.equal(kickEnd, normalized.end, raw.id);
+    if (returnEnd !== null) assert.equal(Math.abs(returnEnd - kickEnd), normalized.punt.returnYards, raw.id);
+  }
+  for (const team of ['9', '1']) {
+    const normalized = normalizeFootballVisualizationPlay(play({ type: { text: 'Punt' }, text: 'Punter punts 43 yards to end zone, Touchback.', start: { team: { id: team }, yardsToEndzone: 60 }, end: { team: { id: team === '9' ? '1' : '9' }, yardsToEndzone: 80 } }), 0, { homeTeamId: '9', awayTeamId: '1' });
+    assert.equal(normalized.punt.destination, team === '9' ? 0 : 100);
+  }
 });

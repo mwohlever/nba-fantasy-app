@@ -1,4 +1,4 @@
-import { nbaLiveHref, parseNbaLiveState } from "../live-scores/urlState";
+import { nbaLiveHref, parseNbaLiveState, nflLiveHref, parseNflLiveState } from "../live-scores/urlState";
 import { sharesViewingContext } from "../viewing-context/context";
 
 export type GroupNavigationSport =
@@ -147,6 +147,13 @@ export function getGroupSwitchDestination({
     // Explicit old Group/league IDs are never transferred to another Group.
     if (searchParams.has("groupId") || searchParams.has("leagueId")) return fallback;
     return nbaLiveHref(parseNbaLiveState(nbaContext, normalizedSearch));
+  }
+
+  // NFL events and weekly calendars are public Live context as well.
+  if (normalizedPathname === "/live-scores" && (searchParams.get("sport") === "nfl" || !searchParams.has("sport"))) {
+    if (!isEnabled("nfl", targetEnabledSports)) return fallback;
+    if (searchParams.has("groupId") || searchParams.has("leagueId") || searchParams.has("eventId")) return fallback;
+    return nflLiveHref(parseNflLiveState(normalizedSearch));
   }
 
   let destinationSearch = normalizedSearch;
