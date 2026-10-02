@@ -1,3 +1,4 @@
+import { golfLiveHref } from "../golf/liveTournament";
 import { nbaLiveHref, parseNbaLiveState, nflLiveHref, parseNflLiveState } from "../live-scores/urlState";
 import { sharesViewingContext } from "../viewing-context/context";
 import { ncaaLiveOverviewHref, parseNcaaLiveOverview } from "../live-scores/ncaaUrlState";
@@ -150,6 +151,13 @@ export function getGroupSwitchDestination({
     return nbaLiveHref(parseNbaLiveState(nbaContext, normalizedSearch));
   }
 
+  // Golf ESPN event identity is public; ownership is re-resolved in the new Group.
+  if (normalizedPathname === "/golf/live") {
+    if (!isEnabled("golf", targetEnabledSports) || searchParams.has("groupId") || searchParams.has("leagueId")) return fallback;
+    if (!searchParams.has("eventId") && hasGroupSpecificResource(searchParams)) return fallback;
+    return golfLiveHref(searchParams.get("eventId"));
+  }
+
   // NFL events and weekly calendars are public Live context as well.
   if (normalizedPathname === "/live-scores" && (searchParams.get("sport") === "nfl" || !searchParams.has("sport"))) {
     if (!isEnabled("nfl", targetEnabledSports)) return fallback;
@@ -226,10 +234,6 @@ export function getGroupSwitchDestination({
 
   if (normalizedPathname === "/live-scores") {
     return sport === "nfl" && isEnabled("nfl", targetEnabledSports) ? currentDestination : fallback;
-  }
-
-  if (normalizedPathname === "/golf/live") {
-    return isEnabled("golf", targetEnabledSports) ? currentDestination : fallback;
   }
 
   if (

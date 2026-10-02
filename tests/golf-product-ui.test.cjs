@@ -154,7 +154,10 @@ test('Golf Live requests the lightweight accepted-summary variant before Home-on
   const liveReturn = summary.indexOf('if (liveOnly) {');
   const fantasyBoard = summary.indexOf('const canonicalFantasy = latestSlate ? await loadGolfFantasy');
 
-  assert.match(live, /\/api\/home-summary\?sport=golf&view=live/);
+  const liveLoader = fs.readFileSync("lib/client/golfLiveTournaments.ts", "utf8");
+  assert.match(live, /loadGolfLiveSummary\(eventId\)/);
+  assert.match(liveLoader, /sport: "golf", view: "live"/);
+  assert.match(liveLoader, /fetch\(`\/api\/home-summary\?/);
   assert.match(route, /liveOnly: searchParams\.get\("view"\) === "live"/);
   assert.ok(liveReturn >= 0 && liveReturn < fantasyBoard, 'Live returns before building the canonical fantasy board');
   assert.match(summary, /const avatarByTeamId = liveOnly/);

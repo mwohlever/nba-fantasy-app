@@ -1,0 +1,55 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* Bundle real Live pages with synthetic auth/Group/Next history for read-only browser QA. */
+const fs = require('node:fs');
+const path = require('node:path');
+const { createRequire } = require('node:module');
+const ts = require('typescript');
+const root = path.resolve(__dirname, '../..');
+module.exports = function golfLiveBrowserBundle() {
+  const sources = {}, maps = {};
+  const special = {
+    'next/navigation': `const React=require('react');
+      function useLocation() { return React.useSyncExternalStore(fn => { window.addEventListener('popstate',fn); return () => window.removeEventListener('popstate',fn); }, () => location.pathname+location.search); }
+      exports.usePathname=()=>new URL(useLocation(),'http://standings.test').pathname;
+      exports.useSearchParams=()=>new URLSearchParams(new URL(useLocation(),'http://standings.test').search);exports.useRouter=()=>({push:href=>history.pushState(null,'',href)});`,
+    '@/components/AppNav': `const React=require('react'); const {getGroupSwitchDestination}=require('@/lib/groups/navigation');
+      exports.__esModule=true; exports.default=()=>React.createElement('nav',{'aria-label':'Fixture navigation'},
+        React.createElement('button',{onClick:()=>{fixtureGroup.groupContext.group.id='b';history.replaceState(null,'',getGroupSwitchDestination({pathname:location.pathname,search:location.search,targetGroupSlug:'b',enabledSports:['golf'],canAdministerGroup:false}));renderPage();}},'Switch Group'),
+        React.createElement('button',{onClick:()=>history.pushState(null,'','/live-scores?sport=nba')},'Switch sport'));`,
+    'next/link': `const React=require('react'); exports.__esModule=true; exports.default=({children,...props})=>React.createElement('a',props,children);`,
+    'next/dynamic': `const React=require('react');exports.__esModule=true;exports.default=(_loader,options)=>options.loading;`,
+    '@/components/lineups/PlayerModal': `exports.__esModule=true;exports.default=()=>null;`,
+    '@/components/providers/SportProvider': `exports.useSelectedSport=()=>({selectedSport:'golf',setSelectedSport(){}});`,
+    '@/components/providers/GroupProvider': `exports.useGroupContext=()=>window.fixtureGroup;`,
+  };
+  const oldTs = require.extensions['.ts'], oldTsx = require.extensions['.tsx'];
+  require.extensions['.ts'] ??= () => {}; require.extensions['.tsx'] ??= () => {};
+  function add(filename, supplied) {
+    if (sources[filename]) return filename;
+    let source = supplied ?? fs.readFileSync(filename, 'utf8');
+    if (/\.tsx?$/.test(filename)) source = ts.transpileModule(source, { fileName: filename,
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
+    }).outputText;
+    sources[filename] = source; maps[filename] = {};
+    for (const match of source.matchAll(/require\(["']([^"']+)["']\)/g)) {
+      const request = match[1]; if (request.endsWith('.development.js')) continue;
+      maps[filename][request] = special[request] ? add(path.join(root, `virtual-${request.replaceAll('/', '-')}.js`), special[request])
+        : add(createRequire(filename).resolve(request.startsWith('@/') ? path.join(root, request.slice(2)) : request));
+    }
+    return filename;
+  }
+  try {
+    const golf = add(path.join(root, 'components/golf/GolfLivePage.tsx'));
+    const react = add(require.resolve('react')), client = add(require.resolve('react-dom/client'));
+    return `const process={env:{NODE_ENV:'production'}}; const global=globalThis;
+      const sources=${JSON.stringify(sources)}, maps=${JSON.stringify(maps)}, cache={};
+      function load(id) { if(cache[id]) return cache[id].exports; const m=cache[id]={exports:{}};
+        new Function('require','module','exports',sources[id])(r=>load(maps[id][r]),m,m.exports); return m.exports; }
+      window.React=load(${JSON.stringify(react)}); window.ReactDOMClient=load(${JSON.stringify(client)});
+      window.GolfLivePage=load(${JSON.stringify(golf)}).default;
+      for(const method of ['pushState','replaceState']) { const original=history[method].bind(history); history[method]=(...args)=>{original(...args); dispatchEvent(new PopStateEvent('popstate'));}; }`;
+  } finally {
+    if (oldTs) require.extensions['.ts'] = oldTs; else delete require.extensions['.ts'];
+    if (oldTsx) require.extensions['.tsx'] = oldTsx; else delete require.extensions['.tsx'];
+  }
+};

@@ -1217,14 +1217,21 @@ export async function fetchGolfSchedule(
   dates?: string,
 ): Promise<GolfScheduleEvent[]> {
   const payload = await fetchGolfPayload(dates);
-  const calendar = safeArray(payload.leagues?.[0]?.calendar);
+  return parseGolfScheduleFromPayload(payload);
+}
+
+/** Shared by server schedule discovery and the browser ESPN path. */
+export function parseGolfScheduleFromPayload(payload: unknown): GolfScheduleEvent[] {
+  if (!isRecord(payload)) throw new Error("ESPN golf returned an invalid schedule.");
+  const scoreboard = payload as EspnGolfScoreboardPayload;
+  const calendar = safeArray(scoreboard.leagues?.[0]?.calendar);
 
   const schedule = calendar
     .map((entry): GolfScheduleEvent | null => {
       const espnEventId = String(entry.id ?? "").trim();
       const name = String(entry.label ?? "").trim();
 
-      if (!espnEventId || !name) {
+      if (!/^\d+$/.test(espnEventId) || !name) {
         return null;
       }
 

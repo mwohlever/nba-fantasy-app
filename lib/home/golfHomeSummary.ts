@@ -1,3 +1,4 @@
+import { matchGolfLiveSlate } from "@/lib/golf/liveTournament";
 import { slateViewingOptions } from "@/lib/viewing-context/context";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -18,6 +19,7 @@ import { loadFantasyTeamAvatars } from '@/lib/fantasyTeamIdentity';
 
 type GolfSlateRow = {
   id: number;
+  external_event_id: string | null;
   date: string | null;
   start_date: string | null;
   end_date: string | null;
@@ -146,10 +148,15 @@ function isTerminalGolfStatus(
 export async function getGolfHomeSummary({
   liveOnly = false,
   requestedSlateId = null,
+  requestedEventId = null,
 }: {
   liveOnly?: boolean;
   requestedSlateId?: number | null;
+  requestedEventId?: string | null;
 } = {}) {
+  if (liveOnly && requestedEventId !== null && !/^\d+$/.test(requestedEventId)) {
+    return NextResponse.json({ error: "Invalid Golf event ID." }, { status: 400 });
+  }
   const user = await getCurrentUser();
 
   if (!user) {
@@ -178,6 +185,14 @@ export async function getGolfHomeSummary({
   const { context, league } =
     activeLeague;
 
+  const slateQuery = supabaseAdmin
+    .from("slates")
+    .select(
+      "id, external_event_id, date, start_date, end_date, is_locked, first_game_start_time, display_name, has_cut, tournament_analysis, show_tournament_analysis, rules_snapshot",
+    )
+    .eq("sport", "golf")
+    .eq("league_id", league.id);
+
   const [
     { data: slateData, error: slateError },
     { data: resultData, error: resultError },
@@ -188,17 +203,9 @@ export async function getGolfHomeSummary({
     },
     { data: slateTeamData, error: slateTeamError },
   ] = await Promise.all([
-    supabaseAdmin
-      .from("slates")
-      .select(
-        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name, has_cut, tournament_analysis, show_tournament_analysis, rules_snapshot",
-      )
-      .eq("sport", "golf")
-      .eq(
-        "league_id",
-        league.id,
-      )
-      .is("archived_at", null)
+    (liveOnly && requestedEventId !== null
+      ? slateQuery.eq("external_event_id", requestedEventId)
+      : slateQuery.is("archived_at", null))
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
 
@@ -467,7 +474,7 @@ export async function getGolfHomeSummary({
         return aTime - bTime;
       })[0] ?? null;
 
-  const latestSlate =
+  const defaultSlate =
     (!liveOnly ? normalizedSlates.find(slate => slate.id === requestedSlateId) : null) ??
     liveSlate ??
     startedOpenSlate ??
@@ -475,6 +482,11 @@ export async function getGolfHomeSummary({
     latestCompletedSlate ??
     normalizedSlates[0] ??
     null;
+
+  // Explicit public event IDs must never borrow another tournament's ownership.
+  const latestSlate = liveOnly && requestedEventId !== null
+    ? matchGolfLiveSlate(normalizedSlates, requestedEventId)
+    : defaultSlate;
 
   let latestEventPlayers: GolfEventPlayerRow[] =
     [];
@@ -697,6 +709,7 @@ export async function getGolfHomeSummary({
     new Map<number, Set<number>>();
 
   function addOwnership(teamId: number, playerId: number) {
+    if (liveOnly && !teamNameById.has(teamId)) return;
     const existing =
       playerIdsByTeamId.get(teamId) ??
       [];
@@ -1443,6 +1456,7 @@ export async function getGolfHomeSummary({
 
     return {
       id: slate.id,
+      ...(liveOnly ? { external_event_id: slate.external_event_id } : {}),
       date: slate.date,
       start_date: slate.start_date,
       end_date: slate.end_date,

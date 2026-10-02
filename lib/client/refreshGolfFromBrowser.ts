@@ -616,22 +616,33 @@ export async function fetchGolfScoreboardFromBrowser(
     );
   }
 
+  return fetchGolfEventScoreboardFromBrowser(config.eventId, config.year);
+}
+
+/** Same provider payload as slate refresh, without requiring a fantasy slate. */
+export async function fetchGolfEventScoreboardFromBrowser(
+  eventId: string,
+  year: string,
+  leaderboardPayload?: unknown,
+): Promise<{ scoreboardPayload: unknown; observedAt: string }> {
   const espnUrl =
     "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard" +
     `?dates=${encodeURIComponent(
-      config.year,
+      year,
     )}` +
     `&event=${encodeURIComponent(
-      config.eventId,
+      eventId,
     )}`;
   const leaderboardUrl =
     "https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard" +
-    `?event=${encodeURIComponent(config.eventId)}`;
+    `?event=${encodeURIComponent(eventId)}`;
 
   const observedAt = new Date().toISOString();
   const [espnResponse, leaderboardResponse] = await Promise.all([
     fetch(espnUrl, { cache: "no-store", headers: { Accept: "application/json, text/plain, */*" } }),
-    fetch(leaderboardUrl, { cache: "no-store", headers: { Accept: "application/json, text/plain, */*" } }),
+    leaderboardPayload === undefined
+      ? fetch(leaderboardUrl, { cache: "no-store", headers: { Accept: "application/json, text/plain, */*" } })
+      : Promise.resolve(Response.json(leaderboardPayload)),
   ]);
 
   if (!espnResponse.ok) {
@@ -651,8 +662,8 @@ export async function fetchGolfScoreboardFromBrowser(
 
   const scoreboardPayload =
     createCompactScoreboard(
-      mergeLeaderboardCompetitorStatuses(rawScoreboard, rawLeaderboard, config.eventId),
-      config.eventId,
+      mergeLeaderboardCompetitorStatuses(rawScoreboard, rawLeaderboard, eventId),
+      eventId,
     );
 
   return { scoreboardPayload, observedAt };
