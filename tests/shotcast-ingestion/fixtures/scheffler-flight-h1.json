@@ -1,0 +1,1289 @@
+{
+  "__typename": "ShotDetails",
+  "displayType": "ALL",
+  "id": "R2026027-46046-1-TC-US",
+  "tournamentId": "R2026027",
+  "playerId": "46046",
+  "round": 1,
+  "lineColor": "#0084FF",
+  "message": "",
+  "holes": [
+    {
+      "__typename": "ShotDetailHole",
+      "holeNumber": 1,
+      "displayHoleNumber": "1",
+      "par": 4,
+      "yardage": 415,
+      "status": "PAR",
+      "score": "4",
+      "green": true,
+      "rank": "9",
+      "fairwayCenter": {
+        "__typename": "StrokeCoordinates",
+        "x": 9543.47,
+        "y": 10760.57,
+        "z": 348.42,
+        "tourcastX": 9543.47,
+        "tourcastY": 10760.57,
+        "tourcastZ": 348.42,
+        "enhancedX": 9543.47,
+        "enhancedY": 10760.57
+      },
+      "teeOverview": {
+        "__typename": "PointOfInterestCoords",
+        "leftToRightCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 10119.34,
+          "tourcastY": 11413.12,
+          "tourcastZ": 349.06,
+          "enhancedX": 0.15381751991618806,
+          "enhancedY": 0.4161720505645259
+        },
+        "bottomToTopCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 10119.34,
+          "tourcastY": 11413.12,
+          "tourcastZ": 349.06,
+          "enhancedX": 0.43757716868132623,
+          "enhancedY": 0.7741468802797514
+        }
+      },
+      "teeGreen": {
+        "__typename": "PointOfInterestCoords",
+        "leftToRightCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 10119.34,
+          "tourcastY": 11413.12,
+          "tourcastZ": 349.06,
+          "enhancedX": -5.416919533781433,
+          "enhancedY": 0.3293409448343434
+        },
+        "bottomToTopCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 10119.34,
+          "tourcastY": 11413.12,
+          "tourcastZ": 349.06,
+          "enhancedX": 0.4578338067952295,
+          "enhancedY": 6.573741583144755
+        }
+      },
+      "pinOverview": {
+        "__typename": "PointOfInterestCoords",
+        "leftToRightCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 9463.49,
+          "tourcastY": 10395.55,
+          "tourcastZ": 349.42,
+          "enhancedX": 0.7447208582849815,
+          "enhancedY": 0.4458360135832252
+        },
+        "bottomToTopCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 9463.49,
+          "tourcastY": 10395.55,
+          "tourcastZ": 349.42,
+          "enhancedX": 0.45970114643070514,
+          "enhancedY": 0.08742141521769697
+        }
+      },
+      "pinGreen": {
+        "__typename": "PointOfInterestCoords",
+        "leftToRightCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 9463.49,
+          "tourcastY": 10395.55,
+          "tourcastZ": 349.42,
+          "enhancedX": 0.44608747092074996,
+          "enhancedY": 0.6236690831626052
+        },
+        "bottomToTopCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 9463.49,
+          "tourcastY": 10395.55,
+          "tourcastZ": 349.42,
+          "enhancedX": 0.6517445301346645,
+          "enhancedY": 0.5547757484169935
+        }
+      },
+      "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_027_513_overhead_full_1.jpg",
+      "holePickleLeftToRight": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_027_513_overhead_full_1.jpg",
+      "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_027_513_overhead_green_1.jpg",
+      "holePickleGreenLeftToRight": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_027_513_overhead_green_1.jpg",
+      "holePickleBottomToTopAsset": {
+        "__typename": "ImageAsset",
+        "imageOrg": "pga-tour",
+        "imagePath": "/holes_2026_r_027_513_overhead_full_1",
+        "assetType": "image"
+      },
+      "holePickleLeftToRightAsset": {
+        "__typename": "ImageAsset",
+        "imageOrg": "pga-tour",
+        "imagePath": "/holes_2026_r_027_513_overhead_full_1",
+        "assetType": "image"
+      },
+      "holePickleGreenBottomToTopAsset": {
+        "__typename": "ImageAsset",
+        "imageOrg": "pga-tour",
+        "imagePath": "/holes_2026_r_027_513_overhead_green_1",
+        "assetType": "image"
+      },
+      "holePickleGreenLeftToRightAsset": {
+        "__typename": "ImageAsset",
+        "imageOrg": "pga-tour",
+        "imagePath": "/holes_2026_r_027_513_overhead_green_1",
+        "assetType": "image"
+      },
+      "strokes": [
+        {
+          "__typename": "HoleStroke",
+          "showMarker": true,
+          "groupShowMarker": true,
+          "markerText": "274",
+          "strokeNumber": 1,
+          "finalStroke": false,
+          "distance": "274 yds",
+          "distanceRemaining": "150 yds",
+          "strokeType": "STROKE",
+          "overview": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 10119.337,
+                "tourcastY": 11413.122,
+                "tourcastZ": 349.056,
+                "enhancedX": 0.15381745487121315,
+                "enhancedY": 0.41617616214854314
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": 0.5426148767227928,
+                "enhancedY": 0.6505455973508975
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 10119.337,
+                "tourcastY": 11413.122,
+                "tourcastZ": 349.056,
+                "enhancedX": 0.4375802351855521,
+                "enhancedY": 0.774146955872521
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": 0.6123777854313716,
+                "enhancedY": 0.32230132544430534
+              }
+            }
+          },
+          "green": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 10119.337,
+                "tourcastY": 11413.122,
+                "tourcastZ": 349.056,
+                "enhancedX": -5.416920179163423,
+                "enhancedY": 0.32938174043217194
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": -1.5592299273100778,
+                "enhancedY": 2.654820883169498
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 10119.337,
+                "tourcastY": 11413.122,
+                "tourcastZ": 349.056,
+                "enhancedX": 0.45786068389099377,
+                "enhancedY": 6.573742245695105
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": 1.9899147776934405,
+                "enhancedY": 2.613435608625431
+              }
+            }
+          },
+          "playByPlay": "274 yds to right intermediate, 150 yds to hole",
+          "playByPlayLabel": "Shot 1",
+          "toLocationCode": "ERI",
+          "fromLocationCode": "OTB",
+          "toLocation": "Right Intermediate",
+          "fromLocation": "Tee Box",
+          "radarData": {
+            "apexHeight": 133.5,
+            "apexRange": 574.87,
+            "apexSide": 9.05,
+            "clubSpeed": 0,
+            "ballSpeed": 178.67,
+            "smashFactor": 0,
+            "launchSpin": 4003.35,
+            "spinAxis": 16.16,
+            "verticalLaunchAngle": 9.35,
+            "horizontalLaunchAngle": -7.18,
+            "actualFlightTime": 8,
+            "ballImpactMeasured": "2026-08-13T13:31:46.4860000",
+            "ballTrajectory": [
+              {
+                "__typename": "RadarBallTracjectory",
+                "kind": "Flight",
+                "xFit": [
+                  -0.400574,
+                  78.341231,
+                  -14.261456,
+                  1.940449,
+                  -0.170532,
+                  0.00918,
+                  -0.000226
+                ],
+                "yFit": [
+                  -0.025171,
+                  13.110547,
+                  2.346268,
+                  -1.209065,
+                  0.138911,
+                  -0.008169,
+                  0.000215
+                ],
+                "zFit": [
+                  0.285831,
+                  -8.356217,
+                  3.358279,
+                  -0.203351,
+                  -0.041039,
+                  0.006658,
+                  -0.000261
+                ],
+                "spinRateFit": [
+                  4003.348346,
+                  -118.666674,
+                  1.668849,
+                  -0.012935
+                ],
+                "timeInterval": [
+                  0,
+                  7.705
+                ],
+                "validTimeInterval": [
+                  0,
+                  9.001
+                ],
+                "measuredTimeInterval": [
+                  0.023,
+                  7.559
+                ],
+                "type": "Broadcast"
+              }
+            ],
+            "normalizedTrajectory": [
+              {
+                "valid": true,
+                "yFit": [
+                  -0.025171,
+                  13.111,
+                  2.647103,
+                  -1.425168,
+                  0.187769,
+                  -0.012264,
+                  0.000319
+                ],
+                "validTimeInterval": [
+                  0,
+                  7.788
+                ],
+                "curve": 44.13,
+                "maxHeight": 40.41,
+                "spinAxis": 16.16,
+                "timeInterval": [
+                  0,
+                  7.788
+                ],
+                "carrySide": 17.12,
+                "carry": 256.23,
+                "windVelocity": [
+                  0,
+                  0,
+                  0
+                ],
+                "zFit": [
+                  -0.400574,
+                  78.341,
+                  -14.43889,
+                  2.107514,
+                  -0.199095,
+                  0.011071,
+                  -0.000264
+                ]
+              }
+            ],
+            "normalizedTrajectoryV2": [
+              {
+                "valid": true,
+                "yFit": [
+                  -0.025171,
+                  13.111,
+                  2.647103,
+                  -1.425168,
+                  0.187769,
+                  -0.012264,
+                  0.000319
+                ],
+                "validTimeInterval": [
+                  0,
+                  7.788
+                ],
+                "curve": 44.13,
+                "maxHeight": 40.41,
+                "spinAxis": 16.16,
+                "timeInterval": [
+                  0,
+                  7.788
+                ],
+                "carrySide": 17.12,
+                "carry": 256.23,
+                "windVelocity": [
+                  0,
+                  0,
+                  0
+                ],
+                "zFit": [
+                  -0.400574,
+                  78.341,
+                  -14.43889,
+                  2.107514,
+                  -0.199095,
+                  0.011071,
+                  -0.000264
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "HoleStroke",
+          "showMarker": true,
+          "groupShowMarker": false,
+          "markerText": "151",
+          "strokeNumber": 2,
+          "finalStroke": false,
+          "distance": "151 yds",
+          "distanceRemaining": "36 ft 5 in.",
+          "strokeType": "STROKE",
+          "overview": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": 0.5426148767227928,
+                "enhancedY": 0.6505455973508975
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.7382335693473099,
+                "enhancedY": 0.40690836079819026
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": 0.6123777854313716,
+                "enhancedY": 0.32230132544430534
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.43066809971263265,
+                "enhancedY": 0.09496069689564779
+              }
+            }
+          },
+          "green": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": -1.5592299273100778,
+                "enhancedY": 2.654820883169498
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.3817198742469777,
+                "enhancedY": 0.2374245578778561
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": 1.9899147776934405,
+                "enhancedY": 2.613435608625431
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.39727758121779666,
+                "enhancedY": 0.6208555460174621
+              }
+            }
+          },
+          "playByPlay": "151 yds to left green, 36 ft 5 in. to hole",
+          "playByPlayLabel": "Shot 2",
+          "toLocationCode": "ELG",
+          "fromLocationCode": "OIR",
+          "toLocation": "Left Green",
+          "fromLocation": "Intermediate Rough",
+          "radarData": {
+            "apexHeight": 105.05,
+            "apexRange": 294.59,
+            "apexSide": -21.62,
+            "clubSpeed": 0,
+            "ballSpeed": 118.2,
+            "smashFactor": 0,
+            "launchSpin": 0,
+            "spinAxis": -17.31,
+            "verticalLaunchAngle": 20.12,
+            "horizontalLaunchAngle": -2.45,
+            "actualFlightTime": 6,
+            "ballImpactMeasured": "2026-08-13T13:35:53.0120000",
+            "ballTrajectory": [
+              {
+                "__typename": "RadarBallTracjectory",
+                "kind": "Flight",
+                "xFit": [
+                  250.70678,
+                  40.596809,
+                  -10.235313,
+                  2.281248,
+                  -0.342101,
+                  0.029146,
+                  -0.001016
+                ],
+                "yFit": [
+                  0.028158,
+                  18.179142,
+                  -1.453065,
+                  -0.487391,
+                  0.047028,
+                  -0.000596,
+                  -0.000037
+                ],
+                "zFit": [
+                  17.761293,
+                  -28.523632,
+                  6.021593,
+                  -1.124271,
+                  0.1492,
+                  -0.012206,
+                  0.000422
+                ],
+                "spinRateFit": [
+                  4277.697016,
+                  -126.393357,
+                  1.767433,
+                  -0.013671
+                ],
+                "timeInterval": [
+                  0,
+                  6.346
+                ],
+                "validTimeInterval": [
+                  0,
+                  7.837
+                ],
+                "measuredTimeInterval": [
+                  -0.012,
+                  6.307
+                ],
+                "type": "Incoming"
+              }
+            ],
+            "normalizedTrajectory": [],
+            "normalizedTrajectoryV2": []
+          }
+        },
+        {
+          "__typename": "HoleStroke",
+          "showMarker": false,
+          "groupShowMarker": false,
+          "markerText": "14",
+          "strokeNumber": 3,
+          "finalStroke": false,
+          "distance": "42 ft 0 in.",
+          "distanceRemaining": "5 ft 5 in.",
+          "strokeType": "STROKE",
+          "overview": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.7382335693473099,
+                "enhancedY": 0.40690836079819026
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.7449254469523579,
+                "enhancedY": 0.452235047768213
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.43066809971263265,
+                "enhancedY": 0.09496069689564779
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.4644736781962063,
+                "enhancedY": 0.08718364996629724
+              }
+            }
+          },
+          "green": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.3817198742469777,
+                "enhancedY": 0.2374245578778561
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.44811742390279596,
+                "enhancedY": 0.6871610176277667
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.39727758121779666,
+                "enhancedY": 0.6208555460174621
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.6935745044996922,
+                "enhancedY": 0.5526917990854332
+              }
+            }
+          },
+          "playByPlay": "Putt 42 ft 0 in., 5 ft 5 in. to hole",
+          "playByPlayLabel": "Shot 3",
+          "toLocationCode": "ERG",
+          "fromLocationCode": "OGR",
+          "toLocation": "Right Green",
+          "fromLocation": "Green",
+          "ballPath": {
+            "isLipOut": false,
+            "path": [
+              {
+                "x": 9499.511,
+                "y": 10389.01,
+                "z": 349.2169,
+                "secondsSinceStart": 0
+              },
+              {
+                "x": 9497.898,
+                "y": 10389.14,
+                "z": 349.2125,
+                "secondsSinceStart": 0.125
+              },
+              {
+                "x": 9496.325,
+                "y": 10389.274,
+                "z": 349.2091,
+                "secondsSinceStart": 0.25
+              },
+              {
+                "x": 9494.792,
+                "y": 10389.414,
+                "z": 349.2159,
+                "secondsSinceStart": 0.375
+              },
+              {
+                "x": 9493.297,
+                "y": 10389.557,
+                "z": 349.22403,
+                "secondsSinceStart": 0.5
+              },
+              {
+                "x": 9491.843,
+                "y": 10389.704,
+                "z": 349.2276,
+                "secondsSinceStart": 0.625
+              },
+              {
+                "x": 9490.426,
+                "y": 10389.8545,
+                "z": 349.22913,
+                "secondsSinceStart": 0.75
+              },
+              {
+                "x": 9489.047,
+                "y": 10390.009,
+                "z": 349.2275,
+                "secondsSinceStart": 0.875
+              },
+              {
+                "x": 9487.702,
+                "y": 10390.167,
+                "z": 349.2289,
+                "secondsSinceStart": 1
+              },
+              {
+                "x": 9486.394,
+                "y": 10390.33,
+                "z": 349.2313,
+                "secondsSinceStart": 1.125
+              },
+              {
+                "x": 9485.118,
+                "y": 10390.497,
+                "z": 349.23068,
+                "secondsSinceStart": 1.25
+              },
+              {
+                "x": 9483.877,
+                "y": 10390.668,
+                "z": 349.22552,
+                "secondsSinceStart": 1.375
+              },
+              {
+                "x": 9482.667,
+                "y": 10390.844,
+                "z": 349.2206,
+                "secondsSinceStart": 1.5
+              },
+              {
+                "x": 9481.489,
+                "y": 10391.023,
+                "z": 349.22168,
+                "secondsSinceStart": 1.625
+              },
+              {
+                "x": 9480.341,
+                "y": 10391.206,
+                "z": 349.2296,
+                "secondsSinceStart": 1.75
+              },
+              {
+                "x": 9479.227,
+                "y": 10391.391,
+                "z": 349.2377,
+                "secondsSinceStart": 1.875
+              },
+              {
+                "x": 9478.145,
+                "y": 10391.577,
+                "z": 349.2454,
+                "secondsSinceStart": 2
+              },
+              {
+                "x": 9477.096,
+                "y": 10391.765,
+                "z": 349.25684,
+                "secondsSinceStart": 2.125
+              },
+              {
+                "x": 9476.077,
+                "y": 10391.953,
+                "z": 349.27087,
+                "secondsSinceStart": 2.25
+              },
+              {
+                "x": 9474.899,
+                "y": 10392.179,
+                "z": 349.29224,
+                "secondsSinceStart": 2.4000000000000004
+              },
+              {
+                "x": 9473.7705,
+                "y": 10392.404,
+                "z": 349.316,
+                "secondsSinceStart": 2.5500000000000003
+              },
+              {
+                "x": 9472.69,
+                "y": 10392.63,
+                "z": 349.33615,
+                "secondsSinceStart": 2.7
+              },
+              {
+                "x": 9471.659,
+                "y": 10392.8545,
+                "z": 349.34854,
+                "secondsSinceStart": 2.85
+              },
+              {
+                "x": 9470.673,
+                "y": 10393.079,
+                "z": 349.35413,
+                "secondsSinceStart": 3
+              },
+              {
+                "x": 9469.729,
+                "y": 10393.303,
+                "z": 349.35724,
+                "secondsSinceStart": 3.1500000000000004
+              },
+              {
+                "x": 9468.822,
+                "y": 10393.528,
+                "z": 349.3639,
+                "secondsSinceStart": 3.3000000000000003
+              },
+              {
+                "x": 9467.955,
+                "y": 10393.754,
+                "z": 349.37408,
+                "secondsSinceStart": 3.45
+              },
+              {
+                "x": 9467.128,
+                "y": 10393.979,
+                "z": 349.3857,
+                "secondsSinceStart": 3.6
+              },
+              {
+                "x": 9466.343,
+                "y": 10394.202,
+                "z": 349.39737,
+                "secondsSinceStart": 3.75
+              },
+              {
+                "x": 9465.6,
+                "y": 10394.425,
+                "z": 349.40845,
+                "secondsSinceStart": 3.9000000000000004
+              },
+              {
+                "x": 9464.784,
+                "y": 10394.682,
+                "z": 349.41772,
+                "secondsSinceStart": 4.075
+              },
+              {
+                "x": 9464.129,
+                "y": 10394.9,
+                "z": 349.42282,
+                "secondsSinceStart": 4.2250000000000005
+              },
+              {
+                "x": 9463.412,
+                "y": 10395.156,
+                "z": 349.4272,
+                "secondsSinceStart": 4.4
+              },
+              {
+                "x": 9462.654,
+                "y": 10395.448,
+                "z": 349.43344,
+                "secondsSinceStart": 4.6000000000000005
+              },
+              {
+                "x": 9461.961,
+                "y": 10395.741,
+                "z": 349.44232,
+                "secondsSinceStart": 4.800000000000001
+              },
+              {
+                "x": 9461.264,
+                "y": 10396.066,
+                "z": 349.4533,
+                "secondsSinceStart": 5.025
+              },
+              {
+                "x": 9460.716,
+                "y": 10396.349,
+                "z": 349.46298,
+                "secondsSinceStart": 5.2250000000000005
+              },
+              {
+                "x": 9460.238,
+                "y": 10396.621,
+                "z": 349.46945,
+                "secondsSinceStart": 5.425000000000001
+              },
+              {
+                "x": 9459.781,
+                "y": 10396.913,
+                "z": 349.47385,
+                "secondsSinceStart": 5.65
+              },
+              {
+                "x": 9459.366,
+                "y": 10397.217,
+                "z": 349.47537,
+                "secondsSinceStart": 5.9
+              },
+              {
+                "x": 9459.04,
+                "y": 10397.496,
+                "z": 349.474,
+                "secondsSinceStart": 6.15
+              },
+              {
+                "x": 9458.794,
+                "y": 10397.745,
+                "z": 349.47253,
+                "secondsSinceStart": 6.4
+              },
+              {
+                "x": 9458.543,
+                "y": 10398.068,
+                "z": 349.47018,
+                "secondsSinceStart": 6.800000000000001
+              },
+              {
+                "x": 9458.43,
+                "y": 10398.314,
+                "z": 349.4675,
+                "secondsSinceStart": 7.300000000000001
+              },
+              {
+                "x": 9458.461,
+                "y": 10398.244,
+                "z": 349.4683,
+                "secondsSinceStart": 7.575
+              },
+              {
+                "x": 9458.493,
+                "y": 10398.129,
+                "z": 349.46973,
+                "secondsSinceStart": 7.6000000000000005
+              }
+            ],
+            "roundNumber": 1,
+            "holeSequence": 1,
+            "reconstructionType": "simulation",
+            "totalDistanceInches": 516.1071171183522,
+            "holeNumber": 1,
+            "strokeNumber": 3,
+            "playerId": 46046
+          }
+        },
+        {
+          "__typename": "HoleStroke",
+          "showMarker": false,
+          "groupShowMarker": false,
+          "markerText": "2",
+          "strokeNumber": 4,
+          "finalStroke": true,
+          "distance": "5 ft 5 in.",
+          "distanceRemaining": "",
+          "strokeType": "STROKE",
+          "overview": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.7449254469523579,
+                "enhancedY": 0.452235047768213
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9463.49,
+                "tourcastY": 10395.55,
+                "tourcastZ": 349.42,
+                "enhancedX": 0.7447208582849815,
+                "enhancedY": 0.4458360135832252
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.4644736781962063,
+                "enhancedY": 0.08718364996629724
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9463.49,
+                "tourcastY": 10395.55,
+                "tourcastZ": 349.42,
+                "enhancedX": 0.45970114643070514,
+                "enhancedY": 0.08742141521769697
+              }
+            }
+          },
+          "green": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.44811742390279596,
+                "enhancedY": 0.6871610176277667
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9463.49,
+                "tourcastY": 10395.55,
+                "tourcastZ": 349.42,
+                "enhancedX": 0.44608747092074996,
+                "enhancedY": 0.6236690831626052
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.6935745044996922,
+                "enhancedY": 0.5526917990854332
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9463.49,
+                "tourcastY": 10395.55,
+                "tourcastZ": 349.42,
+                "enhancedX": 0.6517445301346645,
+                "enhancedY": 0.5547757484169935
+              }
+            }
+          },
+          "playByPlay": "In the hole",
+          "playByPlayLabel": "Shot 4",
+          "videoId": "6403333013112",
+          "toLocationCode": "OGR",
+          "fromLocationCode": "OGR",
+          "toLocation": "Green",
+          "fromLocation": "Green",
+          "ballPath": {
+            "isLipOut": false,
+            "path": [
+              {
+                "x": 9458.493,
+                "y": 10398.129,
+                "z": 349.46973,
+                "secondsSinceStart": 0
+              },
+              {
+                "x": 9459.033,
+                "y": 10397.654,
+                "z": 349.4716,
+                "secondsSinceStart": 0.2
+              },
+              {
+                "x": 9459.541,
+                "y": 10397.232,
+                "z": 349.4733,
+                "secondsSinceStart": 0.4
+              },
+              {
+                "x": 9460.02,
+                "y": 10396.86,
+                "z": 349.47006,
+                "secondsSinceStart": 0.6000000000000001
+              },
+              {
+                "x": 9460.474,
+                "y": 10396.539,
+                "z": 349.4661,
+                "secondsSinceStart": 0.8
+              },
+              {
+                "x": 9460.903,
+                "y": 10396.263,
+                "z": 349.45944,
+                "secondsSinceStart": 1
+              },
+              {
+                "x": 9461.31,
+                "y": 10396.031,
+                "z": 349.4527,
+                "secondsSinceStart": 1.2000000000000002
+              },
+              {
+                "x": 9461.688,
+                "y": 10395.842,
+                "z": 349.44672,
+                "secondsSinceStart": 1.4000000000000001
+              },
+              {
+                "x": 9462.121,
+                "y": 10395.662,
+                "z": 349.4402,
+                "secondsSinceStart": 1.6500000000000001
+              },
+              {
+                "x": 9462.502,
+                "y": 10395.542,
+                "z": 349.43405,
+                "secondsSinceStart": 1.9000000000000001
+              },
+              {
+                "x": 9462.8545,
+                "y": 10395.472,
+                "z": 349.42947,
+                "secondsSinceStart": 2.1750000000000003
+              },
+              {
+                "x": 9463.235,
+                "y": 10395.46,
+                "z": 349.42322,
+                "secondsSinceStart": 2.575
+              },
+              {
+                "x": 9463.484,
+                "y": 10395.527,
+                "z": 349.4174,
+                "secondsSinceStart": 3.075
+              },
+              {
+                "x": 9463.486,
+                "y": 10395.547,
+                "z": 349.41693,
+                "secondsSinceStart": 3.1500000000000004
+              }
+            ],
+            "roundNumber": 1,
+            "holeSequence": 1,
+            "reconstructionType": "simulation",
+            "totalDistanceInches": 70.05147562092145,
+            "holeNumber": 1,
+            "strokeNumber": 4,
+            "playerId": 46046
+          }
+        }
+      ],
+      "enhancedPickle": {
+        "__typename": "HolePickle",
+        "leftToRight": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_full_1_land.png",
+        "bottomToTop": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_full_1_port.png",
+        "greenLeftToRight": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_green_1_land.png",
+        "greenBottomToTop": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_green_1_port.png",
+        "leftToRightAsset": {
+          "__typename": "ImageAsset",
+          "imageOrg": "pga-tour",
+          "imagePath": "/tourcastPickle/holes_2026_r_027_513_overhead_full_1_land",
+          "assetType": "image"
+        },
+        "bottomToTopAsset": {
+          "__typename": "ImageAsset",
+          "imageOrg": "pga-tour",
+          "imagePath": "/tourcastPickle/holes_2026_r_027_513_overhead_full_1_port",
+          "assetType": "image"
+        },
+        "greenLeftToRightAsset": {
+          "__typename": "ImageAsset",
+          "imageOrg": "pga-tour",
+          "imagePath": "/tourcastPickle/holes_2026_r_027_513_overhead_green_1_land",
+          "assetType": "image"
+        },
+        "greenBottomToTopAsset": {
+          "__typename": "ImageAsset",
+          "imageOrg": "pga-tour",
+          "imagePath": "/tourcastPickle/holes_2026_r_027_513_overhead_green_1_port",
+          "assetType": "image"
+        }
+      }
+    }
+  ],
+  "defaultHolePickle": "TOURCAST_2D"
+}

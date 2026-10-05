@@ -1,0 +1,295 @@
+{
+  "source": {
+    "kind": "captured-PGA-ShotDetailsCompressedV3-field-projection",
+    "observedAt": "2026-10-03T10:56:52.644Z",
+    "note": "Real provider identity, pin and complete overview coordinate fields. Other replay/animation fields omitted; retained values unmodified."
+  },
+  "tournamentId": "R2026027",
+  "playerId": "46046",
+  "round": 1,
+  "holes": [
+    {
+      "holeNumber": 1,
+      "pinGreen": {
+        "__typename": "PointOfInterestCoords",
+        "leftToRightCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 9463.49,
+          "tourcastY": 10395.55,
+          "tourcastZ": 349.42,
+          "enhancedX": 0.44608747092074996,
+          "enhancedY": 0.6236690831626052
+        },
+        "bottomToTopCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 9463.49,
+          "tourcastY": 10395.55,
+          "tourcastZ": 349.42,
+          "enhancedX": 0.6517445301346645,
+          "enhancedY": 0.5547757484169935
+        }
+      },
+      "pinOverview": {
+        "__typename": "PointOfInterestCoords",
+        "leftToRightCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 9463.49,
+          "tourcastY": 10395.55,
+          "tourcastZ": 349.42,
+          "enhancedX": 0.7447208582849815,
+          "enhancedY": 0.4458360135832252
+        },
+        "bottomToTopCoords": {
+          "__typename": "StrokeCoordinates",
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 9463.49,
+          "tourcastY": 10395.55,
+          "tourcastZ": 349.42,
+          "enhancedX": 0.45970114643070514,
+          "enhancedY": 0.08742141521769697
+        }
+      },
+      "strokes": [
+        {
+          "strokeNumber": 1,
+          "finalStroke": false,
+          "overview": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 10119.337,
+                "tourcastY": 11413.122,
+                "tourcastZ": 349.056,
+                "enhancedX": 0.15381745487121315,
+                "enhancedY": 0.41617616214854314
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": 0.5426148767227928,
+                "enhancedY": 0.6505455973508975
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 10119.337,
+                "tourcastY": 11413.122,
+                "tourcastZ": 349.056,
+                "enhancedX": 0.4375802351855521,
+                "enhancedY": 0.774146955872521
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": 0.6123777854313716,
+                "enhancedY": 0.32230132544430534
+              }
+            }
+          }
+        },
+        {
+          "strokeNumber": 2,
+          "finalStroke": false,
+          "overview": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": 0.5426148767227928,
+                "enhancedY": 0.6505455973508975
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.7382335693473099,
+                "enhancedY": 0.40690836079819026
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9527.396,
+                "tourcastY": 10842.169,
+                "tourcastZ": 349.245,
+                "enhancedX": 0.6123777854313716,
+                "enhancedY": 0.32230132544430534
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.43066809971263265,
+                "enhancedY": 0.09496069689564779
+              }
+            }
+          }
+        },
+        {
+          "strokeNumber": 3,
+          "finalStroke": false,
+          "overview": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.7382335693473099,
+                "enhancedY": 0.40690836079819026
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.7449254469523579,
+                "enhancedY": 0.452235047768213
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9499.511,
+                "tourcastY": 10389.01,
+                "tourcastZ": 349.217,
+                "enhancedX": 0.43066809971263265,
+                "enhancedY": 0.09496069689564779
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.4644736781962063,
+                "enhancedY": 0.08718364996629724
+              }
+            }
+          }
+        },
+        {
+          "strokeNumber": 4,
+          "finalStroke": true,
+          "overview": {
+            "__typename": "ShotLinkCoordWrapper",
+            "leftToRightCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.7449254469523579,
+                "enhancedY": 0.452235047768213
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9463.49,
+                "tourcastY": 10395.55,
+                "tourcastZ": 349.42,
+                "enhancedX": 0.7447208582849815,
+                "enhancedY": 0.4458360135832252
+              }
+            },
+            "bottomToTopCoords": {
+              "__typename": "ShotLinkCoordinates",
+              "fromCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9458.493,
+                "tourcastY": 10398.129,
+                "tourcastZ": 349.47,
+                "enhancedX": 0.4644736781962063,
+                "enhancedY": 0.08718364996629724
+              },
+              "toCoords": {
+                "__typename": "StrokeCoordinates",
+                "x": -1,
+                "y": -1,
+                "z": -1,
+                "tourcastX": 9463.49,
+                "tourcastY": 10395.55,
+                "tourcastZ": 349.42,
+                "enhancedX": 0.45970114643070514,
+                "enhancedY": 0.08742141521769697
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

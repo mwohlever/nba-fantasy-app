@@ -1,0 +1,74 @@
+{
+  "source": {
+    "kind": "captured-current-provider-response",
+    "operation": "ShotDetailsCompressedV3",
+    "playerName": "Scottie Scheffler",
+    "observedAt": "2026-09-30T20:43:59.102Z",
+    "note": "Real PGA response captured during diagnosis; unmodified native coordinates, no synthetic player or geometry."
+  },
+  "hole": {
+    "tournamentId": "R2026027",
+    "pgaPlayerId": "46046",
+    "roundNumber": 1,
+    "holeNumber": 1,
+    "pin": {
+      "tourcastX": 9463.49,
+      "tourcastY": 10395.55,
+      "tourcastZ": 349.42
+    },
+    "shots": [
+      {
+        "strokeNumber": 1,
+        "from": {
+          "tourcastX": 10119.337,
+          "tourcastY": 11413.122,
+          "tourcastZ": 349.056
+        },
+        "to": {
+          "tourcastX": 9527.396,
+          "tourcastY": 10842.169,
+          "tourcastZ": 349.245
+        }
+      },
+      {
+        "strokeNumber": 2,
+        "from": {
+          "tourcastX": 9527.396,
+          "tourcastY": 10842.169,
+          "tourcastZ": 349.245
+        },
+        "to": {
+          "tourcastX": 9499.511,
+          "tourcastY": 10389.01,
+          "tourcastZ": 349.217
+        }
+      },
+      {
+        "strokeNumber": 3,
+        "from": {
+          "tourcastX": 9499.511,
+          "tourcastY": 10389.01,
+          "tourcastZ": 349.217
+        },
+        "to": {
+          "tourcastX": 9458.493,
+          "tourcastY": 10398.129,
+          "tourcastZ": 349.47
+        }
+      },
+      {
+        "strokeNumber": 4,
+        "from": {
+          "tourcastX": 9458.493,
+          "tourcastY": 10398.129,
+          "tourcastZ": 349.47
+        },
+        "to": {
+          "tourcastX": 9463.49,
+          "tourcastY": 10395.55,
+          "tourcastZ": 349.42
+        }
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import GolfShotcastVisualizationSlot from "@/components/lineups/GolfShotcastVisualizationSlot";
 const GolfHoleMap2D = dynamic(
   () =>
     import(
@@ -1238,6 +1239,21 @@ export default function GolfHoleReplayPanel({
               {isShotCastOpen ? (
                 <>
                   <GolfHoleMap2D
+                    renderCourseViewport={(fallback, active, resetRequest, viewMode, onStatic3DAvailable, replayRequest, onSelectShot) => (
+                      <GolfShotcastVisualizationSlot
+                        key={`${replay.tournamentId}/${replay.pgaPlayerId}/${replay.roundNumber}/${replay.holeNumber}`}
+                        active={active}
+                        viewMode={viewMode}
+                        onStatic3DAvailable={onStatic3DAvailable}
+                        resetRequest={resetRequest}
+                        replay={replay}
+                        selectedStrokeNumber={selectedStrokeNumber}
+                        replayRequest={replayRequest}
+                        onSelectStroke={onSelectShot}
+                      >
+                        {fallback}
+                      </GolfShotcastVisualizationSlot>
+                    )}
                     title={
                       activeShotCastConfig
                         .title

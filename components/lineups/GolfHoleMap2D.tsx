@@ -6,7 +6,25 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
+
+import type { ShotReplayRequest } from "@/lib/shotcast/shotReplay";
+
+type CourseViewportRenderer = (fallback: ReactNode, active: boolean, resetRequest: number, viewMode: "course" | "green", onStatic3DAvailable: (available: boolean, strokes?: readonly number[]) => void, replayRequest: ShotReplayRequest, onSelectShot: (stroke: number) => void) => ReactNode;
+
+function CourseViewport({ render, active, resetRequest, viewMode, onStatic3DAvailable, replayRequest, onSelectShot, children }: {
+  render?: CourseViewportRenderer;
+  active: boolean;
+  resetRequest: number;
+  viewMode: "course" | "green";
+  onStatic3DAvailable: (available: boolean, strokes?: readonly number[]) => void;
+  replayRequest: ShotReplayRequest;
+  onSelectShot: (stroke: number) => void;
+  children: ReactNode;
+}) {
+  return <>{render ? render(children, active, resetRequest, viewMode, onStatic3DAvailable, replayRequest, onSelectShot) : children}</>;
+}
 
 function GolfGreen3D(_props: Record<string, unknown>) { return null; }
 
@@ -115,6 +133,7 @@ type Props = {
   showShotOverlay?: boolean;
   imageFit?: "fill" | "contain";
   emptyStateLabel?: string;
+  renderCourseViewport?: CourseViewportRenderer;
 };
 
 type PlotPoint = {
@@ -1571,7 +1590,17 @@ export default function GolfHoleMap2D({
   showShotOverlay = true,
   imageFit = "fill",
   emptyStateLabel = "No shot data is available yet.",
+  renderCourseViewport,
 }: Props) {
+  const [viewportResetRequest, setViewportResetRequest] = useState(0);
+  const [static3DAvailable, setStatic3DAvailable] = useState(false);
+  const [replayable3DStrokes, setReplayable3DStrokes] = useState<readonly number[]>([]);
+  const [replayRequest, setReplayRequest] = useState<ShotReplayRequest>(null);
+  const nextReplayRequest = useRef(0);
+  const update3DAvailable = useCallback((available: boolean, strokes: readonly number[] = []) => {
+    setStatic3DAvailable(available);
+    setReplayable3DStrokes(previous => previous.join(",") === strokes.join(",") ? previous : strokes);
+  }, []);
   const viewportRef =
     useRef<HTMLDivElement | null>(
       null,
@@ -1986,13 +2015,14 @@ export default function GolfHoleMap2D({
       greenModelUrl,
     );
 
+  const selectionShots = static3DAvailable ? coursePlottedShots : plottedShots;
   const selectedShot =
-    plottedShots.find(
+    selectionShots.find(
       (shot) =>
         shot.strokeNumber ===
         selectedStrokeNumber,
     ) ??
-    plottedShots[0] ??
+    selectionShots[0] ??
     null;
 
   /*
@@ -2243,6 +2273,7 @@ export default function GolfHoleMap2D({
 
   const resetView =
     useCallback(() => {
+      setViewportResetRequest(request => request + 1);
       cancelShotAnimation();
       setIsPlaying(false);
       /*
@@ -3193,6 +3224,15 @@ export default function GolfHoleMap2D({
         courseShot.fromLocation,
       );
 
+    if (static3DAvailable && replayable3DStrokes.includes(strokeNumber)) {
+      // Same navigation/view semantics as 2D; only the visual replay is replaced.
+      // An event ID makes re-click replay independent of selected-state equality.
+      setViewMode(shouldUseGreen ? "green" : "course");
+      setRevealedStrokeCount(null);
+      setReplayRequest({ id: ++nextReplayRequest.current, strokeNumber });
+      return;
+    }
+
     if (shouldUseGreen) {
       setViewMode("green");
 
@@ -3475,11 +3515,12 @@ export default function GolfHoleMap2D({
               {viewMode !== "green3d" ? (
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    setViewportResetRequest(request => request + 1);
                     focusShot(
                       selectedShot,
-                    )
-                  }
+                    );
+                  }}
                   className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
                 >
                   Recenter shot
@@ -3494,7 +3535,7 @@ export default function GolfHoleMap2D({
               >
                 {isPlaying
                   ? "Playing hole…"
-                  : "▶ Play Hole"}
+                  : static3DAvailable ? "▶ Play Hole (2D)" : "▶ Play Hole"}
               </button>
             </>
           ) : null}
@@ -3564,6 +3605,7 @@ export default function GolfHoleMap2D({
               releasePointer
             }
           >
+            <CourseViewport render={renderCourseViewport} active={!isPlaying && !animatedShot} resetRequest={viewportResetRequest} viewMode={viewMode === "green" ? "green" : "course"} onStatic3DAvailable={update3DAvailable} replayRequest={replayRequest} onSelectShot={stroke => { void selectShot(stroke); }}>
             <div
               className="absolute inset-0 will-change-transform"
               style={{
@@ -4001,6 +4043,7 @@ export default function GolfHoleMap2D({
                 ) : null}
               </svg>
             </div>
+            </CourseViewport>
 
             {animatedShot ? (
               <div

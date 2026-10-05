@@ -71,6 +71,7 @@ type RawBallFlightTrajectory = {
   timeInterval?: unknown[] | null;
   validTimeInterval?: unknown[] | null;
   measuredTimeInterval?: unknown[] | null;
+  impactTime?: unknown;
 };
 
 type RawRadarData = {
@@ -217,6 +218,7 @@ type RawHole = {
    */
   tee?: RawWorldPoint | null;
   pin?: RawWorldPoint | null;
+  fairwayCenter?: RawPointOfInterestCoordinate | null;
 
   /*
    * ShotDetailsCompressedV3 supplies the authoritative pin
@@ -270,6 +272,8 @@ export type GolfShotFlightTrajectory = {
   zFit: number[];
   timeStart: number;
   timeEnd: number;
+  /** Preserve branch eligibility for the development 3D evaluator; 2D unchanged. */
+  representation?: "single-flight-no-impact-v1" | "unsupported";
 };
 
 export type GolfBallPathPoint = {
@@ -347,6 +351,8 @@ export type GolfHoleReplay = {
    * completed the hole.
    */
   pinWorld: GolfWorldPoint | null;
+  /** Native PGA radar frame orientation, independent of imagery and shot anchors. */
+  fairwayWorld?: GolfWorldPoint | null;
 
   /*
    * PGA's round-specific pin on the dedicated Green View
@@ -802,6 +808,10 @@ function flightTrajectory(
     zFit,
     timeStart,
     timeEnd,
+    representation: rows.length === 1 && row.kind?.toLowerCase() === "flight" &&
+      row.impactTime === undefined && timeStart === 0 &&
+      ["broadcast", "incoming"].includes(row.type?.toLowerCase() ?? "")
+        ? "single-flight-no-impact-v1" : "unsupported",
   };
 }
 
@@ -1473,6 +1483,11 @@ export async function fetchGolfHoleReplay(
       ),
 
     greenPin,
+
+    fairwayWorld: hole.fairwayCenter &&
+      [hole.fairwayCenter.tourcastX, hole.fairwayCenter.tourcastY, hole.fairwayCenter.tourcastZ].every(value => typeof value === "number" && Number.isFinite(value))
+        ? { x: hole.fairwayCenter.tourcastX!, y: hole.fairwayCenter.tourcastY!, z: hole.fairwayCenter.tourcastZ! }
+        : null,
 
     shotcast:
       typeof hole.enhancedPickle
