@@ -5,6 +5,7 @@ import {
   loadActiveGroupTeamIds,
 } from "@/lib/security/resourceAuthorization";
 import { validateSlateTeamConfigurations } from "@/lib/security/resourcePolicy";
+import { inspectSlateDiscard, slateDiscardArguments } from "@/lib/slates/discard.server";
 import {
   hasStaleSlateTeams,
   loadSlateParticipantState,
@@ -127,6 +128,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const safeTeams = teams ?? [];
     const safeSlateTeams = slateTeams ?? [];
     const participantState = await loadSlateParticipantState(slate);
+    const discard = await inspectSlateDiscard(authorization);
     const activeTeamIds = participantState.editable
       ? await loadActiveGroupTeamIds(authorization.target.groupId)
       : [];
@@ -169,6 +171,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       success: true,
       slate: {
         ...slate,
+        discard,
         participants_editable: participantState.editable && !hasStaleTeams,
         participant_notice: hasStaleTeams ? staleParticipantNotice : participantState.notice,
         label:
@@ -448,123 +451,41 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function DELETE(_: NextRequest, context: RouteContext) {
+/** Permanently discard an eligible abandoned NFL attempt; never ordinary history deletion. */
+export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const { slateId: slateIdParam } = await context.params;
     const slateId = Number(slateIdParam);
-
-    if (!Number.isFinite(slateId)) {
-      return NextResponse.json(
-        { error: "Invalid slate id." },
-        { status: 400 }
-      );
+    if (!Number.isSafeInteger(slateId) || slateId <= 0) {
+      return NextResponse.json({ error: "Invalid slate id." }, { status: 400 });
     }
-
     const authorization = await authorizeSlateResource(
-      _,
-      slateId,
-      { requireCommissioner: true },
+      request, slateId, { requireCommissioner: true },
     );
-
     if (!authorization.ok) return authorization.response;
-
-    const { data: lineups, error: lineupsError } = await supabaseAdmin
-      .from("lineups")
-      .select("id")
-      .eq("slate_id", slateId);
-
-    if (lineupsError) {
-      return NextResponse.json(
-        { error: `Failed to load slate lineups: ${lineupsError.message}` },
-        { status: 500 }
-      );
+    // Confirmation is explicit and slate-specific. Ownership, actor and all
+    // lifecycle/scoring facts come from authorization and the database.
+    const body = await request.json().catch(() => null);
+    if (body?.action !== "discard" || body?.confirmedSlateId !== slateId) {
+      return NextResponse.json({ error: "Explicit slate discard confirmation is required." }, { status: 400 });
     }
-
-    const lineupIds = (lineups ?? []).map((row) => row.id);
-
-    if (lineupIds.length > 0) {
-      const { error: deleteLineupPlayersError } = await supabaseAdmin
-        .from("lineup_players")
-        .delete()
-        .in("lineup_id", lineupIds);
-
-      if (deleteLineupPlayersError) {
-        return NextResponse.json(
-          { error: `Failed to delete lineup players: ${deleteLineupPlayersError.message}` },
-          { status: 500 }
-        );
-      }
-
-      const { error: deleteLineupsError } = await supabaseAdmin
-        .from("lineups")
-        .delete()
-        .eq("slate_id", slateId);
-
-      if (deleteLineupsError) {
-        return NextResponse.json(
-          { error: `Failed to delete lineups: ${deleteLineupsError.message}` },
-          { status: 500 }
-        );
-      }
+    if (authorization.target.sportKey !== "nfl") {
+      return NextResponse.json({ error: "Discard is available only for pre-game NFL slates.", code: "unsupported_sport" }, { status: 409 });
     }
-
-    const { error: deletePlayerStatsError } = await supabaseAdmin
-      .from("player_slate_stats")
-      .delete()
-      .eq("slate_id", slateId);
-
-    if (deletePlayerStatsError) {
-      return NextResponse.json(
-        { error: `Failed to delete player stats: ${deletePlayerStatsError.message}` },
-        { status: 500 }
-      );
+    const { data, error } = await supabaseAdmin.rpc(
+      "discard_abandoned_nfl_slate", slateDiscardArguments(authorization),
+    );
+    if (error || !data || typeof data.success !== "boolean") {
+      return NextResponse.json({ error: "Slate discard is unavailable. No discard was confirmed; reload Slate Admin before retrying.", code: "unavailable" }, { status: 503 });
     }
-
-    const { error: deleteTeamResultsError } = await supabaseAdmin
-      .from("team_slate_results")
-      .delete()
-      .eq("slate_id", slateId);
-
-    if (deleteTeamResultsError) {
-      return NextResponse.json(
-        { error: `Failed to delete team results: ${deleteTeamResultsError.message}` },
-        { status: 500 }
-      );
+    if (!data.success) {
+      const status = data.code === "not_found" ? 404 : data.code === "dependency_failure" ? 500 : 409;
+      return NextResponse.json({ error: data.reason, code: data.code }, { status });
     }
-
-    const { error: deleteSlateTeamsError } = await supabaseAdmin
-      .from("slate_teams")
-      .delete()
-      .eq("slate_id", slateId);
-
-    if (deleteSlateTeamsError) {
-      return NextResponse.json(
-        { error: `Failed to delete slate teams: ${deleteSlateTeamsError.message}` },
-        { status: 500 }
-      );
-    }
-
-    const { error: deleteSlateError } = await supabaseAdmin
-      .from("slates")
-      .delete()
-      .eq("id", slateId);
-
-    if (deleteSlateError) {
-      return NextResponse.json(
-        { error: `Failed to delete slate: ${deleteSlateError.message}` },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "Slate deleted successfully.",
-    });
+    return NextResponse.json({ success: true, slateId, notificationsDetached: data.notificationsDetached,
+      message: "Slate discarded. You can now recreate this NFL week." });
   } catch (error) {
     console.error(error);
-    return NextResponse.json(
-      { error: "Unexpected server error while deleting slate." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Unexpected server error while discarding slate. Reload Slate Admin before retrying." }, { status: 500 });
   }
 }

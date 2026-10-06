@@ -4,10 +4,10 @@ const path = require('node:path');
 const { createRequire } = require('node:module');
 const ts = require('typescript');
 const root = path.resolve(__dirname, '../..');
-module.exports = function slateAdminBrowserBundle() {
+module.exports = function slateAdminBrowserBundle({ includeCreation = false } = {}) {
   const sources = {}, maps = {};
   const special = {
-    'next/navigation': `const router={replace:()=>{},push:()=>{}};exports.useRouter=()=>router;`,
+    'next/navigation': `const router={replace:()=>{},push:url=>{window.fixtureNavigation=url;},refresh:()=>{}};exports.useRouter=()=>router;exports.useSearchParams=()=>new URLSearchParams(window.location.search);`,
     'next/link': `const React=require('react');exports.__esModule=true;exports.default=props=>React.createElement('a',props);`,
     '@/components/AppNav': `exports.__esModule=true;exports.default=()=>null;`,
     '@/components/providers/SportProvider': `exports.useSelectedSport=()=>({selectedSport:window.fixtureSport});`,
@@ -32,13 +32,15 @@ module.exports = function slateAdminBrowserBundle() {
   }
   try {
     const page = add(path.join(root, 'app/admin/slates/page.tsx'));
+    const creation = includeCreation ? add(path.join(root, 'app/slates/new/page.tsx')) : null;
     const react = add(require.resolve('react')), client = add(require.resolve('react-dom/client'));
     return `const process={env:{NODE_ENV:'production'}};const global=globalThis;
       const sources=${JSON.stringify(sources)},maps=${JSON.stringify(maps)},cache={};
       function load(id){if(cache[id])return cache[id].exports;const m=cache[id]={exports:{}};
         new Function('require','module','exports',sources[id])(r=>load(maps[id][r]),m,m.exports);return m.exports;}
       window.React=load(${JSON.stringify(react)});window.ReactDOMClient=load(${JSON.stringify(client)});
-      window.SlateAdmin=load(${JSON.stringify(page)}).default;`;
+      window.SlateAdmin=load(${JSON.stringify(page)}).default;
+      ${creation ? `window.CreateSlate=load(${JSON.stringify(creation)}).default;` : ''}`;
   } finally {
     if (oldTs) require.extensions['.ts'] = oldTs; else delete require.extensions['.ts'];
     if (oldTsx) require.extensions['.tsx'] = oldTsx; else delete require.extensions['.tsx'];

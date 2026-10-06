@@ -4,7 +4,7 @@ const path = require('node:path');
 const ts = require('typescript');
 const root = path.resolve(__dirname, '../..');
 
-function createSlateAdminFixture({ sport = 'nfl', frozen = false, historical = false, stale = false, newMember = false } = {}) {
+function createSlateAdminFixture({ sport = 'nfl', frozen = false, historical = false, stale = false, newMember = false, commissioner = true, user = { id: 'commissioner', systemRole: 'user' }, nflWeek = 6 } = {}) {
   const memberships = [1, 2, 3, 4].map(id => ({ group_id: '111', user_id: `u${id}`, is_active: true }));
   memberships.push({ group_id: '111', user_id: 'u5', is_active: false }, { group_id: 'other', user_id: 'u5', is_active: true });
   if (newMember) memberships.push({ group_id: '111', user_id: 'u6', is_active: true });
@@ -22,13 +22,15 @@ function createSlateAdminFixture({ sport = 'nfl', frozen = false, historical = f
     fantasy_drafts: frozen ? [{ slate_id: 191, participant_ids: [2, 4, 1] }] : [],
     draft_picks: frozen ? [{ slate_id: 191, team_id: 2, overall_pick: 1 }] : [],
     draft_corrections: [], lineups: [], lineup_players: [], golf_event_players: [],
+    player_slate_stats: [], player_nfl_slate_stats: [], nfl_sync_state: [], notification_history: [],
     golf_salary_cap_lineups: [], golf_snake_period_lineups: [], roster_slots: [], slate_nba_games: [],
   };
   tables.teams.push({ id: 11, name: 'Other Group YMCA', group_id: 'other', user_id: 'u5' });
   tables.slate_teams.push({ slate_id: 300, team_id: 11, draft_order: 1, is_participating: true });
   if (newMember) tables.teams.push({ id: 6, name: 'New Member', group_id: '111', user_id: 'u6' });
   if (stale || historical) tables.slate_teams.push({ slate_id: 191, team_id: 5, draft_order: 5, is_participating: historical });
-  const writes = [], reads = [], errors = {};
+  const writes = [], reads = [], errors = {}, rpcCalls = [], rpcErrors = {};
+  let discardResult;
   const db = { from(table) {
     if (!(table in tables)) throw new Error(`Unexpected table ${table}`);
     const filters = [], orders = [];
@@ -70,20 +72,50 @@ function createSlateAdminFixture({ sport = 'nfl', frozen = false, historical = f
       },
     }; return q;
   } };
+  // Browser/API fixture only; real permissions, atomicity and concurrency are
+  // tested separately against the actual migrations in isolated PostgreSQL.
+  db.rpc = async (name, args) => {
+    rpcCalls.push({ name, args });
+    if (rpcErrors[name]) return { data: null, error: rpcErrors[name] };
+    const slate = tables.slates.find(s => s.id === args.p_slate_id);
+    let code = !slate ? 'not_found' : slate.sport !== 'nfl' ? 'unsupported_sport'
+      : slate.is_locked ? 'locked' : !slate.start_date || slate.start_date < '2099-01-01' ? 'not_pre_game'
+      : ['team_slate_results', 'player_slate_stats', 'player_nfl_slate_stats'].some(t => tables[t].some(r => r.slate_id === slate.id)) ? 'scoring_exists'
+      : tables.nfl_sync_state.some(r => r.slate_id === slate.id) ? 'scoring_activity' : 'eligible';
+    const reason = code === 'eligible' ? null : `Discard rejected: ${code}`;
+    if (name === 'inspect_nfl_slate_discard') return { data: { eligible: code === 'eligible', code, reason }, error: null };
+    if (name !== 'discard_abandoned_nfl_slate') throw new Error(`Unexpected RPC ${name}`);
+    if (discardResult) return { data: discardResult, error: null };
+    if (code !== 'eligible') return { data: { success: false, code, reason }, error: null };
+    const ids = tables.lineups.filter(l => l.slate_id === slate.id).map(l => l.id);
+    tables.lineup_players = tables.lineup_players.filter(p => !ids.includes(p.lineup_id));
+    for (const table of ['draft_corrections', 'draft_picks', 'lineups', 'fantasy_drafts', 'slate_teams']) {
+      tables[table] = tables[table].filter(row => row.slate_id !== slate.id);
+    }
+    let notificationsDetached = 0;
+    tables.notification_history.filter(n => n.slate_id === slate.id).forEach(n => {
+      n.slate_id = null; n.metadata = { ...n.metadata, discardedSlate: { id: slate.id } }; notificationsDetached++;
+    });
+    tables.slates = tables.slates.filter(s => s.id !== slate.id);
+    return { data: { success: true, code: 'discarded', notificationsDetached }, error: null };
+  };
   let groupId = '111';
-  const context = () => ({ group: { id: groupId }, canAdministerGroup: true, leagues: [{ id: `${sport}-${groupId}`, isEnabled: true }] });
+  const context = () => ({ group: { id: groupId }, canAdministerGroup: commissioner, leagues: [{ id: `${sport}-${groupId}`, isEnabled: true }] });
   const mocks = {
+    'server-only': {},
     'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
     '@/lib/supabaseAdmin': { supabaseAdmin: db },
-    '@/lib/auth': { getCurrentUser: async () => ({ id: 'commissioner', systemRole: 'user' }) },
+    '@/lib/auth': { getCurrentUser: async () => user },
     '@/lib/groups/context': {
       getGroupContextForUser: async () => context(),
       getActiveLeagueForSport: async () => ({ context: context(), league: { id: `${sport}-${groupId}`, settings: {}, settingsVersion: 1 } }),
     },
     '@/lib/requireAdminApi': { requireAdminApi: async () => null },
     '@/lib/providers/nflWeeks': {
-      fetchNflWeek: async () => ({ name: '2099 Week 6', startDate: '2099-10-15', endDate: '2099-10-19' }),
-      validateNflWeekDates: () => true, isDuplicateNflWeek: () => false,
+      fetchNflWeek: async () => ({ name: `2099 Week ${nflWeek}`, startDate: nflWeek === 5 ? '2099-10-08' : '2099-10-15', endDate: nflWeek === 5 ? '2099-10-12' : '2099-10-19' }),
+      fetchNflWeekSelection: async () => ({ season: 2099, week: nflWeek, name: `2099 Week ${nflWeek}`, startDate: nflWeek === 5 ? '2099-10-08' : '2099-10-15', endDate: nflWeek === 5 ? '2099-10-12' : '2099-10-19', gameCount: 15, weeks: [{ value: nflWeek, label: `Week ${nflWeek}` }] }),
+      validateNflWeekDates: () => true,
+      isDuplicateNflWeek: (slate, leagueId, week) => load('lib/providers/nflWeeks.ts').isDuplicateNflWeek(slate, leagueId, week),
     },
   };
   const cache = {};
@@ -102,10 +134,13 @@ function createSlateAdminFixture({ sport = 'nfl', frozen = false, historical = f
     return exports;
   }
   return {
-    tables, writes, reads, errors, load, switchGroup: id => { groupId = id; },
+    db, tables, writes, reads, errors, rpcCalls, rpcErrors, load,
+    setDiscardResult: result => { discardResult = result; }, switchGroup: id => { groupId = id; },
     route: load('app/api/admin/slates/[slateId]/route.ts'),
+    list: load('app/api/admin/slates/route.ts'),
     reseed: load('app/api/admin/slates/[slateId]/reseed/route.ts'),
     creation: load('app/api/slates/route.ts'),
+    week: load('app/api/slates/nfl-week/route.ts'),
     context: id => ({ params: Promise.resolve({ slateId: String(id ?? 191) }) }),
     request: body => ({ json: async () => body }),
   };

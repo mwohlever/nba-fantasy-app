@@ -44,6 +44,7 @@ type SlateListRow = {
   nba_team_abbreviations?: string[] | null;
   participants_editable?: boolean;
   participant_notice?: string | null;
+  discard?: { eligible: boolean; code: string; reason: string | null };
 };
 
 type SlateTeamRow = {
@@ -218,6 +219,7 @@ export default function AdminSlatesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isReseeding, setIsReseeding] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [isDiscarding, setIsDiscarding] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [isRefreshingGolfField, setIsRefreshingGolfField] =
     useState(false);
@@ -241,6 +243,7 @@ export default function AdminSlatesPage() {
     isSaving ||
     isReseeding ||
     isArchiving ||
+    isDiscarding ||
     isRefreshingGolfField ||
     isImportingGolfField ||
     isSyncingGolfRankings ||
@@ -914,6 +917,39 @@ export default function AdminSlatesPage() {
       setMessage("Something went wrong while updating slate archive state.");
     } finally {
       setIsArchiving(false);
+    }
+  }
+
+  async function handleDiscard() {
+    if (!selectedSlateId || !selectedSlate?.discard?.eligible || isBusy) return;
+    const slateId = Number(selectedSlateId);
+    const label = selectedSlate.label;
+    if (!window.confirm(`Discard ${label}?\n\nThis permanently removes this slate and its draft so it can be recreated. This cannot be undone.`)) return;
+    try {
+      setIsDiscarding(true);
+      setMessage("");
+      const response = await fetch(`/api/admin/slates/${slateId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "discard", confirmedSlateId: slateId }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        await loadSlateDetail(slateId);
+        setMessage(result.error || "Slate could not be discarded.");
+        return;
+      }
+      ++detailRequestRef.current;
+      setSelectedSlateId("");
+      setSelectedSlate(null);
+      setTeams([]);
+      await loadSlates();
+      setMessage(result.message || "Slate discarded. You can now recreate this NFL week.");
+    } catch (error) {
+      console.error(error);
+      setMessage("Discard could not be confirmed. Reload Slate Admin before retrying.");
+    } finally {
+      setIsDiscarding(false);
     }
   }
 
@@ -1661,6 +1697,18 @@ export default function AdminSlatesPage() {
                       ? "Restore Slate"
                       : "Archive Slate"}
                 </button>
+
+                {selectedSlate.sport === "nfl" && selectedSlate.discard?.eligible ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleDiscard()}
+                    disabled={isBusy}
+                    title="Permanently remove this abandoned pre-game slate and its draft."
+                    className="rounded-xl border border-red-500 bg-red-950 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-900 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isDiscarding ? "Discarding..." : "Discard Slate"}
+                  </button>
+                ) : null}
 
                 {selectedSlate.sport === "golf" &&
                 golfAdminTab === "tournament" ? (
