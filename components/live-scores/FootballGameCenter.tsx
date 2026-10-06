@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import FantasyOwnerLabel from "./FantasyOwnerLabel";
 import FootballPlayByPlay from "./FootballPlayByPlay";
+import type { FootballLogoPlay } from "@/lib/live-scores/playTeamLogo";
 import { nflAthleteId, type NflOwnership } from "@/lib/live-scores/nflOwnership";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import type { LiveScoreGame } from "./LiveScoreCard";
@@ -34,22 +35,7 @@ type EspnCompetitor = {
   record?: EspnRecord[];
 };
 
-type EspnPlay = {
-  id?: string;
-  text?: string;
-  awayScore?: number;
-  homeScore?: number;
-  scoringPlay?: boolean;
-  period?: {
-    number?: number;
-  };
-  clock?: {
-    displayValue?: string;
-  };
-  start?: {
-    shortDownDistanceText?: string;
-  };
-};
+type EspnPlay = FootballLogoPlay;
 
 type EspnDrive = {
   id?: string;
@@ -1324,7 +1310,7 @@ export default function FootballGameCenter({
             <div className="px-4 pb-4 pt-4">
               <div className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Play-by-Play</div>
               {selectedQuarter ? <span className="sr-only">{quarterLabel(selectedQuarter)}</span> : null}
-              <FootballPlayByPlay presentation={presentation} period={period} onPeriodChange={onPeriodChange} drives={drives} isLive={isLive} initialPeriod={selectedQuarter} offenseNames={Object.fromEntries(competitors.map((competitor) => [String(competitor.team?.id ?? competitor.id ?? ""), competitor.team?.abbreviation || competitor.team?.shortDisplayName || "OFF"]))} homeTeam={footballHomeTeam} awayTeam={footballAwayTeam} />
+              <FootballPlayByPlay presentation={presentation} period={period} onPeriodChange={onPeriodChange} teams={[game.awayTeam, game.homeTeam]} drives={drives} isLive={isLive} initialPeriod={selectedQuarter} offenseNames={Object.fromEntries(competitors.map((competitor) => [String(competitor.team?.id ?? competitor.id ?? ""), competitor.team?.abbreviation || competitor.team?.shortDisplayName || "OFF"]))} homeTeam={footballHomeTeam} awayTeam={footballAwayTeam} />
             </div>
           ) : tab === "summary" ? (
             <div className="space-y-5 p-4">

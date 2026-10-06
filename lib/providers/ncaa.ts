@@ -174,9 +174,12 @@ function competitorLogo(
       ? competitor.team.logos
       : [];
 
+  // Summary teams expose logos[]; scoreboard teams expose the singular logo.
   return typeof logos[0]?.href === "string"
     ? logos[0].href
-    : null;
+    : typeof competitor?.team?.logo === "string"
+      ? competitor.team.logo
+      : null;
 }
 
 function mapTeam(

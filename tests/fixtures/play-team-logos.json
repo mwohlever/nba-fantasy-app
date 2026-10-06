@@ -1,0 +1,1737 @@
+{
+  "nfl": {
+    "source": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772731",
+    "header": {
+      "id": "401772731",
+      "season": {
+        "year": 2025,
+        "current": false,
+        "type": 2
+      },
+      "competitions": [
+        {
+          "id": "401772731",
+          "date": "2025-09-21T17:00Z",
+          "status": {
+            "type": {
+              "id": "3",
+              "name": "STATUS_FINAL",
+              "state": "post",
+              "completed": true,
+              "description": "Final",
+              "detail": "Final",
+              "shortDetail": "Final"
+            },
+            "isTBDFlex": false
+          },
+          "competitors": [
+            {
+              "id": "16",
+              "homeAway": "home",
+              "score": "48",
+              "team": {
+                "id": "16",
+                "abbreviation": "MIN",
+                "displayName": "Minnesota Vikings",
+                "logos": [
+                  {
+                    "href": "https://a.espncdn.com/i/teamlogos/nfl/500/min.png",
+                    "width": 500,
+                    "height": 500,
+                    "alt": "",
+                    "rel": [
+                      "full",
+                      "default"
+                    ],
+                    "lastUpdated": "2023-08-24T19:26Z"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "4",
+              "homeAway": "away",
+              "score": "10",
+              "team": {
+                "id": "4",
+                "abbreviation": "CIN",
+                "displayName": "Cincinnati Bengals",
+                "logos": [
+                  {
+                    "href": "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png",
+                    "width": 500,
+                    "height": 500,
+                    "alt": "",
+                    "rel": [
+                      "full",
+                      "default"
+                    ],
+                    "lastUpdated": "2024-06-25T18:46Z"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "drives": {
+      "previous": [
+        {
+          "id": "4017727311",
+          "team": {
+            "id": "16"
+          },
+          "plays": [
+            {"id":"40177273140","sequenceNumber":"4000","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"E.McPherson kicks 57 yards from CIN 35 to MIN 8. M.Price to MIN 36 for 28 yards (M.Wilson).","period":{"number":1},"clock":{"displayValue":"15:00"},"start":{"down":0,"distance":0,"yardLine":65,"yardsToEndzone":65,"team":{"id":"4"}},"end":{"down":1,"distance":10,"yardLine":36,"yardsToEndzone":64,"downDistanceText":"1st & 10 at MIN 36","shortDownDistanceText":"1st & 10","possessionText":"MIN 36","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":28,"awayScore":0,"homeScore":0},
+            {"id":"40177273163","sequenceNumber":"6300","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"J.Mason left end pushed ob at MIN 46 for 10 yards (J.Newton).PENALTY on CIN-D.Knight, Defensive Holding, 5 yards, enforced at MIN 46.Penalty on CIN-B.Hill, Illegal Use of Hands, declined.","period":{"number":1},"clock":{"displayValue":"14:55"},"start":{"down":1,"distance":10,"yardLine":36,"yardsToEndzone":64,"downDistanceText":"1st & 10 at MIN 36","shortDownDistanceText":"1st & 10","possessionText":"MIN 36","team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":51,"yardsToEndzone":49,"downDistanceText":"1st & 10 at CIN 49","shortDownDistanceText":"1st & 10","possessionText":"CIN 49","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":true,"statYardage":10,"awayScore":0,"homeScore":0},
+            {"id":"40177273196","sequenceNumber":"9600","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"(Shotgun) C.Wentz pass short right to J.Jefferson to CIN 48 for 1 yard (D.Hill).PENALTY on CIN-D.Hill, Low Block, 15 yards, enforced at CIN 48.","period":{"number":1},"clock":{"displayValue":"14:41"},"start":{"down":1,"distance":10,"yardLine":51,"yardsToEndzone":49,"downDistanceText":"1st & 10 at CIN 49","shortDownDistanceText":"1st & 10","possessionText":"CIN 49","team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":67,"yardsToEndzone":33,"downDistanceText":"1st & 10 at CIN 33","shortDownDistanceText":"1st & 10","possessionText":"CIN 33","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":true,"statYardage":1,"awayScore":0,"homeScore":0},
+            {"id":"401772731137","sequenceNumber":"13700","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"C.Wentz pass short middle to J.Jefferson to CIN 17 for 16 yards (G.Stone).","period":{"number":1},"clock":{"displayValue":"14:25"},"start":{"down":1,"distance":10,"yardLine":67,"yardsToEndzone":33,"downDistanceText":"1st & 10 at CIN 33","shortDownDistanceText":"1st & 10","possessionText":"CIN 33","team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":83,"yardsToEndzone":17,"downDistanceText":"1st & 10 at CIN 17","shortDownDistanceText":"1st & 10","possessionText":"CIN 17","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":16,"awayScore":0,"homeScore":0},
+            {"id":"401772731162","sequenceNumber":"16200","type":{"id":"3","text":"Pass Incompletion"},"text":"C.Wentz pass incomplete deep left to A.Thielen.","period":{"number":1},"clock":{"displayValue":"13:43"},"start":{"down":1,"distance":10,"yardLine":83,"yardsToEndzone":17,"downDistanceText":"1st & 10 at CIN 17","shortDownDistanceText":"1st & 10","possessionText":"CIN 17","team":{"id":"16"}},"end":{"down":2,"distance":10,"yardLine":83,"yardsToEndzone":17,"downDistanceText":"2nd & 10 at CIN 17","shortDownDistanceText":"2nd & 10","possessionText":"CIN 17","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":0},
+            {"id":"401772731197","sequenceNumber":"19700","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"(Shotgun) J.Mason right tackle to CIN 12 for 5 yards (K.Jenkins).","period":{"number":1},"clock":{"displayValue":"13:36"},"start":{"down":2,"distance":10,"yardLine":83,"yardsToEndzone":17,"downDistanceText":"2nd & 10 at CIN 17","shortDownDistanceText":"2nd & 10","possessionText":"CIN 17","team":{"id":"16"}},"end":{"down":3,"distance":5,"yardLine":88,"yardsToEndzone":12,"downDistanceText":"3rd & 5 at CIN 12","shortDownDistanceText":"3rd & 5","possessionText":"CIN 12","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":5,"awayScore":0,"homeScore":0},
+            {"id":"401772731219","sequenceNumber":"21900","type":{"id":"67","text":"Passing Touchdown","abbreviation":"TD"},"text":"(Shotgun) C.Wentz pass short right to J.Oliver for 12 yards, TOUCHDOWN. W.Reichard extra point is GOOD, Center-A.DePaola, Holder-R.Wright.","period":{"number":1},"clock":{"displayValue":"12:57"},"start":{"down":3,"distance":5,"yardLine":88,"yardsToEndzone":12,"downDistanceText":"3rd & 5 at CIN 12","shortDownDistanceText":"3rd & 5","possessionText":"CIN 12","team":{"id":"16"}},"end":{"down":-1,"distance":10,"yardLine":100,"yardsToEndzone":0,"team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":true,"scoringType":{"name":"touchdown","displayName":"Touchdown","abbreviation":"TD"},"pointAfterAttempt":{"id":61,"text":"Extra Point Good","abbreviation":"Extra Point Good","value":1},"isTurnover":false,"isPenalty":false,"statYardage":12,"awayScore":0,"homeScore":7},
+            {"id":"401772731253","sequenceNumber":"25300","type":{"id":"74","text":"Official Timeout","abbreviation":"Off TO"},"text":"Official Timeout at 12:57.","period":{"number":1},"clock":{"displayValue":"12:57"},"start":{"down":-1,"distance":0,"yardLine":85,"yardsToEndzone":0,"downDistanceText":" & Goal at CIN 15","shortDownDistanceText":" & Goal","possessionText":"CIN 15","team":{"id":"16"}},"end":{"down":-1,"distance":0,"yardLine":85,"yardsToEndzone":0,"team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":7}
+          ]
+        },
+        {
+          "id": "4017727312",
+          "team": {
+            "id": "4"
+          },
+          "plays": [
+            {"id":"401772731260","sequenceNumber":"26000","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"W.Reichard kicks 52 yards from MIN 35 to CIN 13. S.Perine to CIN 29 for 16 yards (J.Okudah).","period":{"number":1},"clock":{"displayValue":"12:57"},"start":{"down":0,"distance":0,"yardLine":35,"yardsToEndzone":65,"team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":71,"yardsToEndzone":71,"downDistanceText":"1st & 10 at CIN 29","shortDownDistanceText":"1st & 10","possessionText":"CIN 29","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":16,"awayScore":0,"homeScore":7},
+            {"id":"401772731290","sequenceNumber":"29000","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"C.Brown right end to CIN 28 for -1 yards (J.Greenard).","period":{"number":1},"clock":{"displayValue":"12:53"},"start":{"down":1,"distance":10,"yardLine":71,"yardsToEndzone":71,"downDistanceText":"1st & 10 at CIN 29","shortDownDistanceText":"1st & 10","possessionText":"CIN 29","team":{"id":"4"}},"end":{"down":2,"distance":11,"yardLine":72,"yardsToEndzone":72,"downDistanceText":"2nd & 11 at CIN 28","shortDownDistanceText":"2nd & 11","possessionText":"CIN 28","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":-1,"awayScore":0,"homeScore":7},
+            {"id":"401772731312","sequenceNumber":"31200","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"(Shotgun) J.Browning pass short left to J.Chase pushed ob at CIN 29 for 1 yard (B.Murphy).","period":{"number":1},"clock":{"displayValue":"12:17"},"start":{"down":2,"distance":11,"yardLine":72,"yardsToEndzone":72,"downDistanceText":"2nd & 11 at CIN 28","shortDownDistanceText":"2nd & 11","possessionText":"CIN 28","team":{"id":"4"}},"end":{"down":3,"distance":10,"yardLine":71,"yardsToEndzone":71,"downDistanceText":"3rd & 10 at CIN 29","shortDownDistanceText":"3rd & 10","possessionText":"CIN 29","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":1,"awayScore":0,"homeScore":7},
+            {"id":"401772731342","sequenceNumber":"34200","type":{"id":"3","text":"Pass Incompletion"},"text":"(Shotgun) J.Browning pass incomplete short right to J.Chase (B.Murphy).","period":{"number":1},"clock":{"displayValue":"11:32"},"start":{"down":3,"distance":10,"yardLine":71,"yardsToEndzone":71,"downDistanceText":"3rd & 10 at CIN 29","shortDownDistanceText":"3rd & 10","possessionText":"CIN 29","team":{"id":"4"}},"end":{"down":4,"distance":10,"yardLine":71,"yardsToEndzone":71,"downDistanceText":"4th & 10 at CIN 29","shortDownDistanceText":"4th & 10","possessionText":"CIN 29","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":7},
+            {"id":"401772731365","sequenceNumber":"36500","type":{"id":"52","text":"Punt","abbreviation":"PUNT"},"text":"R.Rehkow punts 51 yards to MIN 20, Center-W.Wagner. M.Price to MIN 26 for 6 yards (D.Ivey; B.Carter).","period":{"number":1},"clock":{"displayValue":"11:28"},"start":{"down":4,"distance":10,"yardLine":71,"yardsToEndzone":71,"downDistanceText":"4th & 10 at CIN 29","shortDownDistanceText":"4th & 10","possessionText":"CIN 29","team":{"id":"4"}},"end":{"down":1,"distance":10,"yardLine":26,"yardsToEndzone":74,"downDistanceText":"1st & 10 at MIN 26","shortDownDistanceText":"1st & 10","possessionText":"MIN 26","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"defense","order":1},{"id":"4","type":"offense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":6,"awayScore":0,"homeScore":7},
+            {"id":"401772731378","sequenceNumber":"37800","type":{"id":"74","text":"Official Timeout","abbreviation":"Off TO"},"text":"Official Timeout at 11:16.","period":{"number":1},"clock":{"displayValue":"11:16"},"start":{"down":1,"distance":10,"yardLine":26,"yardsToEndzone":0,"downDistanceText":"1st & 10 at MIN 26","shortDownDistanceText":"1st & 10","possessionText":"MIN 26","team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":26,"yardsToEndzone":74,"downDistanceText":"1st & 10 at MIN 26","shortDownDistanceText":"1st & 10","possessionText":"MIN 26","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":7}
+          ]
+        },
+        {
+          "id": "4017727313",
+          "team": {
+            "id": "16"
+          },
+          "plays": [
+            {"id":"401772731391","sequenceNumber":"39100","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"J.Mason left tackle to MIN 29 for 3 yards (T.Slaton; K.Jenkins).","period":{"number":1},"clock":{"displayValue":"11:16"},"start":{"down":1,"distance":10,"yardLine":26,"yardsToEndzone":74,"downDistanceText":"1st & 10 at MIN 26","shortDownDistanceText":"1st & 10","possessionText":"MIN 26","team":{"id":"16"}},"end":{"down":2,"distance":7,"yardLine":29,"yardsToEndzone":71,"downDistanceText":"2nd & 7 at MIN 29","shortDownDistanceText":"2nd & 7","possessionText":"MIN 29","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":3,"awayScore":0,"homeScore":7},
+            {"id":"401772731425","sequenceNumber":"42500","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"(Shotgun) J.Mason left tackle to MIN 32 for 3 yards (B.Hill).","period":{"number":1},"clock":{"displayValue":"10:39"},"start":{"down":2,"distance":7,"yardLine":29,"yardsToEndzone":71,"downDistanceText":"2nd & 7 at MIN 29","shortDownDistanceText":"2nd & 7","possessionText":"MIN 29","team":{"id":"16"}},"end":{"down":3,"distance":4,"yardLine":32,"yardsToEndzone":68,"downDistanceText":"3rd & 4 at MIN 32","shortDownDistanceText":"3rd & 4","possessionText":"MIN 32","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":3,"awayScore":0,"homeScore":7},
+            {"id":"401772731447","sequenceNumber":"44700","type":{"id":"8","text":"Penalty","abbreviation":"PEN"},"text":"(Shotgun) PENALTY on MIN-C.Darrisaw, False Start, 5 yards, enforced at MIN 32 - No Play.","period":{"number":1},"clock":{"displayValue":"10:02"},"start":{"down":3,"distance":4,"yardLine":32,"yardsToEndzone":68,"downDistanceText":"3rd & 4 at MIN 32","shortDownDistanceText":"3rd & 4","possessionText":"MIN 32","team":{"id":"16"}},"end":{"down":3,"distance":9,"yardLine":27,"yardsToEndzone":73,"downDistanceText":"3rd & 9 at MIN 27","shortDownDistanceText":"3rd & 9","possessionText":"MIN 27","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":true,"statYardage":-5,"awayScore":0,"homeScore":7},
+            {"id":"401772731471","sequenceNumber":"47100","type":{"id":"7","text":"Sack"},"text":"(Shotgun) C.Wentz sacked at MIN 17 for -10 yards (sack split by K.Jenkins and M.Murphy).","period":{"number":1},"clock":{"displayValue":"9:45"},"start":{"down":3,"distance":9,"yardLine":27,"yardsToEndzone":73,"downDistanceText":"3rd & 9 at MIN 27","shortDownDistanceText":"3rd & 9","possessionText":"MIN 27","team":{"id":"16"}},"end":{"down":4,"distance":19,"yardLine":17,"yardsToEndzone":83,"downDistanceText":"4th & 19 at MIN 17","shortDownDistanceText":"4th & 19","possessionText":"MIN 17","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":-10,"awayScore":0,"homeScore":7},
+            {"id":"401772731491","sequenceNumber":"49100","type":{"id":"52","text":"Punt","abbreviation":"PUNT"},"text":"R.Wright punts 44 yards to CIN 39, Center-A.DePaola. C.Jones pushed ob at CIN 48 for 9 yards (B.Yurosek).","period":{"number":1},"clock":{"displayValue":"9:02"},"start":{"down":4,"distance":19,"yardLine":17,"yardsToEndzone":17,"downDistanceText":"4th & 19 at MIN 17","shortDownDistanceText":"4th & 19","possessionText":"MIN 17","team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":52,"yardsToEndzone":52,"downDistanceText":"1st & 10 at CIN 48","shortDownDistanceText":"1st & 10","possessionText":"CIN 48","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"defense","order":1},{"id":"16","type":"offense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":9,"awayScore":0,"homeScore":7},
+            {"id":"401772731509","sequenceNumber":"50900","type":{"id":"74","text":"Official Timeout","abbreviation":"Off TO"},"text":"Official Timeout at 08:49.","period":{"number":1},"clock":{"displayValue":"8:49"},"start":{"down":1,"distance":10,"yardLine":52,"yardsToEndzone":0,"downDistanceText":"1st & 10 at CIN 48","shortDownDistanceText":"1st & 10","possessionText":"CIN 48","team":{"id":"4"}},"end":{"down":1,"distance":10,"yardLine":52,"yardsToEndzone":52,"downDistanceText":"1st & 10 at CIN 48","shortDownDistanceText":"1st & 10","possessionText":"CIN 48","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":7}
+          ]
+        },
+        {
+          "id": "4017727314",
+          "team": {
+            "id": "4"
+          },
+          "plays": [
+            {"id":"401772731527","sequenceNumber":"52700","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"J.Chase left end to MIN 43 for 9 yards (J.Metellus).","period":{"number":1},"clock":{"displayValue":"8:49"},"start":{"down":1,"distance":10,"yardLine":52,"yardsToEndzone":52,"downDistanceText":"1st & 10 at CIN 48","shortDownDistanceText":"1st & 10","possessionText":"CIN 48","team":{"id":"4"}},"end":{"down":2,"distance":1,"yardLine":43,"yardsToEndzone":43,"downDistanceText":"2nd & 1 at MIN 43","shortDownDistanceText":"2nd & 1","possessionText":"MIN 43","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":9,"awayScore":0,"homeScore":7},
+            {"id":"401772731556","sequenceNumber":"55600","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"J.Browning up the middle to MIN 40 for 3 yards (I.Pace).","period":{"number":1},"clock":{"displayValue":"8:18"},"start":{"down":2,"distance":1,"yardLine":43,"yardsToEndzone":43,"downDistanceText":"2nd & 1 at MIN 43","shortDownDistanceText":"2nd & 1","possessionText":"MIN 43","team":{"id":"4"}},"end":{"down":1,"distance":10,"yardLine":40,"yardsToEndzone":40,"downDistanceText":"1st & 10 at MIN 40","shortDownDistanceText":"1st & 10","possessionText":"MIN 40","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":3,"awayScore":0,"homeScore":7},
+            {"id":"401772731578","sequenceNumber":"57800","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"J.Browning pass short left to N.Fant to MIN 30 for 10 yards (J.Metellus).","period":{"number":1},"clock":{"displayValue":"7:44"},"start":{"down":1,"distance":10,"yardLine":40,"yardsToEndzone":40,"downDistanceText":"1st & 10 at MIN 40","shortDownDistanceText":"1st & 10","possessionText":"MIN 40","team":{"id":"4"}},"end":{"down":1,"distance":10,"yardLine":30,"yardsToEndzone":30,"downDistanceText":"1st & 10 at MIN 30","shortDownDistanceText":"1st & 10","possessionText":"MIN 30","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":10,"awayScore":0,"homeScore":7},
+            {"id":"401772731603","sequenceNumber":"60300","type":{"id":"9","text":"Fumble Recovery (Own)"},"text":"C.Brown right guard to MIN 29 for 1 yard (E.Wilson). FUMBLES (E.Wilson), and recovers at MIN 29.","period":{"number":1},"clock":{"displayValue":"7:08"},"start":{"down":1,"distance":10,"yardLine":30,"yardsToEndzone":30,"downDistanceText":"1st & 10 at MIN 30","shortDownDistanceText":"1st & 10","possessionText":"MIN 30","team":{"id":"4"}},"end":{"down":2,"distance":9,"yardLine":29,"yardsToEndzone":29,"downDistanceText":"2nd & 9 at MIN 29","shortDownDistanceText":"2nd & 9","possessionText":"MIN 29","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":1,"awayScore":0,"homeScore":7},
+            {"id":"401772731641","sequenceNumber":"64100","type":{"id":"36","text":"Interception Return Touchdown","abbreviation":"TD"},"text":"(Shotgun) J.Browning pass deep right intended for C.Brown INTERCEPTED by I.Rodgers (H.Smith) [I.Pace] at MIN 13. I.Rodgers for 87 yards, TOUCHDOWN. W.Reichard extra point is GOOD, Center-A.DePaola, Holder-R.Wright.","period":{"number":1},"clock":{"displayValue":"6:08"},"start":{"down":2,"distance":9,"yardLine":29,"yardsToEndzone":29,"downDistanceText":"2nd & 9 at MIN 29","shortDownDistanceText":"2nd & 9","possessionText":"MIN 29","team":{"id":"4"}},"end":{"down":-1,"distance":10,"yardLine":100,"yardsToEndzone":0,"team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"defense","order":1},{"id":"4","type":"offense","order":2}],"scoringPlay":true,"scoringType":{"name":"touchdown","displayName":"Touchdown","abbreviation":"TD"},"pointAfterAttempt":{"id":61,"text":"Extra Point Good","abbreviation":"Extra Point Good","value":1},"isTurnover":true,"isPenalty":false,"statYardage":87,"awayScore":0,"homeScore":14},
+            {"id":"401772731677","sequenceNumber":"67700","type":{"id":"74","text":"Official Timeout","abbreviation":"Off TO"},"text":"Official Timeout at 06:08.","period":{"number":1},"clock":{"displayValue":"6:08"},"start":{"down":-1,"distance":0,"yardLine":85,"yardsToEndzone":0,"downDistanceText":" & Goal at CIN 15","shortDownDistanceText":" & Goal","possessionText":"CIN 15","team":{"id":"16"}},"end":{"down":-1,"distance":0,"yardLine":85,"yardsToEndzone":0,"team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":14}
+          ]
+        },
+        {
+          "id": "4017727317",
+          "team": {
+            "id": "4"
+          },
+          "plays": [
+            {"id":"4017727311039","sequenceNumber":"103900","type":{"id":"2","text":"End Period","abbreviation":"EP"},"text":"END QUARTER 1","period":{"number":1},"clock":{"displayValue":"0:00"},"start":{"down":2,"distance":7,"yardLine":80,"yardsToEndzone":80,"team":{"id":"4"}},"end":{"down":2,"distance":7,"yardLine":80,"yardsToEndzone":80,"downDistanceText":"2nd & 7 at CIN 20","shortDownDistanceText":"2nd & 7","possessionText":"CIN 20","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":14}
+          ]
+        },
+        {
+          "id": "4017727318",
+          "team": {
+            "id": "16"
+          },
+          "plays": [
+            {"id":"4017727311379","sequenceNumber":"137900","type":{"id":"59","text":"Field Goal Good","abbreviation":"FG"},"text":"W.Reichard 35 yard field goal is GOOD, Center-A.DePaola, Holder-R.Wright.","period":{"number":2},"clock":{"displayValue":"9:20"},"start":{"down":4,"distance":6,"yardLine":83,"yardsToEndzone":17,"downDistanceText":"4th & 6 at CIN 17","shortDownDistanceText":"4th & 6","possessionText":"CIN 17","team":{"id":"16"}},"end":{"down":-1,"distance":10,"yardLine":100,"yardsToEndzone":0,"team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":true,"scoringType":{"name":"field-goal","displayName":"Field Goal","abbreviation":"FG"},"isTurnover":false,"isPenalty":false,"statYardage":35,"awayScore":0,"homeScore":17}
+          ]
+        },
+        {
+          "id": "4017727319",
+          "team": {
+            "id": "4"
+          },
+          "plays": [
+            {"id":"4017727311611","sequenceNumber":"161100","type":{"id":"21","text":"Timeout","abbreviation":"TO"},"text":"Timeout #1 by CIN at 04:51.","period":{"number":2},"clock":{"displayValue":"4:51"},"start":{"down":3,"distance":8,"yardLine":27,"yardsToEndzone":0,"downDistanceText":"3rd & 8 at MIN 27","shortDownDistanceText":"3rd & 8","possessionText":"MIN 27","team":{"id":"4"}},"end":{"down":3,"distance":8,"yardLine":27,"yardsToEndzone":27,"downDistanceText":"3rd & 8 at MIN 27","shortDownDistanceText":"3rd & 8","possessionText":"MIN 27","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":17}
+          ]
+        },
+        {
+          "id": "40177273111",
+          "team": {
+            "id": "4"
+          },
+          "plays": [
+            {"id":"4017727311850","sequenceNumber":"185000","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"J.Browning pass short middle to N.Fant to MIN 39 for 9 yards (E.Wilson) [I.Pace].","period":{"number":2},"clock":{"displayValue":"2:52"},"start":{"down":1,"distance":10,"yardLine":48,"yardsToEndzone":48,"downDistanceText":"1st & 10 at MIN 48","shortDownDistanceText":"1st & 10","possessionText":"MIN 48","team":{"id":"4"}},"end":{"down":2,"distance":1,"yardLine":39,"yardsToEndzone":39,"downDistanceText":"2nd & 1 at MIN 39","shortDownDistanceText":"2nd & 1","possessionText":"MIN 39","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":9,"awayScore":3,"homeScore":17},
+            {"id":"4017727311882","sequenceNumber":"188200","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"(Shotgun) S.Perine right guard to MIN 36 for 3 yards (I.Pace).","period":{"number":2},"clock":{"displayValue":"2:15"},"start":{"down":2,"distance":1,"yardLine":39,"yardsToEndzone":39,"downDistanceText":"2nd & 1 at MIN 39","shortDownDistanceText":"2nd & 1","possessionText":"MIN 39","team":{"id":"4"}},"end":{"down":1,"distance":10,"yardLine":36,"yardsToEndzone":36,"downDistanceText":"1st & 10 at MIN 36","shortDownDistanceText":"1st & 10","possessionText":"MIN 36","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":3,"awayScore":3,"homeScore":17},
+            {"id":"4017727311893","sequenceNumber":"189300","type":{"id":"75","text":"Two-minute warning","abbreviation":"2Min Warn"},"text":"Two-Minute Warning","period":{"number":2},"clock":{"displayValue":"2:00"},"start":{"down":1,"distance":10,"yardLine":36,"yardsToEndzone":0,"downDistanceText":"1st & 10 at MIN 36","shortDownDistanceText":"1st & 10","possessionText":"MIN 36","team":{"id":"4"}},"end":{"down":1,"distance":10,"yardLine":36,"yardsToEndzone":36,"downDistanceText":"1st & 10 at MIN 36","shortDownDistanceText":"1st & 10","possessionText":"MIN 36","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":3,"homeScore":17},
+            {"id":"4017727311904","sequenceNumber":"190400","type":{"id":"39","text":"Fumble Return Touchdown","abbreviation":"TD"},"text":"(Shotgun) J.Browning pass short right to N.Fant to MIN 32 for 4 yards (I.Rodgers). FUMBLES (I.Rodgers), RECOVERED by MIN-I.Rodgers at MIN 34. I.Rodgers for 66 yards, TOUCHDOWN. W.Reichard extra point is GOOD, Center-A.DePaola, Holder-R.Wright.","period":{"number":2},"clock":{"displayValue":"1:47"},"start":{"down":1,"distance":10,"yardLine":36,"yardsToEndzone":36,"downDistanceText":"1st & 10 at MIN 36","shortDownDistanceText":"1st & 10","possessionText":"MIN 36","team":{"id":"4"}},"end":{"down":-1,"distance":10,"yardLine":100,"yardsToEndzone":0,"team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"defense","order":1},{"id":"4","type":"offense","order":2}],"scoringPlay":true,"scoringType":{"name":"touchdown","displayName":"Touchdown","abbreviation":"TD"},"pointAfterAttempt":{"id":61,"text":"Extra Point Good","abbreviation":"Extra Point Good","value":1},"isTurnover":true,"isPenalty":false,"statYardage":66,"awayScore":3,"homeScore":24}
+          ]
+        },
+        {
+          "id": "40177273112",
+          "team": {
+            "id": "4"
+          },
+          "plays": [
+            {"id":"4017727311968","sequenceNumber":"196800","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"W.Reichard kicks 59 yards from MIN 35 to CIN 6. S.Perine to CIN 27 for 21 yards (I.Pace).","period":{"number":2},"clock":{"displayValue":"1:47"},"start":{"down":0,"distance":0,"yardLine":35,"yardsToEndzone":65,"team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":73,"yardsToEndzone":73,"downDistanceText":"1st & 10 at CIN 27","shortDownDistanceText":"1st & 10","possessionText":"CIN 27","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":21,"awayScore":3,"homeScore":24},
+            {"id":"4017727311991","sequenceNumber":"199100","type":{"id":"3","text":"Pass Incompletion"},"text":"(Shotgun) J.Browning pass incomplete short right to M.Gesicki.","period":{"number":2},"clock":{"displayValue":"1:42"},"start":{"down":1,"distance":10,"yardLine":73,"yardsToEndzone":73,"downDistanceText":"1st & 10 at CIN 27","shortDownDistanceText":"1st & 10","possessionText":"CIN 27","team":{"id":"4"}},"end":{"down":2,"distance":10,"yardLine":73,"yardsToEndzone":73,"downDistanceText":"2nd & 10 at CIN 27","shortDownDistanceText":"2nd & 10","possessionText":"CIN 27","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":3,"homeScore":24},
+            {"id":"4017727312014","sequenceNumber":"201400","type":{"id":"8","text":"Penalty","abbreviation":"PEN"},"text":"(Shotgun) J.Browning pass short middle to M.Gesicki to CIN 36 for 9 yards (J.Metellus).PENALTY on MIN-J.Allen, Defensive Offside, 5 yards, enforced at CIN 27 - No Play.","period":{"number":2},"clock":{"displayValue":"1:38"},"start":{"down":2,"distance":10,"yardLine":73,"yardsToEndzone":73,"downDistanceText":"2nd & 10 at CIN 27","shortDownDistanceText":"2nd & 10","possessionText":"CIN 27","team":{"id":"4"}},"end":{"down":2,"distance":5,"yardLine":68,"yardsToEndzone":68,"downDistanceText":"2nd & 5 at CIN 32","shortDownDistanceText":"2nd & 5","possessionText":"CIN 32","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":true,"statYardage":5,"awayScore":3,"homeScore":24},
+            {"id":"4017727312050","sequenceNumber":"205000","type":{"id":"29","text":"Fumble Recovery (Opponent)"},"text":"(Shotgun) J.Browning pass short right to J.Chase to CIN 47 for 15 yards (I.Rodgers). FUMBLES (I.Rodgers), RECOVERED by MIN-J.Okudah at MIN 48. J.Okudah to MIN 48 for no gain (J.Chase).Penalty on CIN-T.Higgins, Illegal Motion, declined.Penalty on CIN-J.Browning, Illegal Forward Pass, declined.","period":{"number":2},"clock":{"displayValue":"1:31"},"start":{"down":2,"distance":5,"yardLine":68,"yardsToEndzone":68,"downDistanceText":"2nd & 5 at CIN 32","shortDownDistanceText":"2nd & 5","possessionText":"CIN 32","team":{"id":"4"}},"end":{"down":1,"distance":10,"yardLine":48,"yardsToEndzone":52,"downDistanceText":"1st & 10 at MIN 48","shortDownDistanceText":"1st & 10","possessionText":"MIN 48","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"defense","order":1},{"id":"4","type":"offense","order":2}],"scoringPlay":false,"isTurnover":true,"isPenalty":false,"statYardage":0,"awayScore":3,"homeScore":24}
+          ]
+        },
+        {
+          "id": "40177273118",
+          "team": {
+            "id": "4"
+          },
+          "plays": [
+            {"id":"4017727312950","sequenceNumber":"295000","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"W.Reichard kicks 57 yards from MIN 35 to CIN 8. C.Jones to CIN 30 for 22 yards (T.Felton).","period":{"number":3},"clock":{"displayValue":"6:00"},"start":{"down":0,"distance":0,"yardLine":35,"yardsToEndzone":65,"team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":70,"yardsToEndzone":70,"downDistanceText":"1st & 10 at CIN 30","shortDownDistanceText":"1st & 10","possessionText":"CIN 30","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":22,"awayScore":3,"homeScore":41},
+            {"id":"4017727312980","sequenceNumber":"298000","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"(Shotgun) J.Browning pass short left to J.Chase pushed ob at CIN 34 for 4 yards (I.Pace).","period":{"number":3},"clock":{"displayValue":"5:55"},"start":{"down":1,"distance":10,"yardLine":70,"yardsToEndzone":70,"downDistanceText":"1st & 10 at CIN 30","shortDownDistanceText":"1st & 10","possessionText":"CIN 30","team":{"id":"4"}},"end":{"down":2,"distance":6,"yardLine":66,"yardsToEndzone":66,"downDistanceText":"2nd & 6 at CIN 34","shortDownDistanceText":"2nd & 6","possessionText":"CIN 34","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":4,"awayScore":3,"homeScore":41},
+            {"id":"4017727313010","sequenceNumber":"301000","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"(No Huddle, Shotgun) J.Browning pass short right to C.Brown pushed ob at CIN 38 for 4 yards (L.Rodriguez).","period":{"number":3},"clock":{"displayValue":"5:20"},"start":{"down":2,"distance":6,"yardLine":66,"yardsToEndzone":66,"downDistanceText":"2nd & 6 at CIN 34","shortDownDistanceText":"2nd & 6","possessionText":"CIN 34","team":{"id":"4"}},"end":{"down":3,"distance":2,"yardLine":62,"yardsToEndzone":62,"downDistanceText":"3rd & 2 at CIN 38","shortDownDistanceText":"3rd & 2","possessionText":"CIN 38","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":4,"awayScore":3,"homeScore":41},
+            {"id":"4017727313040","sequenceNumber":"304000","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"(Shotgun) J.Browning pass short middle to D.Sample to MIN 46 for 16 yards (J.Metellus).","period":{"number":3},"clock":{"displayValue":"4:38"},"start":{"down":3,"distance":2,"yardLine":62,"yardsToEndzone":62,"downDistanceText":"3rd & 2 at CIN 38","shortDownDistanceText":"3rd & 2","possessionText":"CIN 38","team":{"id":"4"}},"end":{"down":1,"distance":10,"yardLine":46,"yardsToEndzone":46,"downDistanceText":"1st & 10 at MIN 46","shortDownDistanceText":"1st & 10","possessionText":"MIN 46","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":16,"awayScore":3,"homeScore":41},
+            {"id":"4017727313065","sequenceNumber":"306500","type":{"id":"3","text":"Pass Incompletion"},"text":"J.Browning pass incomplete short left to M.Tinsley.","period":{"number":3},"clock":{"displayValue":"3:59"},"start":{"down":1,"distance":10,"yardLine":46,"yardsToEndzone":46,"downDistanceText":"1st & 10 at MIN 46","shortDownDistanceText":"1st & 10","possessionText":"MIN 46","team":{"id":"4"}},"end":{"down":2,"distance":10,"yardLine":46,"yardsToEndzone":46,"downDistanceText":"2nd & 10 at MIN 46","shortDownDistanceText":"2nd & 10","possessionText":"MIN 46","team":{"id":"4"}},"teamParticipants":[{"id":"4","type":"offense","order":1},{"id":"16","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":3,"homeScore":41},
+            {"id":"4017727313088","sequenceNumber":"308800","type":{"id":"26","text":"Pass Interception Return","abbreviation":"INTR"},"text":"(Shotgun) J.Browning pass short middle intended for M.Gesicki INTERCEPTED by J.Metellus at MIN 32. J.Metellus to MIN 32 for no gain (M.Gesicki).","period":{"number":3},"clock":{"displayValue":"3:55"},"start":{"down":2,"distance":10,"yardLine":46,"yardsToEndzone":46,"downDistanceText":"2nd & 10 at MIN 46","shortDownDistanceText":"2nd & 10","possessionText":"MIN 46","team":{"id":"4"}},"end":{"down":1,"distance":10,"yardLine":32,"yardsToEndzone":68,"downDistanceText":"1st & 10 at MIN 32","shortDownDistanceText":"1st & 10","possessionText":"MIN 32","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"defense","order":1},{"id":"4","type":"offense","order":2}],"scoringPlay":false,"isTurnover":true,"isPenalty":false,"statYardage":0,"awayScore":3,"homeScore":41},
+            {"id":"4017727313102","sequenceNumber":"310200","type":{"id":"74","text":"Official Timeout","abbreviation":"Off TO"},"text":"Official Timeout at 03:49.","period":{"number":3},"clock":{"displayValue":"3:49"},"start":{"down":1,"distance":10,"yardLine":32,"yardsToEndzone":0,"downDistanceText":"1st & 10 at MIN 32","shortDownDistanceText":"1st & 10","possessionText":"MIN 32","team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":32,"yardsToEndzone":68,"downDistanceText":"1st & 10 at MIN 32","shortDownDistanceText":"1st & 10","possessionText":"MIN 32","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":3,"homeScore":41}
+          ]
+        },
+        {
+          "id": "40177273119",
+          "team": {
+            "id": "16"
+          },
+          "plays": [
+            {"id":"4017727313115","sequenceNumber":"311500","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"J.Mason left end pushed ob at CIN 44 for 24 yards (G.Stone). ** Injury Update: MIN-D.Jackson has returned to the game.","period":{"number":3},"clock":{"displayValue":"3:49"},"start":{"down":1,"distance":10,"yardLine":32,"yardsToEndzone":68,"downDistanceText":"1st & 10 at MIN 32","shortDownDistanceText":"1st & 10","possessionText":"MIN 32","team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":56,"yardsToEndzone":44,"downDistanceText":"1st & 10 at CIN 44","shortDownDistanceText":"1st & 10","possessionText":"CIN 44","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":24,"awayScore":3,"homeScore":41},
+            {"id":"4017727313149","sequenceNumber":"314900","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"C.Wentz pass deep right to J.Nailor to CIN 22 for 22 yards (D.Turner).","period":{"number":3},"clock":{"displayValue":"3:05"},"start":{"down":1,"distance":10,"yardLine":56,"yardsToEndzone":44,"downDistanceText":"1st & 10 at CIN 44","shortDownDistanceText":"1st & 10","possessionText":"CIN 44","team":{"id":"16"}},"end":{"down":1,"distance":10,"yardLine":78,"yardsToEndzone":22,"downDistanceText":"1st & 10 at CIN 22","shortDownDistanceText":"1st & 10","possessionText":"CIN 22","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":22,"awayScore":3,"homeScore":41},
+            {"id":"4017727313174","sequenceNumber":"317400","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"J.Mason right end to CIN 9 for 13 yards (J.Battle).","period":{"number":3},"clock":{"displayValue":"2:26"},"start":{"down":1,"distance":10,"yardLine":78,"yardsToEndzone":22,"downDistanceText":"1st & 10 at CIN 22","shortDownDistanceText":"1st & 10","possessionText":"CIN 22","team":{"id":"16"}},"end":{"down":1,"distance":9,"yardLine":91,"yardsToEndzone":9,"downDistanceText":"1st & Goal at CIN 9","shortDownDistanceText":"1st & Goal","possessionText":"CIN 9","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":13,"awayScore":3,"homeScore":41},
+            {"id":"4017727313196","sequenceNumber":"319600","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"J.Mason right tackle to CIN 8 for 1 yard (B.Carter).","period":{"number":3},"clock":{"displayValue":"1:43"},"start":{"down":1,"distance":9,"yardLine":91,"yardsToEndzone":9,"downDistanceText":"1st & Goal at CIN 9","shortDownDistanceText":"1st & Goal","possessionText":"CIN 9","team":{"id":"16"}},"end":{"down":2,"distance":8,"yardLine":92,"yardsToEndzone":8,"downDistanceText":"2nd & Goal at CIN 8","shortDownDistanceText":"2nd & Goal","possessionText":"CIN 8","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":1,"awayScore":3,"homeScore":41},
+            {"id":"4017727313221","sequenceNumber":"322100","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"C.Wentz scrambles right tackle to CIN 5 for 3 yards (M.Pennel).","period":{"number":3},"clock":{"displayValue":"1:02"},"start":{"down":2,"distance":8,"yardLine":92,"yardsToEndzone":8,"downDistanceText":"2nd & Goal at CIN 8","shortDownDistanceText":"2nd & Goal","possessionText":"CIN 8","team":{"id":"16"}},"end":{"down":3,"distance":5,"yardLine":95,"yardsToEndzone":5,"downDistanceText":"3rd & Goal at CIN 5","shortDownDistanceText":"3rd & Goal","possessionText":"CIN 5","team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":3,"awayScore":3,"homeScore":41},
+            {"id":"4017727313243","sequenceNumber":"324300","type":{"id":"67","text":"Passing Touchdown","abbreviation":"TD"},"text":"(Shotgun) C.Wentz pass short right to T.Hockenson for 5 yards, TOUCHDOWN. W.Reichard extra point is GOOD, Center-A.DePaola, Holder-R.Wright.","period":{"number":3},"clock":{"displayValue":"0:17"},"start":{"down":3,"distance":5,"yardLine":95,"yardsToEndzone":5,"downDistanceText":"3rd & Goal at CIN 5","shortDownDistanceText":"3rd & Goal","possessionText":"CIN 5","team":{"id":"16"}},"end":{"down":-1,"distance":10,"yardLine":100,"yardsToEndzone":0,"team":{"id":"16"}},"teamParticipants":[{"id":"16","type":"offense","order":1},{"id":"4","type":"defense","order":2}],"scoringPlay":true,"scoringType":{"name":"touchdown","displayName":"Touchdown","abbreviation":"TD"},"pointAfterAttempt":{"id":61,"text":"Extra Point Good","abbreviation":"Extra Point Good","value":1},"isTurnover":false,"isPenalty":false,"statYardage":5,"awayScore":3,"homeScore":48}
+          ]
+        },
+        {
+          "id": "40177273125",
+          "team": {
+            "id": "16"
+          },
+          "plays": [
+            {"id":"4017727314246","sequenceNumber":"424600","type":{"id":"66","text":"End of Game","abbreviation":"EG"},"text":"END GAME","period":{"number":4},"clock":{"displayValue":"0:00"},"start":{"down":0,"distance":0,"yardLine":83,"yardsToEndzone":0},"end":{"down":0,"distance":10,"yardLine":83,"yardsToEndzone":17,"team":{"id":"16"}},"teamParticipants":[{"id":"16","order":1},{"id":"4","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":10,"homeScore":48}
+          ]
+        }
+      ]
+    }
+  },
+  "ncaa": {
+    "source": "https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary?event=401858454",
+    "header": {
+      "id": "401858454",
+      "season": {
+        "year": 2026,
+        "current": true,
+        "type": 2
+      },
+      "competitions": [
+        {
+          "id": "401858454",
+          "date": "2026-09-19T16:00Z",
+          "status": {
+            "type": {
+              "id": "3",
+              "name": "STATUS_FINAL",
+              "state": "post",
+              "completed": true,
+              "description": "Final",
+              "detail": "Final",
+              "shortDetail": "Final"
+            }
+          },
+          "competitors": [
+            {
+              "id": "194",
+              "homeAway": "home",
+              "score": "59",
+              "team": {
+                "id": "194",
+                "abbreviation": "OSU",
+                "displayName": "Ohio State Buckeyes",
+                "logos": [
+                  {
+                    "href": "https://a.espncdn.com/i/teamlogos/ncaa/500/194.png",
+                    "width": 500,
+                    "height": 500,
+                    "alt": "",
+                    "rel": [
+                      "full",
+                      "default"
+                    ],
+                    "lastUpdated": "2025-12-23T01:44Z"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "2309",
+              "homeAway": "away",
+              "score": "3",
+              "team": {
+                "id": "2309",
+                "abbreviation": "KENT",
+                "displayName": "Kent State Golden Flashes",
+                "logos": [
+                  {
+                    "href": "https://a.espncdn.com/i/teamlogos/ncaa/500/2309.png",
+                    "width": 500,
+                    "height": 500,
+                    "alt": "",
+                    "rel": [
+                      "full",
+                      "default"
+                    ],
+                    "lastUpdated": "2025-12-24T20:19Z"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "drives": {
+      "previous": [
+        {
+          "id": "4018584542",
+          "team": {
+            "id": "194"
+          },
+          "plays": [
+            {"id":"4018584543","sequenceNumber":"1","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"#49 M.Diomede kickoff 65 yards to the KentSt00, Touchback","period":{"number":1},"clock":{"displayValue":"15:00"},"start":{"down":1,"distance":10,"yardLine":35,"yardsToEndzone":65,"team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":75,"yardsToEndzone":75,"downDistanceText":"1st & 10 at KENT 25","shortDownDistanceText":"1st & 10","possessionText":"KENT 25","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":0},
+            {"id":"401858454778","sequenceNumber":"1","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"#96 S.Leonard kickoff 23 yards to the KentSt12, out of bounds at KentSt12","period":{"number":1},"clock":{"displayValue":"0:00"},"start":{"down":1,"distance":10,"yardLine":65,"yardsToEndzone":65,"team":{"id":"2309"}},"end":{"down":1,"distance":10,"yardLine":88,"yardsToEndzone":12,"downDistanceText":"1st & 10 at KENT 12","shortDownDistanceText":"1st & 10","possessionText":"KENT 12","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":21},
+            {"id":"40185845418","sequenceNumber":"2","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"Shotgun #10 J.Sayin pass complete short left to #0 B.Inniss caught at OhioSt40, for 9 yards to the OhioSt44 (#7 A.Stockstill), out of bounds","period":{"number":1},"clock":{"displayValue":"15:00"},"start":{"down":1,"distance":10,"yardLine":35,"yardsToEndzone":65,"downDistanceText":"1st & 10 at OSU 35","shortDownDistanceText":"1st & 10","possessionText":"OSU 35","team":{"id":"194"}},"end":{"down":2,"distance":1,"yardLine":44,"yardsToEndzone":56,"downDistanceText":"2nd & 1 at OSU 44","shortDownDistanceText":"2nd & 1","possessionText":"OSU 44","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":9,"awayScore":0,"homeScore":0},
+            {"id":"40185845423","sequenceNumber":"3","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"#25 B.Jackson rush right for 10 yards gain to the KentSt46 (#38 C.Robinson; #1 A.Muhammad), 1ST DOWN","period":{"number":1},"clock":{"displayValue":"15:00"},"start":{"down":2,"distance":1,"yardLine":44,"yardsToEndzone":56,"downDistanceText":"2nd & 1 at OSU 44","shortDownDistanceText":"2nd & 1","possessionText":"OSU 44","team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":54,"yardsToEndzone":46,"downDistanceText":"1st & 10 at KENT 46","shortDownDistanceText":"1st & 10","possessionText":"KENT 46","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":10,"awayScore":0,"homeScore":0},
+            {"id":"40185845427","sequenceNumber":"4","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"Shotgun #10 J.Sayin pass complete short left to #0 B.Inniss caught at KentSt44, for 8 yards to the KentSt38 (#7 A.Stockstill), out of bounds","period":{"number":1},"clock":{"displayValue":"15:00"},"start":{"down":1,"distance":10,"yardLine":54,"yardsToEndzone":46,"downDistanceText":"1st & 10 at KENT 46","shortDownDistanceText":"1st & 10","possessionText":"KENT 46","team":{"id":"194"}},"end":{"down":2,"distance":2,"yardLine":62,"yardsToEndzone":38,"downDistanceText":"2nd & 2 at KENT 38","shortDownDistanceText":"2nd & 2","possessionText":"KENT 38","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":8,"awayScore":0,"homeScore":0},
+            {"id":"40185845432","sequenceNumber":"5","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #25 B.Jackson rush middle for 8 yards gain to the KentSt30 (#44 A.Bottiggi), 1ST DOWN","period":{"number":1},"clock":{"displayValue":"15:00"},"start":{"down":2,"distance":2,"yardLine":62,"yardsToEndzone":38,"downDistanceText":"2nd & 2 at KENT 38","shortDownDistanceText":"2nd & 2","possessionText":"KENT 38","team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":70,"yardsToEndzone":30,"downDistanceText":"1st & 10 at KENT 30","shortDownDistanceText":"1st & 10","possessionText":"KENT 30","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":8,"awayScore":0,"homeScore":0},
+            {"id":"40185845436","sequenceNumber":"6","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"No Huddle-Shotgun #10 J.Sayin pass complete short right to #4 J.Smith caught at KentSt32, for 13 yards to the KentSt17 (#38 C.Robinson), out of bounds, 1ST DOWN","period":{"number":1},"clock":{"displayValue":"15:00"},"start":{"down":1,"distance":10,"yardLine":70,"yardsToEndzone":30,"downDistanceText":"1st & 10 at KENT 30","shortDownDistanceText":"1st & 10","possessionText":"KENT 30","team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":83,"yardsToEndzone":17,"downDistanceText":"1st & 10 at KENT 17","shortDownDistanceText":"1st & 10","possessionText":"KENT 17","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":13,"awayScore":0,"homeScore":0},
+            {"id":"40185845441","sequenceNumber":"7","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #25 B.Jackson rush middle for 6 yards gain to the KentSt11 (#1 A.Muhammad)","period":{"number":1},"clock":{"displayValue":"15:00"},"start":{"down":1,"distance":10,"yardLine":83,"yardsToEndzone":17,"downDistanceText":"1st & 10 at KENT 17","shortDownDistanceText":"1st & 10","possessionText":"KENT 17","team":{"id":"194"}},"end":{"down":2,"distance":4,"yardLine":89,"yardsToEndzone":11,"downDistanceText":"2nd & 4 at KENT 11","shortDownDistanceText":"2nd & 4","possessionText":"KENT 11","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":6,"awayScore":0,"homeScore":0},
+            {"id":"40185845445","sequenceNumber":"8","type":{"id":"68","text":"Rushing Touchdown","abbreviation":"TD"},"text":"#24 J.Jackson rush middle for 11 yards gain to the KentSt00 TOUCHDOWN, clock 12:07, 1ST DOWN #96 C.Hawkins kick attempt good (H: #42 J.McGuire, LS: #55 D.Riggs)","period":{"number":1},"clock":{"displayValue":"12:07"},"start":{"down":2,"distance":4,"yardLine":89,"yardsToEndzone":11,"downDistanceText":"2nd & 4 at KENT 11","shortDownDistanceText":"2nd & 4","possessionText":"KENT 11","team":{"id":"194"}},"end":{"down":-1,"distance":0,"yardLine":100,"yardsToEndzone":0,"team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":true,"scoringType":{"name":"touchdown","displayName":"Touchdown","abbreviation":"TD"},"pointAfterAttempt":{"id":61,"text":"Extra Point Good","abbreviation":"Extra Point Good","value":1},"isTurnover":false,"isPenalty":false,"statYardage":11,"awayScore":0,"homeScore":7}
+          ]
+        },
+        {
+          "id": "4018584544",
+          "team": {
+            "id": "2309"
+          },
+          "plays": [
+            {"id":"40185845452","sequenceNumber":"10","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"#49 M.Diomede kickoff 65 yards to the KentSt00, Touchback","period":{"number":1},"clock":{"displayValue":"12:07"},"start":{"down":1,"distance":10,"yardLine":35,"yardsToEndzone":0,"team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":0,"yardsToEndzone":0,"team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":7},
+            {"id":"40185845457","sequenceNumber":"11","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #12 D.DeShields rush middle for 2 yards gain to the KentSt27, End Of Play","period":{"number":1},"clock":{"displayValue":"12:07"},"start":{"down":1,"distance":10,"yardLine":75,"yardsToEndzone":75,"downDistanceText":"1st & 10 at KENT 25","shortDownDistanceText":"1st & 10","possessionText":"KENT 25","team":{"id":"2309"}},"end":{"down":2,"distance":8,"yardLine":73,"yardsToEndzone":73,"downDistanceText":"2nd & 8 at KENT 27","shortDownDistanceText":"2nd & 8","possessionText":"KENT 27","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":2,"awayScore":0,"homeScore":7},
+            {"id":"40185845461","sequenceNumber":"12","type":{"id":"8","text":"Penalty","abbreviation":"PEN"},"text":"Shotgun #0 M.King rush middle for 1 yard gain to the KentSt28 (#2 K.Jackson Jr.) PENALTY KentSt Illegal Formation 5 yards from KentSt27 to KentSt22. NO PLAY","period":{"number":1},"clock":{"displayValue":"12:07"},"start":{"down":2,"distance":8,"yardLine":73,"yardsToEndzone":73,"downDistanceText":"2nd & 8 at KENT 27","shortDownDistanceText":"2nd & 8","possessionText":"KENT 27","team":{"id":"2309"}},"end":{"down":2,"distance":13,"yardLine":78,"yardsToEndzone":78,"downDistanceText":"2nd & 13 at KENT 22","shortDownDistanceText":"2nd & 13","possessionText":"KENT 22","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":true,"statYardage":5,"awayScore":0,"homeScore":7},
+            {"id":"40185845466","sequenceNumber":"13","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"Shotgun #12 D.DeShields pass complete short right to #0 M.King caught at KentSt21, for 1 yard to the KentSt23 (#14 C.Alliegro)","period":{"number":1},"clock":{"displayValue":"12:07"},"start":{"down":2,"distance":13,"yardLine":78,"yardsToEndzone":78,"downDistanceText":"2nd & 13 at KENT 22","shortDownDistanceText":"2nd & 13","possessionText":"KENT 22","team":{"id":"2309"}},"end":{"down":3,"distance":12,"yardLine":77,"yardsToEndzone":77,"downDistanceText":"3rd & 12 at KENT 23","shortDownDistanceText":"3rd & 12","possessionText":"KENT 23","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":1,"awayScore":0,"homeScore":7},
+            {"id":"40185845471","sequenceNumber":"14","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #0 M.King rush middle for 9 yards gain to the KentSt32 (#26 P.Pierce; #8 J.McClain)","period":{"number":1},"clock":{"displayValue":"12:07"},"start":{"down":3,"distance":12,"yardLine":77,"yardsToEndzone":77,"downDistanceText":"3rd & 12 at KENT 23","shortDownDistanceText":"3rd & 12","possessionText":"KENT 23","team":{"id":"2309"}},"end":{"down":4,"distance":3,"yardLine":68,"yardsToEndzone":68,"downDistanceText":"4th & 3 at KENT 32","shortDownDistanceText":"4th & 3","possessionText":"KENT 32","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":9,"awayScore":0,"homeScore":7},
+            {"id":"40185845475","sequenceNumber":"15","type":{"id":"52","text":"Punt","abbreviation":"PUNT"},"text":"#42 K.Ford punt 30 yards to the OhioSt38","period":{"number":1},"clock":{"displayValue":"9:15"},"start":{"down":4,"distance":3,"yardLine":68,"yardsToEndzone":68,"downDistanceText":"4th & 3 at KENT 32","shortDownDistanceText":"4th & 3","possessionText":"KENT 32","team":{"id":"2309"}},"end":{"down":1,"distance":10,"yardLine":38,"yardsToEndzone":62,"downDistanceText":"1st & 10 at OSU 38","shortDownDistanceText":"1st & 10","possessionText":"OSU 38","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"defense","order":1},{"id":"2309","type":"offense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":7}
+          ]
+        },
+        {
+          "id": "4018584545",
+          "team": {
+            "id": "194"
+          },
+          "plays": [
+            {"id":"40185845479","sequenceNumber":"16","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"Shotgun #10 J.Sayin pass complete short right to #3 D.McCuin caught at OhioSt35, for 7 yards to the OhioSt45 (#3 D.Jackson III)","period":{"number":1},"clock":{"displayValue":"9:15"},"start":{"down":1,"distance":10,"yardLine":38,"yardsToEndzone":62,"downDistanceText":"1st & 10 at OSU 38","shortDownDistanceText":"1st & 10","possessionText":"OSU 38","team":{"id":"194"}},"end":{"down":2,"distance":3,"yardLine":45,"yardsToEndzone":55,"downDistanceText":"2nd & 3 at OSU 45","shortDownDistanceText":"2nd & 3","possessionText":"OSU 45","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":7,"awayScore":0,"homeScore":7},
+            {"id":"40185845484","sequenceNumber":"17","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"#10 J.Sayin pass complete deep right to #3 D.McCuin caught at KentSt34, for 22 yards to the KentSt33 (#2 J.Cordoba), 1ST DOWN","period":{"number":1},"clock":{"displayValue":"9:15"},"start":{"down":2,"distance":3,"yardLine":45,"yardsToEndzone":55,"downDistanceText":"2nd & 3 at OSU 45","shortDownDistanceText":"2nd & 3","possessionText":"OSU 45","team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":67,"yardsToEndzone":33,"downDistanceText":"1st & 10 at KENT 33","shortDownDistanceText":"1st & 10","possessionText":"KENT 33","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":22,"awayScore":0,"homeScore":7},
+            {"id":"40185845489","sequenceNumber":"18","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"Shotgun #10 J.Sayin pass complete short middle to #4 J.Smith caught at KentSt22, for 23 yards to the KentSt10 (#3 D.Jackson III), 1ST DOWN","period":{"number":1},"clock":{"displayValue":"9:15"},"start":{"down":1,"distance":10,"yardLine":67,"yardsToEndzone":33,"downDistanceText":"1st & 10 at KENT 33","shortDownDistanceText":"1st & 10","possessionText":"KENT 33","team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":90,"yardsToEndzone":10,"downDistanceText":"1st & Goal at KENT 10","shortDownDistanceText":"1st & Goal","possessionText":"KENT 10","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":23,"awayScore":0,"homeScore":7},
+            {"id":"40185845494","sequenceNumber":"19","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"#25 B.Jackson rush middle for 4 yards gain to the KentSt06 (#2 J.Cordoba; #8 J.Cordoba)","period":{"number":1},"clock":{"displayValue":"9:15"},"start":{"down":1,"distance":10,"yardLine":90,"yardsToEndzone":10,"downDistanceText":"1st & Goal at KENT 10","shortDownDistanceText":"1st & Goal","possessionText":"KENT 10","team":{"id":"194"}},"end":{"down":2,"distance":6,"yardLine":94,"yardsToEndzone":6,"downDistanceText":"2nd & Goal at KENT 6","shortDownDistanceText":"2nd & Goal","possessionText":"KENT 6","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":4,"awayScore":0,"homeScore":7},
+            {"id":"40185845498","sequenceNumber":"20","type":{"id":"67","text":"Passing Touchdown","abbreviation":"TD"},"text":"#10 J.Sayin pass complete short left to #83 N.Roberts caught at KentSt03, for 6 yards to the KentSt00 TOUCHDOWN, clock 06:42, 1ST DOWN #96 C.Hawkins kick attempt good (H: #42 J.McGuire, LS: #55 D.Riggs)","period":{"number":1},"clock":{"displayValue":"6:42"},"start":{"down":2,"distance":6,"yardLine":94,"yardsToEndzone":6,"downDistanceText":"2nd & Goal at KENT 6","shortDownDistanceText":"2nd & Goal","possessionText":"KENT 6","team":{"id":"194"}},"end":{"down":-1,"distance":0,"yardLine":100,"yardsToEndzone":0,"team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":true,"scoringType":{"name":"touchdown","displayName":"Touchdown","abbreviation":"TD"},"pointAfterAttempt":{"id":61,"text":"Extra Point Good","abbreviation":"Extra Point Good","value":1},"isTurnover":false,"isPenalty":false,"statYardage":6,"awayScore":0,"homeScore":14}
+          ]
+        },
+        {
+          "id": "4018584547",
+          "team": {
+            "id": "2309"
+          },
+          "plays": [
+            {"id":"401858454106","sequenceNumber":"22","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"#49 M.Diomede kickoff 65 yards to the KentSt00, Touchback","period":{"number":1},"clock":{"displayValue":"6:42"},"start":{"down":1,"distance":10,"yardLine":35,"yardsToEndzone":65,"team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":75,"yardsToEndzone":75,"downDistanceText":"1st & 10 at KENT 25","shortDownDistanceText":"1st & 10","possessionText":"KENT 25","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":14},
+            {"id":"401858454109","sequenceNumber":"23","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #5 J.Caffey rush middle for 0 yards to the KentSt25 (#94 J.Moore)","period":{"number":1},"clock":{"displayValue":"6:42"},"start":{"down":1,"distance":10,"yardLine":75,"yardsToEndzone":75,"downDistanceText":"1st & 10 at KENT 25","shortDownDistanceText":"1st & 10","possessionText":"KENT 25","team":{"id":"2309"}},"end":{"down":2,"distance":10,"yardLine":75,"yardsToEndzone":75,"downDistanceText":"2nd & 10 at KENT 25","shortDownDistanceText":"2nd & 10","possessionText":"KENT 25","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":14},
+            {"id":"401858454113","sequenceNumber":"24","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"Shotgun #12 D.DeShields pass complete short left to #5 J.Caffey caught at KentSt21, for 4 yards to the KentSt29 (#8 J.McClain), out of bounds","period":{"number":1},"clock":{"displayValue":"6:42"},"start":{"down":2,"distance":10,"yardLine":75,"yardsToEndzone":75,"downDistanceText":"2nd & 10 at KENT 25","shortDownDistanceText":"2nd & 10","possessionText":"KENT 25","team":{"id":"2309"}},"end":{"down":3,"distance":6,"yardLine":71,"yardsToEndzone":71,"downDistanceText":"3rd & 6 at KENT 29","shortDownDistanceText":"3rd & 6","possessionText":"KENT 29","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":4,"awayScore":0,"homeScore":14},
+            {"id":"401858454118","sequenceNumber":"25","type":{"id":"8","text":"Penalty","abbreviation":"PEN"},"text":"PENALTY KentSt False Start (#72 C.Wilson) 5 yards from KentSt29 to KentSt24. NO PLAY","period":{"number":1},"clock":{"displayValue":"6:42"},"start":{"down":3,"distance":6,"yardLine":71,"yardsToEndzone":71,"downDistanceText":"3rd & 6 at KENT 29","shortDownDistanceText":"3rd & 6","possessionText":"KENT 29","team":{"id":"2309"}},"end":{"down":3,"distance":11,"yardLine":76,"yardsToEndzone":76,"downDistanceText":"3rd & 11 at KENT 24","shortDownDistanceText":"3rd & 11","possessionText":"KENT 24","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":true,"statYardage":5,"awayScore":0,"homeScore":14},
+            {"id":"401858454122","sequenceNumber":"26","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"Shotgun #12 D.DeShields pass complete short left to #1 A.Banks caught at KentSt34, for 13 yards to the KentSt37 (#28 S.Caldwell), out of bounds, 1ST DOWN","period":{"number":1},"clock":{"displayValue":"6:42"},"start":{"down":3,"distance":11,"yardLine":76,"yardsToEndzone":76,"downDistanceText":"3rd & 11 at KENT 24","shortDownDistanceText":"3rd & 11","possessionText":"KENT 24","team":{"id":"2309"}},"end":{"down":1,"distance":10,"yardLine":63,"yardsToEndzone":63,"downDistanceText":"1st & 10 at KENT 37","shortDownDistanceText":"1st & 10","possessionText":"KENT 37","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":13,"awayScore":0,"homeScore":14},
+            {"id":"401858454127","sequenceNumber":"27","type":{"id":"3","text":"Pass Incompletion"},"text":"Shotgun #12 D.DeShields pass incomplete short left to #1 A.Banks thrown to KentSt45","period":{"number":1},"clock":{"displayValue":"6:42"},"start":{"down":1,"distance":10,"yardLine":63,"yardsToEndzone":63,"downDistanceText":"1st & 10 at KENT 37","shortDownDistanceText":"1st & 10","possessionText":"KENT 37","team":{"id":"2309"}},"end":{"down":2,"distance":10,"yardLine":63,"yardsToEndzone":63,"downDistanceText":"2nd & 10 at KENT 37","shortDownDistanceText":"2nd & 10","possessionText":"KENT 37","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":14},
+            {"id":"401858454130","sequenceNumber":"28","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #5 J.Caffey rush middle for 9 yards gain to the KentSt46 (#14 C.Alliegro; #1 E.Little Jr.)","period":{"number":1},"clock":{"displayValue":"6:42"},"start":{"down":2,"distance":10,"yardLine":63,"yardsToEndzone":63,"downDistanceText":"2nd & 10 at KENT 37","shortDownDistanceText":"2nd & 10","possessionText":"KENT 37","team":{"id":"2309"}},"end":{"down":3,"distance":1,"yardLine":54,"yardsToEndzone":54,"downDistanceText":"3rd & 1 at KENT 46","shortDownDistanceText":"3rd & 1","possessionText":"KENT 46","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":9,"awayScore":0,"homeScore":14},
+            {"id":"401858454136","sequenceNumber":"29","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"#18 H.Hopperton rush middle for 0 yards to the KentSt46 (#53 W.Smith Jr.; #94 J.Moore)","period":{"number":1},"clock":{"displayValue":"6:42"},"start":{"down":3,"distance":1,"yardLine":54,"yardsToEndzone":54,"downDistanceText":"3rd & 1 at KENT 46","shortDownDistanceText":"3rd & 1","possessionText":"KENT 46","team":{"id":"2309"}},"end":{"down":4,"distance":1,"yardLine":54,"yardsToEndzone":54,"downDistanceText":"4th & 1 at KENT 46","shortDownDistanceText":"4th & 1","possessionText":"KENT 46","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":14},
+            {"id":"401858454140","sequenceNumber":"30","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"#18 H.Hopperton rush middle for 0 yards to the KentSt46 (#2 K.Jackson Jr.; #5 R.Pettijohn), TURNOVER ON DOWNS","period":{"number":1},"clock":{"displayValue":"3:06"},"start":{"down":4,"distance":1,"yardLine":54,"yardsToEndzone":54,"downDistanceText":"4th & 1 at KENT 46","shortDownDistanceText":"4th & 1","possessionText":"KENT 46","team":{"id":"2309"}},"end":{"down":1,"distance":10,"yardLine":54,"yardsToEndzone":46,"downDistanceText":"1st & 10 at KENT 46","shortDownDistanceText":"1st & 10","possessionText":"KENT 46","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"defense","order":1},{"id":"2309","type":"offense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":14}
+          ]
+        },
+        {
+          "id": "40185845410",
+          "team": {
+            "id": "2309"
+          },
+          "plays": [
+            {"id":"401858454192","sequenceNumber":"40","type":{"id":"2","text":"End Period","abbreviation":"EP"},"text":"End of 1st quarter.","period":{"number":1},"clock":{"displayValue":"0:00"},"start":{"down":3,"distance":10,"yardLine":75,"yardsToEndzone":75,"team":{"id":"2309"}},"end":{"down":4,"distance":10,"yardLine":69,"yardsToEndzone":69,"downDistanceText":"4th & 10 at KENT 31","shortDownDistanceText":"4th & 10","possessionText":"KENT 31","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":21}
+          ]
+        },
+        {
+          "id": "40185845413",
+          "team": {
+            "id": "2309"
+          },
+          "plays": [
+            {"id":"401858454252","sequenceNumber":"53","type":{"id":"8","text":"Penalty","abbreviation":"PEN"},"text":"PENALTY KentSt UNS: Unsportsmanlike Conduct (#8 J.Cordoba) 15 yards from OhioSt35 to OhioSt50. NO PLAY","period":{"number":2},"clock":{"displayValue":"9:29"},"start":{"down":0,"distance":0,"yardLine":35,"yardsToEndzone":65,"team":{"id":"194"}},"end":{"down":-1,"distance":0,"yardLine":50,"yardsToEndzone":50,"team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":true,"statYardage":15,"awayScore":0,"homeScore":28},
+            {"id":"401858454255","sequenceNumber":"54","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"#49 M.Diomede kickoff 41 yards to the KentSt09 #8 D.Clark return 5 yards to the KentSt14 (#41 B.Rembert)","period":{"number":2},"clock":{"displayValue":"9:25"},"start":{"down":1,"distance":10,"yardLine":50,"yardsToEndzone":50,"team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":86,"yardsToEndzone":86,"downDistanceText":"1st & 10 at KENT 14","shortDownDistanceText":"1st & 10","possessionText":"KENT 14","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":5,"awayScore":0,"homeScore":28},
+            {"id":"401858454260","sequenceNumber":"55","type":{"id":"3","text":"Pass Incompletion"},"text":"Shotgun #12 D.DeShields pass incomplete short middle to #4 J.Kelley thrown to KentSt20 broken up by #14 C.Alliegro","period":{"number":2},"clock":{"displayValue":"9:25"},"start":{"down":1,"distance":10,"yardLine":86,"yardsToEndzone":86,"downDistanceText":"1st & 10 at KENT 14","shortDownDistanceText":"1st & 10","possessionText":"KENT 14","team":{"id":"2309"}},"end":{"down":2,"distance":10,"yardLine":86,"yardsToEndzone":86,"downDistanceText":"2nd & 10 at KENT 14","shortDownDistanceText":"2nd & 10","possessionText":"KENT 14","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":28},
+            {"id":"401858454263","sequenceNumber":"56","type":{"id":"8","text":"Penalty","abbreviation":"PEN"},"text":"PENALTY KentSt False Start (#72 C.Wilson) 5 yards from KentSt14 to KentSt09. NO PLAY","period":{"number":2},"clock":{"displayValue":"9:25"},"start":{"down":2,"distance":10,"yardLine":86,"yardsToEndzone":86,"downDistanceText":"2nd & 10 at KENT 14","shortDownDistanceText":"2nd & 10","possessionText":"KENT 14","team":{"id":"2309"}},"end":{"down":2,"distance":15,"yardLine":91,"yardsToEndzone":91,"downDistanceText":"2nd & 15 at KENT 9","shortDownDistanceText":"2nd & 15","possessionText":"KENT 9","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":true,"statYardage":5,"awayScore":0,"homeScore":28},
+            {"id":"401858454266","sequenceNumber":"57","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"Shotgun #12 D.DeShields pass complete short left to #89 T.Mulder caught at KentSt10, for 3 yards to the KentSt12 (#25 J.Timmons)","period":{"number":2},"clock":{"displayValue":"9:25"},"start":{"down":2,"distance":15,"yardLine":91,"yardsToEndzone":91,"downDistanceText":"2nd & 15 at KENT 9","shortDownDistanceText":"2nd & 15","possessionText":"KENT 9","team":{"id":"2309"}},"end":{"down":3,"distance":12,"yardLine":88,"yardsToEndzone":88,"downDistanceText":"3rd & 12 at KENT 12","shortDownDistanceText":"3rd & 12","possessionText":"KENT 12","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":3,"awayScore":0,"homeScore":28},
+            {"id":"401858454271","sequenceNumber":"58","type":{"id":"26","text":"Pass Interception Return","abbreviation":"INTR"},"text":"Shotgun #12 D.DeShields pass intercepted by #5 R.Pettijohn at KentSt21 #5 R.Pettijohn return 8 yards to the KentSt13 (#4 J.Kelley)","period":{"number":2},"clock":{"displayValue":"8:31"},"start":{"down":3,"distance":12,"yardLine":88,"yardsToEndzone":88,"downDistanceText":"3rd & 12 at KENT 12","shortDownDistanceText":"3rd & 12","possessionText":"KENT 12","team":{"id":"2309"}},"end":{"down":1,"distance":10,"yardLine":87,"yardsToEndzone":13,"downDistanceText":"1st & 10 at KENT 13","shortDownDistanceText":"1st & 10","possessionText":"KENT 13","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"defense","order":1},{"id":"2309","type":"offense","order":2}],"scoringPlay":false,"isTurnover":true,"isPenalty":false,"statYardage":8,"awayScore":0,"homeScore":28}
+          ]
+        },
+        {
+          "id": "40185845414",
+          "team": {
+            "id": "194"
+          },
+          "plays": [
+            {"id":"401858454277","sequenceNumber":"59","type":{"id":"3","text":"Pass Incompletion"},"text":"Shotgun #10 J.Sayin pass incomplete short right to #85 B.Christian thrown to KentSt10","period":{"number":2},"clock":{"displayValue":"8:31"},"start":{"down":1,"distance":10,"yardLine":87,"yardsToEndzone":13,"downDistanceText":"1st & 10 at KENT 13","shortDownDistanceText":"1st & 10","possessionText":"KENT 13","team":{"id":"194"}},"end":{"down":2,"distance":10,"yardLine":87,"yardsToEndzone":13,"downDistanceText":"2nd & 10 at KENT 13","shortDownDistanceText":"2nd & 10","possessionText":"KENT 13","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":28},
+            {"id":"401858454280","sequenceNumber":"60","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #24 J.Jackson rush right for 5 yards gain to the KentSt08 (#13 Q.Rhodes-McKee; #32 T.Rubinstein)","period":{"number":2},"clock":{"displayValue":"8:31"},"start":{"down":2,"distance":10,"yardLine":87,"yardsToEndzone":13,"downDistanceText":"2nd & 10 at KENT 13","shortDownDistanceText":"2nd & 10","possessionText":"KENT 13","team":{"id":"194"}},"end":{"down":3,"distance":5,"yardLine":92,"yardsToEndzone":8,"downDistanceText":"3rd & 5 at KENT 8","shortDownDistanceText":"3rd & 5","possessionText":"KENT 8","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":5,"awayScore":0,"homeScore":28},
+            {"id":"401858454284","sequenceNumber":"61","type":{"id":"3","text":"Pass Incompletion"},"text":"Shotgun #10 J.Sayin pass incomplete short left to #11 B.Boyd thrown to KentSt00","period":{"number":2},"clock":{"displayValue":"8:31"},"start":{"down":3,"distance":5,"yardLine":92,"yardsToEndzone":8,"downDistanceText":"3rd & 5 at KENT 8","shortDownDistanceText":"3rd & 5","possessionText":"KENT 8","team":{"id":"194"}},"end":{"down":4,"distance":5,"yardLine":92,"yardsToEndzone":8,"downDistanceText":"4th & 5 at KENT 8","shortDownDistanceText":"4th & 5","possessionText":"KENT 8","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":28},
+            {"id":"401858454287","sequenceNumber":"62","type":{"id":"7","text":"Sack"},"text":"Shotgun #10 J.Sayin sacked for loss of 7 yards to the KentSt15 (#52 A.Burgess), TURNOVER ON DOWNS","period":{"number":2},"clock":{"displayValue":"7:35"},"start":{"down":4,"distance":5,"yardLine":92,"yardsToEndzone":8,"downDistanceText":"4th & 5 at KENT 8","shortDownDistanceText":"4th & 5","possessionText":"KENT 8","team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":85,"yardsToEndzone":85,"downDistanceText":"1st & 10 at KENT 15","shortDownDistanceText":"1st & 10","possessionText":"KENT 15","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"defense","order":1},{"id":"194","type":"offense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":-7,"awayScore":0,"homeScore":28}
+          ]
+        },
+        {
+          "id": "40185845416",
+          "team": {
+            "id": "194"
+          },
+          "plays": [
+            {"id":"401858454357","sequenceNumber":"77","type":{"id":"21","text":"Timeout","abbreviation":"TO"},"text":"Timeout Ohio State, clock 02:00","period":{"number":2},"clock":{"displayValue":"2:00"},"start":{"down":2,"distance":1,"yardLine":52,"yardsToEndzone":48,"downDistanceText":"2nd & 1 at KENT 48","shortDownDistanceText":"2nd & 1","possessionText":"KENT 48","team":{"id":"194"}},"end":{"down":0,"distance":1,"yardLine":52,"yardsToEndzone":48,"team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":28}
+          ]
+        },
+        {
+          "id": "40185845430",
+          "team": {
+            "id": "2309"
+          },
+          "plays": [
+            {"id":"401858454618","sequenceNumber":"129","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"#49 M.Diomede kickoff 65 yards to the KentSt00, Touchback","period":{"number":4},"clock":{"displayValue":"14:27"},"start":{"down":1,"distance":10,"yardLine":35,"yardsToEndzone":65,"team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":75,"yardsToEndzone":75,"downDistanceText":"1st & 10 at KENT 25","shortDownDistanceText":"1st & 10","possessionText":"KENT 25","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":49},
+            {"id":"401858454627","sequenceNumber":"129","type":{"id":"21","text":"Timeout","abbreviation":"TO"},"text":"Timeout Ohio State, clock 14:27","period":{"number":4},"clock":{"displayValue":"14:27"},"start":{"down":0,"distance":0,"yardLine":35,"yardsToEndzone":65,"downDistanceText":" & 0 at OSU 35","shortDownDistanceText":" & 0","possessionText":"OSU 35","team":{"id":"194"}},"end":{"down":0,"distance":65,"yardLine":35,"yardsToEndzone":65,"team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"defense","order":1},{"id":"194","type":"offense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":49},
+            {"id":"401858454681","sequenceNumber":"130","type":{"id":"39","text":"Fumble Return Touchdown","abbreviation":"TD"},"text":"Jamir Perez 11 Yd Fumble Return (Connor Hawkins Kick)","period":{"number":4},"clock":{"displayValue":"14:19"},"start":{"down":1,"distance":10,"yardLine":75,"yardsToEndzone":75,"downDistanceText":"1st & 10 at KENT 25","shortDownDistanceText":"1st & 10","possessionText":"KENT 25","team":{"id":"2309"}},"end":{"down":-1,"distance":0,"yardLine":100,"yardsToEndzone":0,"team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"defense","order":1},{"id":"2309","type":"offense","order":2}],"scoringPlay":true,"scoringType":{"name":"touchdown","displayName":"Touchdown","abbreviation":"TD"},"pointAfterAttempt":{"id":61,"text":"Extra Point Good","abbreviation":"Extra Point Good","value":1},"isTurnover":true,"isPenalty":false,"statYardage":11,"awayScore":0,"homeScore":56}
+          ]
+        },
+        {
+          "id": "40185845432",
+          "team": {
+            "id": "2309"
+          },
+          "plays": [
+            {"id":"401858454636","sequenceNumber":"132","type":{"id":"53","text":"Kickoff","abbreviation":"K"},"text":"#92 C.Peterson kickoff 65 yards to the KentSt00 #85 B.Smith return 11 yards to the KentSt11 (#46 R.Rudzinski) PENALTY KentSt Illegal Block in Back (#36 W.Januska) 5 yards from KentSt11 to KentSt06","period":{"number":4},"clock":{"displayValue":"14:14"},"start":{"down":1,"distance":10,"yardLine":35,"yardsToEndzone":65,"team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":94,"yardsToEndzone":94,"downDistanceText":"1st & 10 at KENT 6","shortDownDistanceText":"1st & 10","possessionText":"KENT 6","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":11,"awayScore":0,"homeScore":56},
+            {"id":"401858454642","sequenceNumber":"133","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #25 D.Delaney Jr. rush middle for 0 yards to the KentSt06 (#98 J.Perez; #90 D.Simeon)","period":{"number":4},"clock":{"displayValue":"14:14"},"start":{"down":1,"distance":10,"yardLine":94,"yardsToEndzone":94,"downDistanceText":"1st & 10 at KENT 6","shortDownDistanceText":"1st & 10","possessionText":"KENT 6","team":{"id":"2309"}},"end":{"down":2,"distance":10,"yardLine":94,"yardsToEndzone":94,"downDistanceText":"2nd & 10 at KENT 6","shortDownDistanceText":"2nd & 10","possessionText":"KENT 6","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":56},
+            {"id":"401858454646","sequenceNumber":"134","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #25 D.Delaney Jr. rush middle for 9 yards gain to the KentSt15 (#11 T.Moore)","period":{"number":4},"clock":{"displayValue":"14:14"},"start":{"down":2,"distance":10,"yardLine":94,"yardsToEndzone":94,"downDistanceText":"2nd & 10 at KENT 6","shortDownDistanceText":"2nd & 10","possessionText":"KENT 6","team":{"id":"2309"}},"end":{"down":3,"distance":1,"yardLine":85,"yardsToEndzone":85,"downDistanceText":"3rd & 1 at KENT 15","shortDownDistanceText":"3rd & 1","possessionText":"KENT 15","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":9,"awayScore":0,"homeScore":56},
+            {"id":"401858454650","sequenceNumber":"135","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #25 D.Delaney Jr. rush middle for 2 yards gain to the KentSt17 (#90 D.Simeon), 1ST DOWN","period":{"number":4},"clock":{"displayValue":"14:14"},"start":{"down":3,"distance":1,"yardLine":85,"yardsToEndzone":85,"downDistanceText":"3rd & 1 at KENT 15","shortDownDistanceText":"3rd & 1","possessionText":"KENT 15","team":{"id":"2309"}},"end":{"down":1,"distance":10,"yardLine":83,"yardsToEndzone":83,"downDistanceText":"1st & 10 at KENT 17","shortDownDistanceText":"1st & 10","possessionText":"KENT 17","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":2,"awayScore":0,"homeScore":56},
+            {"id":"401858454654","sequenceNumber":"136","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #25 D.Delaney Jr. rush right for 1 yard gain to the KentSt18 (#20 C.Johnson)","period":{"number":4},"clock":{"displayValue":"14:14"},"start":{"down":1,"distance":10,"yardLine":83,"yardsToEndzone":83,"downDistanceText":"1st & 10 at KENT 17","shortDownDistanceText":"1st & 10","possessionText":"KENT 17","team":{"id":"2309"}},"end":{"down":2,"distance":9,"yardLine":82,"yardsToEndzone":82,"downDistanceText":"2nd & 9 at KENT 18","shortDownDistanceText":"2nd & 9","possessionText":"KENT 18","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":1,"awayScore":0,"homeScore":56},
+            {"id":"401858454658","sequenceNumber":"137","type":{"id":"24","text":"Pass Reception","abbreviation":"REC"},"text":"Shotgun #14 D.Ruffin pass complete short left to #86 M.Maxey caught at KentSt16, for 1 yard loss to the KentSt17 (#41 B.Rembert)","period":{"number":4},"clock":{"displayValue":"14:14"},"start":{"down":2,"distance":9,"yardLine":82,"yardsToEndzone":82,"downDistanceText":"2nd & 9 at KENT 18","shortDownDistanceText":"2nd & 9","possessionText":"KENT 18","team":{"id":"2309"}},"end":{"down":3,"distance":10,"yardLine":83,"yardsToEndzone":83,"downDistanceText":"3rd & 10 at KENT 17","shortDownDistanceText":"3rd & 10","possessionText":"KENT 17","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":-1,"awayScore":0,"homeScore":56},
+            {"id":"401858454663","sequenceNumber":"138","type":{"id":"3","text":"Pass Incompletion"},"text":"Shotgun #14 D.Ruffin pass incomplete short right thrown to KentSt17 broken up by #16 B.Bradford QB hurried by #98 J.Perez","period":{"number":4},"clock":{"displayValue":"14:14"},"start":{"down":3,"distance":10,"yardLine":83,"yardsToEndzone":83,"downDistanceText":"3rd & 10 at KENT 17","shortDownDistanceText":"3rd & 10","possessionText":"KENT 17","team":{"id":"2309"}},"end":{"down":4,"distance":10,"yardLine":83,"yardsToEndzone":83,"downDistanceText":"4th & 10 at KENT 17","shortDownDistanceText":"4th & 10","possessionText":"KENT 17","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":56},
+            {"id":"401858454666","sequenceNumber":"139","type":{"id":"14","text":"Punt Return"},"text":"#97 J.Stoeckel punt 44 yards to the OhioSt39 #8 D.Jones return 0 yards to the OhioSt39 (#22 D.Pritchard)","period":{"number":4},"clock":{"displayValue":"10:44"},"start":{"down":4,"distance":10,"yardLine":83,"yardsToEndzone":83,"downDistanceText":"4th & 10 at KENT 17","shortDownDistanceText":"4th & 10","possessionText":"KENT 17","team":{"id":"2309"}},"end":{"down":1,"distance":10,"yardLine":39,"yardsToEndzone":61,"downDistanceText":"1st & 10 at OSU 39","shortDownDistanceText":"1st & 10","possessionText":"OSU 39","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"defense","order":1},{"id":"2309","type":"offense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":56}
+          ]
+        },
+        {
+          "id": "40185845433",
+          "team": {
+            "id": "194"
+          },
+          "plays": [
+            {"id":"401858454709","sequenceNumber":"145","type":{"id":"59","text":"Field Goal Good","abbreviation":"FG"},"text":"Connor Hawkins 31 Yd Field Goal ","period":{"number":4},"clock":{"displayValue":"7:22"},"start":{"down":4,"distance":5,"yardLine":87,"yardsToEndzone":13,"downDistanceText":"4th & 5 at KENT 13","shortDownDistanceText":"4th & 5","possessionText":"KENT 13","team":{"id":"194"}},"end":{"down":-1,"distance":-1,"yardLine":35,"yardsToEndzone":65,"team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":true,"scoringType":{"name":"field-goal","displayName":"Field Goal","abbreviation":"FG"},"isTurnover":false,"isPenalty":false,"statYardage":31,"awayScore":0,"homeScore":59}
+          ]
+        },
+        {
+          "id": "40185845436",
+          "team": {
+            "id": "194"
+          },
+          "plays": [
+            {"id":"401858454741","sequenceNumber":"152","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"#29 F.Akih rush middle for 2 yards gain to the OhioSt40 (#25 M.Buchanan)","period":{"number":4},"clock":{"displayValue":"5:09"},"start":{"down":1,"distance":10,"yardLine":38,"yardsToEndzone":62,"downDistanceText":"1st & 10 at OSU 38","shortDownDistanceText":"1st & 10","possessionText":"OSU 38","team":{"id":"194"}},"end":{"down":2,"distance":8,"yardLine":40,"yardsToEndzone":60,"downDistanceText":"2nd & 8 at OSU 40","shortDownDistanceText":"2nd & 8","possessionText":"OSU 40","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":2,"awayScore":0,"homeScore":59},
+            {"id":"401858454745","sequenceNumber":"153","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #29 F.Akih rush left for 4 yards loss to the OhioSt36 (#13 Q.Rhodes-McKee)","period":{"number":4},"clock":{"displayValue":"5:09"},"start":{"down":2,"distance":8,"yardLine":40,"yardsToEndzone":60,"downDistanceText":"2nd & 8 at OSU 40","shortDownDistanceText":"2nd & 8","possessionText":"OSU 40","team":{"id":"194"}},"end":{"down":3,"distance":12,"yardLine":36,"yardsToEndzone":64,"downDistanceText":"3rd & 12 at OSU 36","shortDownDistanceText":"3rd & 12","possessionText":"OSU 36","team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":-4,"awayScore":0,"homeScore":59},
+            {"id":"401858454749","sequenceNumber":"154","type":{"id":"26","text":"Pass Interception Return","abbreviation":"INTR"},"text":"Shotgun #9 T.St. Clair pass intercepted by #24 T.Mintz at KentSt47 #24 T.Mintz return 48 yards to the OhioSt05 (#28 S.Jackson Jr.)","period":{"number":4},"clock":{"displayValue":"3:33"},"start":{"down":3,"distance":12,"yardLine":36,"yardsToEndzone":64,"downDistanceText":"3rd & 12 at OSU 36","shortDownDistanceText":"3rd & 12","possessionText":"OSU 36","team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":5,"yardsToEndzone":5,"downDistanceText":"1st & 10 at OSU 5","shortDownDistanceText":"1st & 10","possessionText":"OSU 5","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"defense","order":1},{"id":"194","type":"offense","order":2}],"scoringPlay":false,"isTurnover":true,"isPenalty":false,"statYardage":48,"awayScore":0,"homeScore":59}
+          ]
+        },
+        {
+          "id": "40185845437",
+          "team": {
+            "id": "2309"
+          },
+          "plays": [
+            {"id":"401858454755","sequenceNumber":"155","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #14 D.Ruffin rush left for 4 yards gain to the OhioSt01 (#11 T.Moore)","period":{"number":4},"clock":{"displayValue":"3:33"},"start":{"down":1,"distance":5,"yardLine":5,"yardsToEndzone":5,"downDistanceText":"1st & Goal at OSU 5","shortDownDistanceText":"1st & Goal","possessionText":"OSU 5","team":{"id":"2309"}},"end":{"down":2,"distance":1,"yardLine":1,"yardsToEndzone":1,"downDistanceText":"2nd & Goal at OSU 1","shortDownDistanceText":"2nd & Goal","possessionText":"OSU 1","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":4,"awayScore":0,"homeScore":59},
+            {"id":"401858454759","sequenceNumber":"156","type":{"id":"8","text":"Penalty","abbreviation":"PEN"},"text":"PENALTY KentSt False Start (#70 H.Chasko) 5 yards from OhioSt01 to OhioSt06. NO PLAY","period":{"number":4},"clock":{"displayValue":"3:33"},"start":{"down":2,"distance":1,"yardLine":1,"yardsToEndzone":1,"downDistanceText":"2nd & Goal at OSU 1","shortDownDistanceText":"2nd & Goal","possessionText":"OSU 1","team":{"id":"2309"}},"end":{"down":2,"distance":6,"yardLine":6,"yardsToEndzone":6,"downDistanceText":"2nd & Goal at OSU 6","shortDownDistanceText":"2nd & Goal","possessionText":"OSU 6","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":true,"statYardage":5,"awayScore":0,"homeScore":59},
+            {"id":"401858454762","sequenceNumber":"157","type":{"id":"3","text":"Pass Incompletion"},"text":"Shotgun #14 D.Ruffin pass incomplete short left to #80 T.Hunter thrown to OhioSt00","period":{"number":4},"clock":{"displayValue":"3:33"},"start":{"down":2,"distance":6,"yardLine":6,"yardsToEndzone":6,"downDistanceText":"2nd & Goal at OSU 6","shortDownDistanceText":"2nd & Goal","possessionText":"OSU 6","team":{"id":"2309"}},"end":{"down":3,"distance":6,"yardLine":6,"yardsToEndzone":6,"downDistanceText":"3rd & Goal at OSU 6","shortDownDistanceText":"3rd & Goal","possessionText":"OSU 6","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":59},
+            {"id":"401858454765","sequenceNumber":"158","type":{"id":"5","text":"Rush","abbreviation":"RUSH"},"text":"Shotgun #14 D.Ruffin rush middle for 3 yards gain to the OhioSt03 (#11 T.Moore)","period":{"number":4},"clock":{"displayValue":"3:33"},"start":{"down":3,"distance":6,"yardLine":6,"yardsToEndzone":6,"downDistanceText":"3rd & Goal at OSU 6","shortDownDistanceText":"3rd & Goal","possessionText":"OSU 6","team":{"id":"2309"}},"end":{"down":4,"distance":3,"yardLine":3,"yardsToEndzone":3,"downDistanceText":"4th & Goal at OSU 3","shortDownDistanceText":"4th & Goal","possessionText":"OSU 3","team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":3,"awayScore":0,"homeScore":59},
+            {"id":"401858454769","sequenceNumber":"159","type":{"id":"59","text":"Field Goal Good","abbreviation":"FG"},"text":"Sean Leonard 30 Yd Field Goal ","period":{"number":4},"clock":{"displayValue":"1:56"},"start":{"down":4,"distance":3,"yardLine":3,"yardsToEndzone":3,"downDistanceText":"4th & Goal at OSU 3","shortDownDistanceText":"4th & Goal","possessionText":"OSU 3","team":{"id":"2309"}},"end":{"down":-1,"distance":-1,"yardLine":65,"yardsToEndzone":65,"team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":true,"scoringType":{"name":"field-goal","displayName":"Field Goal","abbreviation":"FG"},"isTurnover":false,"isPenalty":false,"statYardage":30,"awayScore":3,"homeScore":59},
+            {"id":"401858454771","sequenceNumber":"159","type":{"id":"21","text":"Timeout","abbreviation":"TO"},"text":"Timeout Kent State, clock 02:00","period":{"number":4},"clock":{"displayValue":"2:00"},"start":{"down":4,"distance":3,"yardLine":3,"yardsToEndzone":3,"downDistanceText":"4th & Goal at OSU 3","shortDownDistanceText":"4th & Goal","possessionText":"OSU 3","team":{"id":"2309"}},"end":{"down":0,"distance":3,"yardLine":3,"yardsToEndzone":3,"team":{"id":"2309"}},"teamParticipants":[{"id":"2309","type":"offense","order":1},{"id":"194","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":0,"homeScore":59}
+          ]
+        },
+        {
+          "id": "40185845439",
+          "team": {
+            "id": "194"
+          },
+          "plays": [
+            {"id":"401858454793","sequenceNumber":"164","type":{"id":"66","text":"End of Game","abbreviation":"EG"},"text":"End of 4th quarter.","period":{"number":4},"clock":{"displayValue":"0:00"},"start":{"down":3,"distance":4,"yardLine":31,"yardsToEndzone":69,"team":{"id":"194"}},"end":{"down":1,"distance":10,"yardLine":36,"yardsToEndzone":64,"team":{"id":"194"}},"teamParticipants":[{"id":"194","type":"offense","order":1},{"id":"2309","type":"defense","order":2}],"scoringPlay":false,"isTurnover":false,"isPenalty":false,"statYardage":0,"awayScore":3,"homeScore":59}
+          ]
+        }
+      ]
+    },
+    "scoreboardSource": "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=20260919&limit=1000&groups=80",
+    "scoreboardEvent": {
+      "id": "401858454",
+      "uid": "s:20~l:23~e:401858454",
+      "date": "2026-09-19T16:00Z",
+      "name": "Kent State Golden Flashes at Ohio State Buckeyes",
+      "shortName": "KENT @ OSU",
+      "season": {
+        "year": 2026,
+        "type": 2,
+        "slug": "regular-season"
+      },
+      "week": {
+        "number": 3
+      },
+      "competitions": [
+        {
+          "id": "401858454",
+          "uid": "s:20~l:23~e:401858454~c:401858454",
+          "date": "2026-09-19T16:00Z",
+          "attendance": 100009,
+          "type": {
+            "id": "1",
+            "abbreviation": "STD"
+          },
+          "timeValid": true,
+          "dateValid": true,
+          "neutralSite": false,
+          "conferenceCompetition": false,
+          "playByPlayAvailable": true,
+          "recent": false,
+          "venue": {
+            "id": "3861",
+            "fullName": "Ohio Stadium",
+            "address": {
+              "city": "Columbus",
+              "state": "OH",
+              "country": "USA"
+            },
+            "indoor": false
+          },
+          "competitors": [
+            {
+              "id": "194",
+              "uid": "s:20~l:23~t:194",
+              "type": "team",
+              "order": 0,
+              "homeAway": "home",
+              "winner": true,
+              "team": {
+                "id": "194",
+                "uid": "s:20~l:23~t:194",
+                "location": "Ohio State",
+                "name": "Buckeyes",
+                "abbreviation": "OSU",
+                "displayName": "Ohio State Buckeyes",
+                "shortDisplayName": "Ohio State",
+                "color": "ba0c2f",
+                "alternateColor": "a8adb4",
+                "isActive": true,
+                "venue": {
+                  "id": "3861"
+                },
+                "links": [
+                  {
+                    "rel": [
+                      "clubhouse",
+                      "desktop",
+                      "team"
+                    ],
+                    "href": "https://www.espn.com/college-football/team/_/id/194/ohio-state-buckeyes",
+                    "text": "Clubhouse",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "clubhouse",
+                      "mobile",
+                      "team"
+                    ],
+                    "href": "https://www.espn.com/college-football/team/_/id/194/ohio-state-buckeyes",
+                    "text": "Clubhouse",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "roster",
+                      "desktop",
+                      "team"
+                    ],
+                    "href": "https://www.espn.com/college-football/team/roster/_/id/194",
+                    "text": "Roster",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "roster",
+                      "sportscenter",
+                      "app",
+                      "team"
+                    ],
+                    "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:23~t:194&section=roster",
+                    "text": "Roster",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "stats",
+                      "desktop",
+                      "team"
+                    ],
+                    "href": "https://www.espn.com/college-football/team/stats/_/id/194",
+                    "text": "Statistics",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "stats",
+                      "sportscenter",
+                      "app",
+                      "team"
+                    ],
+                    "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:23~t:194&section=stats",
+                    "text": "Statistics",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "schedule",
+                      "desktop",
+                      "team"
+                    ],
+                    "href": "https://www.espn.com/college-football/team/schedule/_/id/194",
+                    "text": "Schedule",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "schedule",
+                      "sportscenter",
+                      "app",
+                      "team"
+                    ],
+                    "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:23~t:194&section=scores",
+                    "text": "Schedule",
+                    "isExternal": false,
+                    "isPremium": false
+                  }
+                ],
+                "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/194.png",
+                "conferenceId": "5"
+              },
+              "score": "59",
+              "linescores": [
+                {
+                  "value": 21.0,
+                  "displayValue": "21",
+                  "period": 1
+                },
+                {
+                  "value": 14.0,
+                  "displayValue": "14",
+                  "period": 2
+                },
+                {
+                  "value": 7.0,
+                  "displayValue": "7",
+                  "period": 3
+                },
+                {
+                  "value": 17.0,
+                  "displayValue": "17",
+                  "period": 4
+                }
+              ],
+              "statistics": [
+
+              ],
+              "curatedRank": {
+                "current": 6
+              },
+              "records": [
+                {
+                  "name": "overall",
+                  "abbreviation": "Game",
+                  "type": "total",
+                  "summary": "2-1"
+                },
+                {
+                  "name": "Home",
+                  "type": "home",
+                  "summary": "2-0"
+                },
+                {
+                  "name": "Road",
+                  "type": "road",
+                  "summary": "0-1"
+                },
+                {
+                  "name": "vs. Conf.",
+                  "type": "vsconf",
+                  "summary": "0-0"
+                }
+              ]
+            },
+            {
+              "id": "2309",
+              "uid": "s:20~l:23~t:2309",
+              "type": "team",
+              "order": 1,
+              "homeAway": "away",
+              "winner": false,
+              "team": {
+                "id": "2309",
+                "uid": "s:20~l:23~t:2309",
+                "location": "Kent State",
+                "name": "Golden Flashes",
+                "abbreviation": "KENT",
+                "displayName": "Kent State Golden Flashes",
+                "shortDisplayName": "Kent State",
+                "color": "002664",
+                "alternateColor": "eaab00",
+                "isActive": true,
+                "venue": {
+                  "id": "3696"
+                },
+                "links": [
+                  {
+                    "rel": [
+                      "clubhouse",
+                      "desktop",
+                      "team"
+                    ],
+                    "href": "https://www.espn.com/college-football/team/_/id/2309/kent-state-golden-flashes",
+                    "text": "Clubhouse",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "clubhouse",
+                      "mobile",
+                      "team"
+                    ],
+                    "href": "https://www.espn.com/college-football/team/_/id/2309/kent-state-golden-flashes",
+                    "text": "Clubhouse",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "roster",
+                      "desktop",
+                      "team"
+                    ],
+                    "href": "https://www.espn.com/college-football/team/roster/_/id/2309",
+                    "text": "Roster",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "roster",
+                      "sportscenter",
+                      "app",
+                      "team"
+                    ],
+                    "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:23~t:2309&section=roster",
+                    "text": "Roster",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "stats",
+                      "desktop",
+                      "team"
+                    ],
+                    "href": "https://www.espn.com/college-football/team/stats/_/id/2309",
+                    "text": "Statistics",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "stats",
+                      "sportscenter",
+                      "app",
+                      "team"
+                    ],
+                    "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:23~t:2309&section=stats",
+                    "text": "Statistics",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "schedule",
+                      "desktop",
+                      "team"
+                    ],
+                    "href": "https://www.espn.com/college-football/team/schedule/_/id/2309",
+                    "text": "Schedule",
+                    "isExternal": false,
+                    "isPremium": false
+                  },
+                  {
+                    "rel": [
+                      "schedule",
+                      "sportscenter",
+                      "app",
+                      "team"
+                    ],
+                    "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:23~t:2309&section=scores",
+                    "text": "Schedule",
+                    "isExternal": false,
+                    "isPremium": false
+                  }
+                ],
+                "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2309.png",
+                "conferenceId": "15"
+              },
+              "score": "3",
+              "linescores": [
+                {
+                  "value": 0.0,
+                  "displayValue": "0",
+                  "period": 1
+                },
+                {
+                  "value": 0.0,
+                  "displayValue": "0",
+                  "period": 2
+                },
+                {
+                  "value": 0.0,
+                  "displayValue": "0",
+                  "period": 3
+                },
+                {
+                  "value": 3.0,
+                  "displayValue": "3",
+                  "period": 4
+                }
+              ],
+              "statistics": [
+
+              ],
+              "curatedRank": {
+                "current": 99
+              },
+              "records": [
+                {
+                  "name": "overall",
+                  "abbreviation": "Game",
+                  "type": "total",
+                  "summary": "1-2"
+                },
+                {
+                  "name": "Home",
+                  "type": "home",
+                  "summary": "1-0"
+                },
+                {
+                  "name": "Road",
+                  "type": "road",
+                  "summary": "0-2"
+                },
+                {
+                  "name": "vs. Conf.",
+                  "type": "vsconf",
+                  "summary": "0-0"
+                }
+              ]
+            }
+          ],
+          "notes": [
+
+          ],
+          "status": {
+            "clock": 0.0,
+            "displayClock": "0:00",
+            "period": 4,
+            "type": {
+              "id": "3",
+              "name": "STATUS_FINAL",
+              "state": "post",
+              "completed": true,
+              "description": "Final",
+              "detail": "Final",
+              "shortDetail": "Final"
+            }
+          },
+          "broadcasts": [
+            {
+              "market": "national",
+              "names": [
+                "Fox"
+              ]
+            }
+          ],
+          "leaders": [
+            {
+              "name": "passingYards",
+              "displayName": "Passing Leader",
+              "shortDisplayName": "PASS",
+              "abbreviation": "PYDS",
+              "leaders": [
+                {
+                  "displayValue": "18/22, 241 YDS, 2 TD",
+                  "value": 241.0,
+                  "athlete": {
+                    "id": "5079712",
+                    "fullName": "Julian Sayin",
+                    "displayName": "Julian Sayin",
+                    "shortName": "J. Sayin",
+                    "links": [
+                      {
+                        "rel": [
+                          "playercard",
+                          "desktop",
+                          "athlete"
+                        ],
+                        "href": "https://www.espn.com/college-football/player/_/id/5079712/julian-sayin"
+                      }
+                    ],
+                    "headshot": "https://a.espncdn.com/i/headshots/college-football/players/full/5079712.png",
+                    "jersey": "10",
+                    "position": {
+                      "abbreviation": "QB"
+                    },
+                    "team": {
+                      "id": "194"
+                    },
+                    "active": true
+                  },
+                  "team": {
+                    "id": "194"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "rushingYards",
+              "displayName": "Rushing Leader",
+              "shortDisplayName": "RUSH",
+              "abbreviation": "RYDS",
+              "leaders": [
+                {
+                  "displayValue": "11 CAR, 73 YDS, 1 TD",
+                  "value": 73.0,
+                  "athlete": {
+                    "id": "5141517",
+                    "fullName": "Bo Jackson",
+                    "displayName": "Bo Jackson",
+                    "shortName": "B. Jackson",
+                    "links": [
+                      {
+                        "rel": [
+                          "playercard",
+                          "desktop",
+                          "athlete"
+                        ],
+                        "href": "https://www.espn.com/college-football/player/_/id/5141517/bo-jackson"
+                      }
+                    ],
+                    "headshot": "https://a.espncdn.com/i/headshots/college-football/players/full/5141517.png",
+                    "jersey": "25",
+                    "position": {
+                      "abbreviation": "RB"
+                    },
+                    "team": {
+                      "id": "194"
+                    },
+                    "active": true
+                  },
+                  "team": {
+                    "id": "194"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "receivingYards",
+              "displayName": "Receiving Leader",
+              "shortDisplayName": "REC",
+              "abbreviation": "RECYDS",
+              "leaders": [
+                {
+                  "displayValue": "5 REC, 85 YDS",
+                  "value": 85.0,
+                  "athlete": {
+                    "id": "5079720",
+                    "fullName": "Jeremiah Smith",
+                    "displayName": "Jeremiah Smith",
+                    "shortName": "J. Smith",
+                    "links": [
+                      {
+                        "rel": [
+                          "playercard",
+                          "desktop",
+                          "athlete"
+                        ],
+                        "href": "https://www.espn.com/college-football/player/_/id/5079720/jeremiah-smith"
+                      }
+                    ],
+                    "headshot": "https://a.espncdn.com/i/headshots/college-football/players/full/5079720.png",
+                    "jersey": "4",
+                    "position": {
+                      "abbreviation": "WR"
+                    },
+                    "team": {
+                      "id": "194"
+                    },
+                    "active": true
+                  },
+                  "team": {
+                    "id": "194"
+                  }
+                }
+              ]
+            }
+          ],
+          "format": {
+            "regulation": {
+              "periods": 4
+            }
+          },
+          "startDate": "2026-09-19T16:00Z",
+          "broadcast": "Fox",
+          "geoBroadcasts": [
+            {
+              "type": {
+                "id": "1",
+                "shortName": "TV"
+              },
+              "market": {
+                "id": "1",
+                "type": "National"
+              },
+              "media": {
+                "shortName": "Fox"
+              },
+              "lang": "en",
+              "region": "us"
+            }
+          ],
+          "highlights": [
+
+          ],
+          "headlines": [
+            {
+              "type": "Recap",
+              "description": "\u2014 Jeremiah Smith became Ohio State's career receiving yardage leader, Ja\u2019Kobi Jackson scored twice and the sixth-ranked Buckeyes rolled to a 59-3 victory over Kent State on Saturday.",
+              "shortLinkText": "Smith sets Ohio State career receiving mark as 6th-ranked Buckeyes roll past Kent State 59-3"
+            }
+          ]
+        }
+      ],
+      "links": [
+        {
+          "language": "en-US",
+          "rel": [
+            "summary",
+            "desktop",
+            "event"
+          ],
+          "href": "https://www.espn.com/college-football/game/_/gameId/401858454/kent-state-ohio-state",
+          "text": "Gamecast",
+          "shortText": "Gamecast",
+          "isExternal": false,
+          "isPremium": false
+        },
+        {
+          "language": "en-US",
+          "rel": [
+            "boxscore",
+            "desktop",
+            "event"
+          ],
+          "href": "https://www.espn.com/college-football/boxscore/_/gameId/401858454",
+          "text": "Box Score",
+          "shortText": "Box Score",
+          "isExternal": false,
+          "isPremium": false
+        },
+        {
+          "language": "en-US",
+          "rel": [
+            "pbp",
+            "desktop",
+            "event"
+          ],
+          "href": "https://www.espn.com/college-football/playbyplay/_/gameId/401858454",
+          "text": "Play-by-Play",
+          "shortText": "Play-by-Play",
+          "isExternal": false,
+          "isPremium": false
+        },
+        {
+          "language": "en-US",
+          "rel": [
+            "recap",
+            "desktop",
+            "event"
+          ],
+          "href": "https://www.espn.com/college-football/recap?gameId=401858454",
+          "text": "Recap",
+          "shortText": "Recap",
+          "isExternal": false,
+          "isPremium": false
+        }
+      ],
+      "status": {
+        "clock": 0.0,
+        "displayClock": "0:00",
+        "period": 4,
+        "type": {
+          "id": "3",
+          "name": "STATUS_FINAL",
+          "state": "post",
+          "completed": true,
+          "description": "Final",
+          "detail": "Final",
+          "shortDetail": "Final"
+        }
+      }
+    }
+  },
+  "nba": {
+    "source": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=401705418",
+    "header": {
+      "id": "401705418",
+      "season": {
+        "year": 2025,
+        "current": false,
+        "type": 2
+      },
+      "competitions": [
+        {
+          "id": "401705418",
+          "date": "2025-03-01T00:30Z",
+          "status": {
+            "type": {
+              "id": "3",
+              "name": "STATUS_FINAL",
+              "state": "post",
+              "completed": true,
+              "description": "Final",
+              "detail": "Final",
+              "shortDetail": "Final"
+            }
+          },
+          "competitors": [
+            {
+              "id": "2",
+              "homeAway": "home",
+              "score": "116",
+              "team": {
+                "id": "2",
+                "abbreviation": "BOS",
+                "displayName": "Boston Celtics",
+                "logos": [
+                  {
+                    "href": "https://a.espncdn.com/i/teamlogos/nba/500/bos.png",
+                    "width": 500,
+                    "height": 500,
+                    "alt": "",
+                    "rel": [
+                      "full",
+                      "default"
+                    ],
+                    "lastUpdated": "2024-06-25T21:17Z"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "5",
+              "homeAway": "away",
+              "score": "123",
+              "team": {
+                "id": "5",
+                "abbreviation": "CLE",
+                "displayName": "Cleveland Cavaliers",
+                "logos": [
+                  {
+                    "href": "https://a.espncdn.com/i/teamlogos/nba/500/cle.png",
+                    "width": 500,
+                    "height": 500,
+                    "alt": "",
+                    "rel": [
+                      "full",
+                      "default"
+                    ],
+                    "lastUpdated": "2024-06-25T21:17Z"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "plays": [
+      {"id":"4017054184","sequenceNumber":"4","type":{"id":"615","text":"Jumpball"},"text":"Jarrett Allen vs. Al Horford (Derrick White gains possession)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"12:00"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3213"}},{"athlete":{"id":"4066328"}},{"athlete":{"id":"3078576"}}],"scoringPlay":false,"awayScore":0,"homeScore":0,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Jump Ball"},
+      {"id":"4017054187","sequenceNumber":"7","type":{"id":"132","text":"Step Back Jump Shot"},"text":"Jaylen Brown makes 25-foot three point step back jumpshot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"11:44"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}}],"scoringPlay":true,"awayScore":0,"homeScore":3,"shootingPlay":true,"scoreValue":3,"pointsAttempted":3,"coordinate":{"x":14,"y":24},"shortDescription":"+3 Points"},
+      {"id":"4017054188","sequenceNumber":"8","type":{"id":"131","text":"Pullup Jump Shot"},"text":"Donovan Mitchell misses 30-foot three point pullup jump shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"11:25"},"team":{"id":"5"},"participants":[{"athlete":{"id":"3908809"}}],"scoringPlay":false,"awayScore":0,"homeScore":3,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":15,"y":29},"shortDescription":"Missed 3PT"},
+      {"id":"4017054189","sequenceNumber":"9","type":{"id":"155","text":"Defensive Rebound"},"text":"Jayson Tatum defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"11:22"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":0,"homeScore":3,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":15,"y":29},"shortDescription":"Rebound"},
+      {"id":"40170541810","sequenceNumber":"10","type":{"id":"72","text":"Back Court Turnover"},"text":"Jaylen Brown back court turnover","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"11:14"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}}],"scoringPlay":false,"awayScore":0,"homeScore":3,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":36,"y":37},"shortDescription":"Turnover"},
+      {"id":"40170541811","sequenceNumber":"11","type":{"id":"92","text":"Jump Shot"},"text":"Evan Mobley misses 25-foot three point jumper","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"11:04"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4432158"}}],"scoringPlay":false,"awayScore":0,"homeScore":3,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":46,"y":15},"shortDescription":"Missed 3PT"},
+      {"id":"40170541812","sequenceNumber":"12","type":{"id":"155","text":"Defensive Rebound"},"text":"Jayson Tatum defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"11:01"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":0,"homeScore":3,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":46,"y":15},"shortDescription":"Rebound"},
+      {"id":"40170541813","sequenceNumber":"13","type":{"id":"131","text":"Pullup Jump Shot"},"text":"Jayson Tatum makes 15-foot pullup jump shot (Jaylen Brown assists)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"10:41"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}},{"athlete":{"id":"3917376"}}],"scoringPlay":true,"awayScore":0,"homeScore":5,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":37,"y":9},"shortDescription":"+2 Points"},
+      {"id":"40170541815","sequenceNumber":"15","type":{"id":"63","text":"Lost Ball Turnover"},"text":"Donovan Mitchell lost ball turnover (Derrick White steals)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"10:34"},"team":{"id":"5"},"participants":[{"athlete":{"id":"3908809"}},{"athlete":{"id":"3078576"}}],"scoringPlay":false,"awayScore":0,"homeScore":5,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":27,"y":7},"shortDescription":"Turnover"},
+      {"id":"40170541817","sequenceNumber":"17","type":{"id":"113","text":"Running Jump Shot"},"text":"Sam Hauser makes 24-foot three point shot (Jayson Tatum assists)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"10:29"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065804"}},{"athlete":{"id":"4065648"}}],"scoringPlay":true,"awayScore":0,"homeScore":8,"shootingPlay":true,"scoreValue":3,"pointsAttempted":3,"coordinate":{"x":43,"y":17},"shortDescription":"+3 Points"},
+      {"id":"40170541819","sequenceNumber":"19","type":{"id":"131","text":"Pullup Jump Shot"},"text":"Darius Garland misses 27-foot three point pullup jump shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"10:17"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4396907"}}],"scoringPlay":false,"awayScore":0,"homeScore":8,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":17,"y":27},"shortDescription":"Missed 3PT"},
+      {"id":"40170541820","sequenceNumber":"20","type":{"id":"155","text":"Defensive Rebound"},"text":"Al Horford defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"10:15"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3213"}}],"scoringPlay":false,"awayScore":0,"homeScore":8,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":17,"y":27},"shortDescription":"Rebound"},
+      {"id":"40170541821","sequenceNumber":"21","type":{"id":"92","text":"Jump Shot"},"text":"Derrick White makes 24-foot three point jumper (Jayson Tatum assists)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"10:05"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3078576"}},{"athlete":{"id":"4065648"}}],"scoringPlay":true,"awayScore":0,"homeScore":11,"shootingPlay":true,"scoreValue":3,"pointsAttempted":3,"coordinate":{"x":41,"y":19},"shortDescription":"+3 Points"},
+      {"id":"40170541823","sequenceNumber":"23","type":{"id":"16","text":"Full Timeout"},"text":"Cavaliers Full timeout","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"10:04"},"team":{"id":"5"},"scoringPlay":false,"awayScore":0,"homeScore":11,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Timeout"},
+      {"id":"40170541824","sequenceNumber":"24","type":{"id":"151","text":"Cutting Dunk Shot"},"text":"Evan Mobley makes 1-foot dunk (Darius Garland assists)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"9:52"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4432158"}},{"athlete":{"id":"4396907"}}],"scoringPlay":true,"awayScore":2,"homeScore":11,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":24,"y":1},"shortDescription":"+2 Points"},
+      {"id":"40170541826","sequenceNumber":"26","type":{"id":"92","text":"Jump Shot"},"text":"Derrick White misses 23-foot three point jumper","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"9:31"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3078576"}}],"scoringPlay":false,"awayScore":2,"homeScore":11,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":2,"y":0},"shortDescription":"Missed 3PT"},
+      {"id":"40170541827","sequenceNumber":"27","type":{"id":"155","text":"Defensive Rebound"},"text":"Evan Mobley defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"9:29"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4432158"}}],"scoringPlay":false,"awayScore":2,"homeScore":11,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":2,"y":0},"shortDescription":"Rebound"},
+      {"id":"40170541828","sequenceNumber":"28","type":{"id":"121","text":"Fade Away Jump Shot"},"text":"Max Strus misses 25-foot three point shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"9:15"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4065778"}}],"scoringPlay":false,"awayScore":2,"homeScore":11,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":48,"y":11},"shortDescription":"Missed 3PT"},
+      {"id":"40170541829","sequenceNumber":"29","type":{"id":"155","text":"Defensive Rebound"},"text":"Jayson Tatum defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"9:13"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":2,"homeScore":11,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":48,"y":11},"shortDescription":"Rebound"},
+      {"id":"40170541830","sequenceNumber":"30","type":{"id":"131","text":"Pullup Jump Shot"},"text":"Jayson Tatum makes 25-foot three pointer","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"8:58"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":true,"awayScore":2,"homeScore":14,"shootingPlay":true,"scoreValue":3,"pointsAttempted":3,"coordinate":{"x":39,"y":21},"shortDescription":"+3 Points"},
+      {"id":"40170541831","sequenceNumber":"31","type":{"id":"92","text":"Jump Shot"},"text":"Evan Mobley misses 24-foot three point jumper","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"8:44"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4432158"}}],"scoringPlay":false,"awayScore":2,"homeScore":14,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":3,"y":10},"shortDescription":"Missed 3PT"},
+      {"id":"40170541832","sequenceNumber":"32","type":{"id":"155","text":"Defensive Rebound"},"text":"Sam Hauser defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"8:42"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065804"}}],"scoringPlay":false,"awayScore":2,"homeScore":14,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":3,"y":10},"shortDescription":"Rebound"},
+      {"id":"40170541833","sequenceNumber":"33","type":{"id":"62","text":"Bad Pass\nTurnover"},"text":"Jayson Tatum bad pass (Jarrett Allen steals)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"8:28"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}},{"athlete":{"id":"4066328"}}],"scoringPlay":false,"awayScore":2,"homeScore":14,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":17,"y":15},"shortDescription":"Turnover"},
+      {"id":"40170541835","sequenceNumber":"35","type":{"id":"62","text":"Bad Pass\nTurnover"},"text":"Jarrett Allen bad pass (Derrick White steals)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"8:22"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4066328"}},{"athlete":{"id":"3078576"}}],"scoringPlay":false,"awayScore":2,"homeScore":14,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":20,"y":9},"shortDescription":"Turnover"},
+      {"id":"40170541837","sequenceNumber":"37","type":{"id":"146","text":"Running Pullup Jump Shot"},"text":"Jaylen Brown makes 24-foot running pullup jump shot (Derrick White assists)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"8:17"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}},{"athlete":{"id":"3078576"}}],"scoringPlay":true,"awayScore":2,"homeScore":17,"shootingPlay":true,"scoreValue":3,"pointsAttempted":3,"coordinate":{"x":32,"y":24},"shortDescription":"+3 Points"},
+      {"id":"40170541838","sequenceNumber":"38","type":{"id":"44","text":"Shooting Foul"},"text":"Jaylen Brown shooting foul","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"8:05"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}}],"scoringPlay":false,"awayScore":2,"homeScore":17,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":35,"y":11},"shortDescription":"Foul"},
+      {"id":"40170541840","sequenceNumber":"40","type":{"id":"98","text":"Free Throw - 1 of 2"},"text":"Donovan Mitchell makes free throw 1 of 2","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"8:05"},"team":{"id":"5"},"participants":[{"athlete":{"id":"3908809"}}],"scoringPlay":true,"awayScore":3,"homeScore":17,"shootingPlay":true,"scoreValue":1,"pointsAttempted":1,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"+1 Point"},
+      {"id":"40170541842","sequenceNumber":"42","type":{"id":"99","text":"Free Throw - 2 of 2"},"text":"Donovan Mitchell misses free throw 2 of 2","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"8:05"},"team":{"id":"5"},"participants":[{"athlete":{"id":"3908809"}}],"scoringPlay":false,"awayScore":3,"homeScore":17,"shootingPlay":true,"scoreValue":0,"pointsAttempted":1,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Missed FT"},
+      {"id":"40170541843","sequenceNumber":"43","type":{"id":"155","text":"Defensive Rebound"},"text":"Sam Hauser defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"8:03"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065804"}}],"scoringPlay":false,"awayScore":3,"homeScore":17,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Rebound"},
+      {"id":"40170541844","sequenceNumber":"44","type":{"id":"110","text":"Driving Layup Shot"},"text":"Jaylen Brown misses driving layup","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:51"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}}],"scoringPlay":false,"awayScore":3,"homeScore":17,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":25,"y":6},"shortDescription":"Missed FG"},
+      {"id":"40170541845","sequenceNumber":"45","type":{"id":"156","text":"Offensive Rebound"},"text":"Jaylen Brown offensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:49"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}}],"scoringPlay":false,"awayScore":3,"homeScore":17,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":25,"y":6},"shortDescription":"Rebound"},
+      {"id":"40170541846","sequenceNumber":"46","type":{"id":"125","text":"Layup Shot Putback"},"text":"Jaylen Brown makes two point shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:48"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}}],"scoringPlay":true,"awayScore":3,"homeScore":19,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":26,"y":2},"shortDescription":"+2 Points"},
+      {"id":"40170541847","sequenceNumber":"47","type":{"id":"110","text":"Driving Layup Shot"},"text":"Donovan Mitchell misses driving layup","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:38"},"team":{"id":"5"},"participants":[{"athlete":{"id":"3908809"}}],"scoringPlay":false,"awayScore":3,"homeScore":19,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":24,"y":6},"shortDescription":"Missed FG"},
+      {"id":"40170541848","sequenceNumber":"48","type":{"id":"155","text":"Defensive Rebound"},"text":"Al Horford defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:38"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3213"}}],"scoringPlay":false,"awayScore":3,"homeScore":19,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":24,"y":6},"shortDescription":"Rebound"},
+      {"id":"40170541849","sequenceNumber":"49","type":{"id":"113","text":"Running Jump Shot"},"text":"Sam Hauser misses 23-foot three point shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:32"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065804"}}],"scoringPlay":false,"awayScore":3,"homeScore":19,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":2,"y":5},"shortDescription":"Missed 3PT"},
+      {"id":"40170541850","sequenceNumber":"50","type":{"id":"156","text":"Offensive Rebound"},"text":"Jayson Tatum offensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:29"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":3,"homeScore":19,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":2,"y":5},"shortDescription":"Rebound"},
+      {"id":"40170541851","sequenceNumber":"51","type":{"id":"92","text":"Jump Shot"},"text":"Sam Hauser makes 24-foot three point jumper (Jayson Tatum assists)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:27"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065804"}},{"athlete":{"id":"4065648"}}],"scoringPlay":true,"awayScore":3,"homeScore":22,"shootingPlay":true,"scoreValue":3,"pointsAttempted":3,"coordinate":{"x":13,"y":22},"shortDescription":"+3 Points"},
+      {"id":"40170541853","sequenceNumber":"53","type":{"id":"63","text":"Lost Ball Turnover"},"text":"Evan Mobley lost ball turnover (Derrick White steals)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:20"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4432158"}},{"athlete":{"id":"3078576"}}],"scoringPlay":false,"awayScore":3,"homeScore":22,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":20,"y":31},"shortDescription":"Turnover"},
+      {"id":"40170541855","sequenceNumber":"55","type":{"id":"113","text":"Running Jump Shot"},"text":"Jayson Tatum makes 24-foot three point shot (Al Horford assists)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:12"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}},{"athlete":{"id":"3213"}}],"scoringPlay":true,"awayScore":3,"homeScore":25,"shootingPlay":true,"scoreValue":3,"pointsAttempted":3,"coordinate":{"x":1,"y":2},"shortDescription":"+3 Points"},
+      {"id":"40170541857","sequenceNumber":"57","type":{"id":"16","text":"Full Timeout"},"text":"Cavaliers Full timeout","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:11"},"team":{"id":"5"},"scoringPlay":false,"awayScore":3,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Timeout"},
+      {"id":"40170541858","sequenceNumber":"58","type":{"id":"584","text":"Substitution"},"text":"Ty Jerome enters the game for Donovan Mitchell","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:11"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4065733"}},{"athlete":{"id":"3908809"}}],"scoringPlay":false,"awayScore":3,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Substitution"},
+      {"id":"40170541859","sequenceNumber":"59","type":{"id":"584","text":"Substitution"},"text":"De'Andre Hunter enters the game for Evan Mobley","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"7:11"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4065732"}},{"athlete":{"id":"4432158"}}],"scoringPlay":false,"awayScore":3,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Substitution"},
+      {"id":"40170541862","sequenceNumber":"62","type":{"id":"128","text":"Driving Finger Roll Layup"},"text":"Darius Garland makes 3-foot two point shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:52"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4396907"}}],"scoringPlay":true,"awayScore":5,"homeScore":25,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":29,"y":1},"shortDescription":"+2 Points"},
+      {"id":"40170541863","sequenceNumber":"63","type":{"id":"132","text":"Step Back Jump Shot"},"text":"Jayson Tatum misses 26-foot three point step back jumpshot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:37"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":5,"homeScore":25,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":11,"y":23},"shortDescription":"Missed 3PT"},
+      {"id":"40170541864","sequenceNumber":"64","type":{"id":"155","text":"Defensive Rebound"},"text":"Ty Jerome defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:34"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4065733"}}],"scoringPlay":false,"awayScore":5,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":11,"y":23},"shortDescription":"Rebound"},
+      {"id":"40170541865","sequenceNumber":"65","type":{"id":"45","text":"Personal Foul"},"text":"Sam Hauser personal foul","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:30"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065804"}}],"scoringPlay":false,"awayScore":5,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":34,"y":5},"shortDescription":"Foul"},
+      {"id":"40170541867","sequenceNumber":"67","type":{"id":"584","text":"Substitution"},"text":"Luke Kornet enters the game for Al Horford","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:30"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3064560"}},{"athlete":{"id":"3213"}}],"scoringPlay":false,"awayScore":5,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Substitution"},
+      {"id":"40170541869","sequenceNumber":"69","type":{"id":"144","text":"Driving Floating Jump Shot"},"text":"Darius Garland misses driving floating jump shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:26"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4396907"}}],"scoringPlay":false,"awayScore":5,"homeScore":25,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":25,"y":7},"shortDescription":"Missed FG"},
+      {"id":"40170541870","sequenceNumber":"70","type":{"id":"155","text":"Defensive Rebound"},"text":"Luke Kornet defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:23"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3064560"}}],"scoringPlay":false,"awayScore":5,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":25,"y":7},"shortDescription":"Rebound"},
+      {"id":"40170541871","sequenceNumber":"71","type":{"id":"121","text":"Fade Away Jump Shot"},"text":"Jaylen Brown misses 14-foot two point shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:12"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}}],"scoringPlay":false,"awayScore":5,"homeScore":25,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":11,"y":5},"shortDescription":"Missed FG"},
+      {"id":"40170541872","sequenceNumber":"72","type":{"id":"156","text":"Offensive Rebound"},"text":"Luke Kornet offensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:10"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3064560"}}],"scoringPlay":false,"awayScore":5,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":11,"y":5},"shortDescription":"Rebound"},
+      {"id":"40170541873","sequenceNumber":"73","type":{"id":"63","text":"Lost Ball Turnover"},"text":"Luke Kornet lost ball turnover (Ty Jerome steals)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:08"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3064560"}},{"athlete":{"id":"4065733"}}],"scoringPlay":false,"awayScore":5,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":33,"y":7},"shortDescription":"Turnover"},
+      {"id":"40170541875","sequenceNumber":"75","type":{"id":"127","text":"Layup Running Reverse"},"text":"Max Strus makes two point shot (Darius Garland assists)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"6:03"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4065778"}},{"athlete":{"id":"4396907"}}],"scoringPlay":true,"awayScore":7,"homeScore":25,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":23,"y":2},"shortDescription":"+2 Points"},
+      {"id":"40170541876","sequenceNumber":"76","type":{"id":"92","text":"Jump Shot"},"text":"Sam Hauser misses 23-foot three point jumper","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:53"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065804"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":48,"y":6},"shortDescription":"Missed 3PT"},
+      {"id":"40170541877","sequenceNumber":"77","type":{"id":"155","text":"Defensive Rebound"},"text":"Darius Garland defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:51"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4396907"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":48,"y":6},"shortDescription":"Rebound"},
+      {"id":"40170541878","sequenceNumber":"78","type":{"id":"145","text":"Driving Floating Bank Jump Shot"},"text":"Ty Jerome misses two point shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:39"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4065733"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":36,"y":4},"shortDescription":"Missed FG"},
+      {"id":"40170541879","sequenceNumber":"79","type":{"id":"155","text":"Defensive Rebound"},"text":"Jayson Tatum defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:38"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":36,"y":4},"shortDescription":"Rebound"},
+      {"id":"40170541881","sequenceNumber":"81","type":{"id":"131","text":"Pullup Jump Shot"},"text":"Derrick White misses 26-foot three point pullup jump shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:27"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3078576"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":11,"y":22},"shortDescription":"Missed 3PT"},
+      {"id":"40170541882","sequenceNumber":"82","type":{"id":"156","text":"Offensive Rebound"},"text":"Sam Hauser offensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:24"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065804"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":11,"y":22},"shortDescription":"Rebound"},
+      {"id":"40170541883","sequenceNumber":"83","type":{"id":"93","text":"Hook Shot"},"text":"Sam Hauser misses 8-foot hook shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:23"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065804"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":31,"y":6},"shortDescription":"Missed FG"},
+      {"id":"40170541884","sequenceNumber":"84","type":{"id":"155","text":"Defensive Rebound"},"text":"De'Andre Hunter defensive rebound","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:21"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4065732"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":31,"y":6},"shortDescription":"Rebound"},
+      {"id":"40170541885","sequenceNumber":"85","type":{"id":"45","text":"Personal Foul"},"text":"Luke Kornet personal foul","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:10"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3064560"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":12,"y":8},"shortDescription":"Foul"},
+      {"id":"40170541887","sequenceNumber":"87","type":{"id":"584","text":"Substitution"},"text":"Payton Pritchard enters the game for Jaylen Brown","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:10"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4066354"}},{"athlete":{"id":"3917376"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Substitution"},
+      {"id":"40170541888","sequenceNumber":"88","type":{"id":"584","text":"Substitution"},"text":"Sam Merrill enters the game for Max Strus","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:10"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4066757"}},{"athlete":{"id":"4065778"}}],"scoringPlay":false,"awayScore":7,"homeScore":25,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Substitution"},
+      {"id":"40170541891","sequenceNumber":"91","type":{"id":"145","text":"Driving Floating Bank Jump Shot"},"text":"Darius Garland makes 17-foot two point shot (Jarrett Allen assists)","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"5:03"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4396907"}},{"athlete":{"id":"4066328"}}],"scoringPlay":true,"awayScore":9,"homeScore":25,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":13,"y":13},"shortDescription":"+2 Points"},
+      {"id":"401705418125","sequenceNumber":"125","type":{"id":"137","text":"Turnaround Fade Away Jump Shot"},"text":"Jayson Tatum misses 9-foot two point shot","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"2:30"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":16,"homeScore":30,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":26,"y":10},"shortDescription":"Missed FG"},
+      {"id":"401705418132","sequenceNumber":"132","type":{"id":"42","text":"Offensive Foul"},"text":"Payton Pritchard offensive foul","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"1:32"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4066354"}}],"scoringPlay":false,"awayScore":20,"homeScore":32,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":29,"y":26},"shortDescription":"Foul"},
+      {"id":"401705418134","sequenceNumber":"134","type":{"id":"84","text":"Offensive Foul Turnover"},"text":"Payton Pritchard turnover","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"1:32"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4066354"}}],"scoringPlay":false,"awayScore":20,"homeScore":32,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":29,"y":26},"shortDescription":"Turnover"},
+      {"id":"401705418145","sequenceNumber":"145","type":{"id":"110","text":"Driving Layup Shot"},"text":"Jayson Tatum blocks Ty Jerome 's 6-foot driving layup","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"44.1"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4065733"}},{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":23,"homeScore":33,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":31,"y":2},"shortDescription":"Missed FG"},
+      {"id":"401705418156","sequenceNumber":"156","type":{"id":"97","text":"Free Throw - 1 of 1"},"text":"Jayson Tatum makes free throw 1 of 1","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"36.1"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":true,"awayScore":23,"homeScore":36,"shootingPlay":true,"scoreValue":1,"pointsAttempted":1,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"+1 Point"},
+      {"id":"401705418160","sequenceNumber":"160","type":{"id":"412","text":"End Period"},"text":"End of the 1st Quarter","period":{"number":1,"displayValue":"1st Quarter"},"clock":{"displayValue":"0.0"},"scoringPlay":false,"awayScore":26,"homeScore":38,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"End of 1st"},
+      {"id":"401705418179","sequenceNumber":"179","type":{"id":"109","text":"Running Layup Shot"},"text":"Evan Mobley makes two point shot","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"10:24"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4432158"}}],"scoringPlay":true,"awayScore":35,"homeScore":44,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":32,"y":5},"shortDescription":"+2 Points"},
+      {"id":"401705418183","sequenceNumber":"183","type":{"id":"95","text":"Layup Shot"},"text":"Evan Mobley blocks Al Horford 's 5-foot layup","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"10:01"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3213"}},{"athlete":{"id":"4432158"}}],"scoringPlay":false,"awayScore":35,"homeScore":44,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":29,"y":4},"shortDescription":"Missed FG"},
+      {"id":"401705418212","sequenceNumber":"212","type":{"id":"114","text":"Turnaround Jump Shot"},"text":"Al Horford misses 12-foot two point shot","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"7:55"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3213"}}],"scoringPlay":false,"awayScore":41,"homeScore":47,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":36,"y":6},"shortDescription":"Missed FG"},
+      {"id":"401705418214","sequenceNumber":"214","type":{"id":"43","text":"Loose Ball Foul"},"text":"Donovan Mitchell loose ball foul","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"7:53"},"team":{"id":"5"},"participants":[{"athlete":{"id":"3908809"}}],"scoringPlay":false,"awayScore":41,"homeScore":47,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":14,"y":2},"shortDescription":"Foul"},
+      {"id":"401705418233","sequenceNumber":"233","type":{"id":"87","text":"Out of Bounds - Lost Ball Turnover"},"text":"Darius Garland out of bounds lost ball turnover","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"7:07"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4396907"}}],"scoringPlay":false,"awayScore":44,"homeScore":47,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":30,"y":1},"shortDescription":"Turnover"},
+      {"id":"401705418266","sequenceNumber":"266","type":{"id":"118","text":"Alley Oop Dunk Shot"},"text":"Jarrett Allen makes 2-foot alley oop dunk shot (Darius Garland assists)","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"3:27"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4066328"}},{"athlete":{"id":"4396907"}}],"scoringPlay":true,"awayScore":54,"homeScore":62,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":27,"y":1},"shortDescription":"+2 Points"},
+      {"id":"401705418279","sequenceNumber":"279","type":{"id":"122","text":"Jump Shot Bank"},"text":"Jayson Tatum makes 25-foot jump bank shot","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"3:03"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":true,"awayScore":54,"homeScore":65,"shootingPlay":true,"scoreValue":3,"pointsAttempted":3,"coordinate":{"x":33,"y":24},"shortDescription":"+3 Points"},
+      {"id":"401705418280","sequenceNumber":"280","type":{"id":"119","text":"Driving Hook Shot"},"text":"Evan Mobley misses 7-foot two point shot","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"2:43"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4432158"}}],"scoringPlay":false,"awayScore":54,"homeScore":65,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":22,"y":7},"shortDescription":"Missed FG"},
+      {"id":"401705418284","sequenceNumber":"284","type":{"id":"129","text":"Running Finger Roll Layup"},"text":"Darius Garland makes two point shot","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"2:27"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4396907"}}],"scoringPlay":true,"awayScore":56,"homeScore":65,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":28,"y":1},"shortDescription":"+2 Points"},
+      {"id":"401705418305","sequenceNumber":"305","type":{"id":"214","text":"Coach's Challenge (Supported)"},"text":"(00:45.9) [Celtics] COACH'S CHALLENGE (REPLAY SUPPORTS CALL) [Celtics] charged with a timeout","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"45.2"},"team":{"id":"2"},"scoringPlay":false,"awayScore":62,"homeScore":70,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Challenge"},
+      {"id":"401705418311","sequenceNumber":"311","type":{"id":"120","text":"Turnaround Hook Shot"},"text":"Al Horford makes 11-foot two point shot (Payton Pritchard assists)","period":{"number":2,"displayValue":"2nd Quarter"},"clock":{"displayValue":"2.2"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3213"}},{"athlete":{"id":"4066354"}}],"scoringPlay":true,"awayScore":64,"homeScore":74,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":29,"y":11},"shortDescription":"+2 Points"},
+      {"id":"401705418327","sequenceNumber":"327","type":{"id":"100","text":"Free Throw - 1 of 3"},"text":"Jaylen Brown makes free throw 1 of 3","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"11:25"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}}],"scoringPlay":true,"awayScore":64,"homeScore":75,"shootingPlay":true,"scoreValue":1,"pointsAttempted":1,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"+1 Point"},
+      {"id":"401705418328","sequenceNumber":"328","type":{"id":"101","text":"Free Throw - 2 of 3"},"text":"Jaylen Brown makes free throw 2 of 3","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"11:25"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}}],"scoringPlay":true,"awayScore":64,"homeScore":76,"shootingPlay":true,"scoreValue":1,"pointsAttempted":1,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"+1 Point"},
+      {"id":"401705418329","sequenceNumber":"329","type":{"id":"102","text":"Free Throw - 3 of 3"},"text":"Jaylen Brown makes free throw 3 of 3","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"11:25"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}}],"scoringPlay":true,"awayScore":64,"homeScore":77,"shootingPlay":true,"scoreValue":1,"pointsAttempted":1,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"+1 Point"},
+      {"id":"401705418342","sequenceNumber":"342","type":{"id":"115","text":"Driving Dunk Shot"},"text":"Donovan Mitchell makes 1-foot driving dunk (Max Strus assists)","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"10:32"},"team":{"id":"5"},"participants":[{"athlete":{"id":"3908809"}},{"athlete":{"id":"4065778"}}],"scoringPlay":true,"awayScore":68,"homeScore":78,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":24,"y":2},"shortDescription":"+2 Points"},
+      {"id":"401705418384","sequenceNumber":"384","type":{"id":"64","text":"Traveling"},"text":"Payton Pritchard traveling","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"6:33"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4066354"}}],"scoringPlay":false,"awayScore":75,"homeScore":87,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":18,"y":13},"shortDescription":"Turnover"},
+      {"id":"401705418385","sequenceNumber":"385","type":{"id":"111","text":"Alley Oop Layup Shot"},"text":"Jarrett Allen makes alley oop layup (Max Strus assists)","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"6:25"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4066328"}},{"athlete":{"id":"4065778"}}],"scoringPlay":true,"awayScore":77,"homeScore":87,"shootingPlay":true,"scoreValue":2,"pointsAttempted":2,"coordinate":{"x":21,"y":2},"shortDescription":"+2 Points"},
+      {"id":"401705418395","sequenceNumber":"395","type":{"id":"215","text":"Coach's Challenge (Overturned)"},"text":"(05:17) [Cavaliers] COACH'S CHALLENGE (CALL OVERTURNED) [Cavaliers] retain their timeout","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"5:17"},"team":{"id":"5"},"scoringPlay":false,"awayScore":79,"homeScore":89,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Challenge"},
+      {"id":"401705418406","sequenceNumber":"406","type":{"id":"24","text":"Offensive Charge"},"text":"Jayson Tatum offensive charge","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"4:57"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":81,"homeScore":89,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":17,"y":32},"shortDescription":"Foul"},
+      {"id":"401705418409","sequenceNumber":"409","type":{"id":"110","text":"Driving Layup Shot"},"text":"Jayson Tatum blocks Ty Jerome 's 6-foot driving layup","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"4:34"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4065733"}},{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":81,"homeScore":89,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":28,"y":6},"shortDescription":"Missed FG"},
+      {"id":"401705418413","sequenceNumber":"413","type":{"id":"131","text":"Pullup Jump Shot"},"text":"Luke Kornet blocks Darius Garland 's 8-foot pullup jump shot","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"4:12"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4396907"}},{"athlete":{"id":"3064560"}}],"scoringPlay":false,"awayScore":81,"homeScore":91,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":29,"y":8},"shortDescription":"Missed FG"},
+      {"id":"401705418443","sequenceNumber":"443","type":{"id":"126","text":"Layup Driving Reverse"},"text":"Jayson Tatum misses two point shot","period":{"number":3,"displayValue":"3rd Quarter"},"clock":{"displayValue":"1:36"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":88,"homeScore":96,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":29,"y":2},"shortDescription":"Missed FG"},
+      {"id":"401705418479","sequenceNumber":"479","type":{"id":"110","text":"Driving Layup Shot"},"text":"Luke Kornet blocks Ty Jerome 's 5-foot driving layup","period":{"number":4,"displayValue":"4th Quarter"},"clock":{"displayValue":"11:25"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4065733"}},{"athlete":{"id":"3064560"}}],"scoringPlay":false,"awayScore":95,"homeScore":100,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":30,"y":2},"shortDescription":"Missed FG"},
+      {"id":"401705418529","sequenceNumber":"529","type":{"id":"136","text":"Turnaround Bank Jump Shot"},"text":"Jayson Tatum misses 12-foot two point shot","period":{"number":4,"displayValue":"4th Quarter"},"clock":{"displayValue":"7:06"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":109,"homeScore":106,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":16,"y":9},"shortDescription":"Missed FG"},
+      {"id":"401705418540","sequenceNumber":"540","type":{"id":"131","text":"Pullup Jump Shot"},"text":"Jayson Tatum blocks Darius Garland 's 13-foot pullup jump shot","period":{"number":4,"displayValue":"4th Quarter"},"clock":{"displayValue":"6:16"},"team":{"id":"5"},"participants":[{"athlete":{"id":"4396907"}},{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":111,"homeScore":106,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":14,"y":8},"shortDescription":"Missed FG"},
+      {"id":"401705418547","sequenceNumber":"547","type":{"id":"70","text":"Shot Clock Turnover"},"text":"shot clock turnover ","period":{"number":4,"displayValue":"4th Quarter"},"clock":{"displayValue":"5:53"},"team":{"id":"5"},"scoringPlay":false,"awayScore":111,"homeScore":106,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":16,"y":0},"shortDescription":"Turnover"},
+      {"id":"401705418548","sequenceNumber":"548","type":{"id":"126","text":"Layup Driving Reverse"},"text":"Isaac Okoro blocks Jaylen Brown 's 2-foot two point shot","period":{"number":4,"displayValue":"4th Quarter"},"clock":{"displayValue":"5:42"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3917376"}},{"athlete":{"id":"4432822"}}],"scoringPlay":false,"awayScore":111,"homeScore":106,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":27,"y":2},"shortDescription":"Missed FG"},
+      {"id":"401705418558","sequenceNumber":"558","type":{"id":"94","text":"Tip Shot"},"text":"Jayson Tatum misses tip shot","period":{"number":4,"displayValue":"4th Quarter"},"clock":{"displayValue":"5:04"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}}],"scoringPlay":false,"awayScore":111,"homeScore":106,"shootingPlay":true,"scoreValue":0,"pointsAttempted":2,"coordinate":{"x":25,"y":0},"shortDescription":"Missed FG"},
+      {"id":"401705418603","sequenceNumber":"603","type":{"id":"278","text":"Ref-Initiated Review (Supported)"},"text":"(00:49.8) [Cavaliers] REF-INITIATED REVIEW (REPLAY SUPPORTS CALL)","period":{"number":4,"displayValue":"4th Quarter"},"clock":{"displayValue":"49.1"},"scoringPlay":false,"awayScore":121,"homeScore":114,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"Challenge"},
+      {"id":"401705418610","sequenceNumber":"610","type":{"id":"113","text":"Running Jump Shot"},"text":"De'Andre Hunter blocks Jayson Tatum 's 26-foot three point shot","period":{"number":4,"displayValue":"4th Quarter"},"clock":{"displayValue":"26.2"},"team":{"id":"2"},"participants":[{"athlete":{"id":"4065648"}},{"athlete":{"id":"4065732"}}],"scoringPlay":false,"awayScore":121,"homeScore":116,"shootingPlay":true,"scoreValue":0,"pointsAttempted":3,"coordinate":{"x":14,"y":25},"shortDescription":"Missed 3PT"},
+      {"id":"401705418612","sequenceNumber":"612","type":{"id":"22","text":"Personal Take Foul"},"text":"Derrick White personal take foul","period":{"number":4,"displayValue":"4th Quarter"},"clock":{"displayValue":"22.1"},"team":{"id":"2"},"participants":[{"athlete":{"id":"3078576"}}],"scoringPlay":false,"awayScore":121,"homeScore":116,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":12,"y":31},"shortDescription":"Foul"},
+      {"id":"401705418622","sequenceNumber":"622","type":{"id":"402","text":"End Game"},"text":"End of Game","period":{"number":4,"displayValue":"4th Quarter"},"clock":{"displayValue":"0.0"},"scoringPlay":false,"awayScore":123,"homeScore":116,"shootingPlay":false,"scoreValue":0,"pointsAttempted":0,"coordinate":{"x":-214748340,"y":-214748365},"shortDescription":"End of Game"}
+    ]
+  },
+  "edgeCases": {
+    "blocked": {
+      "source": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772839",
+      "play": {
+        "id": "4017728394358",
+        "sequenceNumber": "435800",
+        "type": {
+          "id": "18",
+          "text": "Blocked Field Goal",
+          "abbreviation": "BFG"
+        },
+        "text": "J.Karty 44 yard field goal is BLOCKED (J.Davis), Center-A.Ward, Holder-E.Evans, RECOVERED by PHI-J.Davis at PHI 39. J.Davis for 61 yards, TOUCHDOWN.",
+        "period": {
+          "number": 4
+        },
+        "clock": {
+          "displayValue": "0:00"
+        },
+        "start": {
+          "down": 3,
+          "distance": 3,
+          "yardLine": 26,
+          "yardsToEndzone": 0,
+          "downDistanceText": "3rd & 3 at PHI 26",
+          "shortDownDistanceText": "3rd & 3",
+          "possessionText": "PHI 26",
+          "team": {
+            "id": "14"
+          }
+        },
+        "end": {
+          "down": -1,
+          "distance": 0,
+          "yardLine": 0,
+          "yardsToEndzone": 0,
+          "team": {
+            "id": "21"
+          }
+        },
+        "teamParticipants": [
+          {
+            "id": "21",
+            "type": "defense",
+            "order": 1
+          },
+          {
+            "id": "14",
+            "type": "offense",
+            "order": 2
+          }
+        ],
+        "scoringPlay": true,
+        "scoringType": {
+          "name": "touchdown",
+          "displayName": "Touchdown",
+          "abbreviation": "TD"
+        },
+        "pointAfterAttempt": {
+          "id": 0,
+          "text": "Not Available",
+          "abbreviation": "NA",
+          "value": 0
+        },
+        "isTurnover": true,
+        "isPenalty": false,
+        "statYardage": 44,
+        "awayScore": 26,
+        "homeScore": 33
+      },
+      "teams": [
+        {
+          "id": "21",
+          "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png"
+        },
+        {
+          "id": "14",
+          "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png"
+        }
+      ]
+    },
+    "reviewed": {
+      "source": "https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary?event=401858249",
+      "play": {
+        "id": "401858249143",
+        "sequenceNumber": "30",
+        "type": {
+          "id": "3",
+          "text": "Pass Incompletion"
+        },
+        "text": "(04:14) No Huddle-Shotgun #10 D.Mensah pass incomplete short middle to #1 M.Toney thrown to CLE31 broken up by #14 L.Merritt QB hurried by #14 L.Merritt. The previous play is under automatic review - \"Incomplete pass\". CALL OVERTURNED. (Original Play: (04:14) No Huddle-Shotgun #10 D.Mensah sacked for loss of 8 yards to the CLE23 (#14 L.Merritt), fumble by #10 D.Mensah recovered by CLE #22 C.Myrick at CLE23 #22 C.Myrick return 77 yards to the MIA00 TOUCHDOWN, clock 04:02)",
+        "period": {
+          "number": 1
+        },
+        "clock": {
+          "displayValue": "4:14"
+        },
+        "start": {
+          "down": 2,
+          "distance": 5,
+          "yardLine": 31,
+          "yardsToEndzone": 31,
+          "downDistanceText": "2nd & 5 at CLEM 31",
+          "shortDownDistanceText": "2nd & 5",
+          "possessionText": "CLEM 31",
+          "team": {
+            "id": "2390"
+          }
+        },
+        "end": {
+          "down": 3,
+          "distance": 5,
+          "yardLine": 31,
+          "yardsToEndzone": 31,
+          "downDistanceText": "3rd & 5 at CLEM 31",
+          "shortDownDistanceText": "3rd & 5",
+          "possessionText": "CLEM 31",
+          "team": {
+            "id": "2390"
+          }
+        },
+        "teamParticipants": [
+          {
+            "id": "2390",
+            "type": "offense",
+            "order": 1
+          },
+          {
+            "id": "228",
+            "type": "defense",
+            "order": 2
+          }
+        ],
+        "scoringPlay": false,
+        "isTurnover": false,
+        "isPenalty": false,
+        "statYardage": 0,
+        "awayScore": 7,
+        "homeScore": 0
+      },
+      "teams": [
+        {
+          "id": "228",
+          "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/228.png"
+        },
+        {
+          "id": "2390",
+          "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2390.png"
+        }
+      ]
+    },
+    "kickoffFumble": {
+      "source": "https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary?event=401856818",
+      "play": {
+        "id": "401856818610",
+        "sequenceNumber": "141",
+        "type": {
+          "id": "9",
+          "text": "Fumble Recovery (Own)"
+        },
+        "text": "(02:06) #97 M.Dunn kickoff 65 yards to the TCU00 #27 L.Walker return 1 yard to the TCU00 fumbled by #27 L.Walker at TCU00 recovered by TCU #27 L.Walker at TCU01 (#20 K.Doe)",
+        "period": {
+          "number": 4
+        },
+        "clock": {
+          "displayValue": "1:58"
+        },
+        "start": {
+          "down": 0,
+          "distance": 0,
+          "yardLine": 65,
+          "yardsToEndzone": 65,
+          "team": {
+            "id": "252"
+          }
+        },
+        "end": {
+          "down": -1,
+          "distance": 10,
+          "yardLine": 23,
+          "yardsToEndzone": 77,
+          "team": {
+            "id": "2628"
+          }
+        },
+        "teamParticipants": [
+          {
+            "id": "2628",
+            "type": "defense",
+            "order": 1
+          },
+          {
+            "id": "252",
+            "type": "offense",
+            "order": 2
+          }
+        ],
+        "scoringPlay": false,
+        "isTurnover": false,
+        "isPenalty": false,
+        "statYardage": 1,
+        "awayScore": 17,
+        "homeScore": 7
+      },
+      "teams": [
+        {
+          "id": "2628",
+          "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2628.png"
+        },
+        {
+          "id": "252",
+          "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/252.png"
+        }
+      ]
+    },
+    "badTurnover": {
+      "source": "https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary?event=401858473",
+      "play": {
+        "id": "401858473527",
+        "sequenceNumber": "122",
+        "type": {
+          "id": "63",
+          "text": "Interception",
+          "abbreviation": "INT"
+        },
+        "text": "(02:56) #9 H.Brown pass intercepted by #8 J.McClain at OSU30 QB hurried by #55 J.Walker, End Of Play",
+        "period": {
+          "number": 3
+        },
+        "clock": {
+          "displayValue": "2:52"
+        },
+        "start": {
+          "down": 1,
+          "distance": 10,
+          "yardLine": 50,
+          "yardsToEndzone": 50,
+          "downDistanceText": "1st & 10 at 50",
+          "shortDownDistanceText": "1st & 10",
+          "possessionText": "50",
+          "team": {
+            "id": "2294"
+          }
+        },
+        "end": {
+          "down": 1,
+          "distance": 10,
+          "yardLine": 70,
+          "yardsToEndzone": 70,
+          "downDistanceText": "1st & 10 at OSU 30",
+          "shortDownDistanceText": "1st & 10",
+          "possessionText": "OSU 30",
+          "team": {
+            "id": "194"
+          }
+        },
+        "teamParticipants": [
+          {
+            "id": "194",
+            "type": "defense",
+            "order": 1
+          },
+          {
+            "id": "2294",
+            "type": "offense",
+            "order": 2
+          }
+        ],
+        "scoringPlay": false,
+        "isTurnover": false,
+        "isPenalty": false,
+        "statYardage": 0,
+        "awayScore": 24,
+        "homeScore": 6
+      },
+      "teams": [
+        {
+          "id": "2294",
+          "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/2294.png"
+        },
+        {
+          "id": "194",
+          "logo": "https://a.espncdn.com/i/teamlogos/ncaa/500/194.png"
+        }
+      ]
+    },
+    "missedFieldGoal": {
+      "source": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772936",
+      "play": {
+        "id": "4017729362061",
+        "sequenceNumber": "206100",
+        "type": {
+          "id": "60",
+          "text": "Field Goal Missed",
+          "abbreviation": "FGM"
+        },
+        "text": "M.Gay 58 yard field goal is No Good, Wide Left, Center-T.Ott, Holder-T.Way.",
+        "period": {
+          "number": 2
+        },
+        "clock": {
+          "displayValue": "0:19"
+        },
+        "start": {
+          "down": 4,
+          "distance": 4,
+          "yardLine": 40,
+          "yardsToEndzone": 40,
+          "downDistanceText": "4th & 4 at GB 40",
+          "shortDownDistanceText": "4th & 4",
+          "possessionText": "GB 40",
+          "team": {
+            "id": "28"
+          }
+        },
+        "end": {
+          "down": 1,
+          "distance": 10,
+          "yardLine": 40,
+          "yardsToEndzone": 60,
+          "downDistanceText": "1st & 10 at GB 40",
+          "shortDownDistanceText": "1st & 10",
+          "possessionText": "GB 40",
+          "team": {
+            "id": "9"
+          }
+        },
+        "teamParticipants": [
+          {
+            "id": "9",
+            "type": "defense",
+            "order": 1
+          },
+          {
+            "id": "28",
+            "type": "offense",
+            "order": 2
+          }
+        ],
+        "scoringPlay": false,
+        "isTurnover": false,
+        "isPenalty": false,
+        "statYardage": 58,
+        "awayScore": 3,
+        "homeScore": 14
+      },
+      "teams": [
+        {
+          "id": "9",
+          "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png"
+        },
+        {
+          "id": "28",
+          "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png"
+        }
+      ]
+    },
+    "twoPoint": {
+      "source": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772936",
+      "play": {
+        "id": "4017729364142",
+        "sequenceNumber": "414200",
+        "type": {
+          "id": "67",
+          "text": "Passing Touchdown",
+          "abbreviation": "TD"
+        },
+        "text": "Deebo Samuel 10 Yd pass from Jayden Daniels (Jayden Daniels Pass to Luke McCaffrey for Two-Point Conversion)",
+        "period": {
+          "number": 4
+        },
+        "clock": {
+          "displayValue": "2:53"
+        },
+        "start": {
+          "down": 2,
+          "distance": 10,
+          "yardLine": 10,
+          "yardsToEndzone": 10,
+          "downDistanceText": "2nd & Goal at GB 10",
+          "shortDownDistanceText": "2nd & Goal",
+          "possessionText": "GB 10",
+          "team": {
+            "id": "28"
+          }
+        },
+        "end": {
+          "down": -1,
+          "distance": 10,
+          "yardLine": 0,
+          "yardsToEndzone": 0,
+          "team": {
+            "id": "28"
+          }
+        },
+        "teamParticipants": [
+          {
+            "id": "28",
+            "type": "offense",
+            "order": 1
+          },
+          {
+            "id": "9",
+            "type": "defense",
+            "order": 2
+          }
+        ],
+        "scoringPlay": true,
+        "scoringType": {
+          "name": "touchdown",
+          "displayName": "Touchdown",
+          "abbreviation": "TD"
+        },
+        "pointAfterAttempt": {
+          "id": 15,
+          "text": "Two Point Pass",
+          "abbreviation": "Two Point Pass",
+          "value": 2
+        },
+        "isTurnover": false,
+        "isPenalty": false,
+        "statYardage": 10,
+        "awayScore": 18,
+        "homeScore": 27
+      },
+      "teams": [
+        {
+          "id": "9",
+          "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png"
+        },
+        {
+          "id": "28",
+          "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/wsh.png"
+        }
+      ]
+    }
+  }
+}
