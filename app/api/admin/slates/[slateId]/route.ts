@@ -5,6 +5,11 @@ import {
   loadActiveGroupTeamIds,
 } from "@/lib/security/resourceAuthorization";
 import { validateSlateTeamConfigurations } from "@/lib/security/resourcePolicy";
+import {
+  hasStaleSlateTeams,
+  loadSlateParticipantState,
+  staleParticipantNotice,
+} from "@/lib/slates/participantConfiguration.server";
 
 function normalizeNbaTeamCode(value: string | null | undefined) {
   const code = String(value ?? "").trim().toUpperCase();
@@ -121,12 +126,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const safeTeams = teams ?? [];
     const safeSlateTeams = slateTeams ?? [];
+    const participantState = await loadSlateParticipantState(slate);
+    const activeTeamIds = participantState.editable
+      ? await loadActiveGroupTeamIds(authorization.target.groupId)
+      : [];
+    const active = new Set(activeTeamIds);
+    const hasStaleTeams = participantState.editable && hasStaleSlateTeams(safeSlateTeams, activeTeamIds);
 
     const configMap = new Map(
       safeSlateTeams.map((row) => [row.team_id, row])
     );
 
     const mergedTeams = safeTeams
+      .filter((team) => participantState.editable ? active.has(team.id) : configMap.has(team.id))
       .map((team, index) => {
         const config = configMap.get(team.id);
 
@@ -150,13 +162,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
       })
       .map((team, index) => ({
         ...team,
-        draft_order: index + 1,
+        draft_order: participantState.editable ? index + 1 : team.draft_order,
       }));
 
     return NextResponse.json({
       success: true,
       slate: {
         ...slate,
+        participants_editable: participantState.editable && !hasStaleTeams,
+        participant_notice: hasStaleTeams ? staleParticipantNotice : participantState.notice,
         label:
           slate.display_name?.trim() ||
           (
@@ -239,6 +253,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       });
     }
 
+    const hasTeamUpdates = body.teams !== undefined;
     const teams = body.teams ?? [];
     const isLocked = body.is_locked;
     const rawCutPenalty = Number(body.cut_penalty_per_round);
@@ -256,7 +271,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       .map((value) => normalizeNbaTeamCode(value))
       .filter(Boolean);
 
-    if (!Array.isArray(teams) || teams.length === 0) {
+    if (hasTeamUpdates && (!Array.isArray(teams) || teams.length === 0)) {
       return NextResponse.json(
         { error: "At least one team config is required." },
         { status: 400 }
@@ -273,6 +288,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
+    const { data: existingSlate, error: existingSlateError } = await supabaseAdmin
+      .from("slates")
+      .select("id, sport, is_locked, archived_at, date, end_date")
+      .eq("id", slateId)
+      .single();
+
+    if (existingSlateError || !existingSlate) {
+      return NextResponse.json({ error: "Slate not found." }, { status: 404 });
+    }
+    const participantState = await loadSlateParticipantState(existingSlate);
+    if (hasTeamUpdates && !participantState.editable) {
+      return NextResponse.json({ error: participantState.notice }, { status: 409 });
+    }
+
     const normalizedTeams = [...teams]
       .sort((a, b) => {
         if (a.is_participating !== b.is_participating) {
@@ -286,36 +315,34 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         draft_order: index + 1,
       }));
 
-    const activeTeamIds = await loadActiveGroupTeamIds(
-      authorization.target.groupId,
-    );
-    const teamValidation = validateSlateTeamConfigurations(
-      normalizedTeams.map((team) => ({
-        team_id: Number(team.team_id),
-        draft_order: Number(team.draft_order),
-        is_participating: Boolean(team.is_participating),
-      })),
-      activeTeamIds,
-    );
-
-    if (!teamValidation.ok) {
-      return NextResponse.json(
-        { error: teamValidation.error },
-        { status: 400 },
+    if (hasTeamUpdates) {
+      const activeTeamIds = await loadActiveGroupTeamIds(
+        authorization.target.groupId,
       );
-    }
-
-    const { data: existingSlate, error: existingSlateError } = await supabaseAdmin
-      .from("slates")
-      .select("id, sport")
-      .eq("id", slateId)
-      .single();
-
-    if (existingSlateError || !existingSlate) {
-      return NextResponse.json(
-        { error: "Slate not found." },
-        { status: 404 }
+      const teamValidation = validateSlateTeamConfigurations(
+        normalizedTeams.map((team) => ({
+          team_id: Number(team.team_id),
+          draft_order: Number(team.draft_order),
+          is_participating: Boolean(team.is_participating),
+        })),
+        activeTeamIds,
       );
+
+      if (!teamValidation.ok) {
+        return NextResponse.json(
+          { error: teamValidation.error },
+          { status: 400 },
+        );
+      }
+
+      const { data: storedTeams, error: storedTeamsError } = await supabaseAdmin
+        .from("slate_teams").select("team_id").eq("slate_id", slateId);
+      if (storedTeamsError) throw new Error(storedTeamsError.message);
+      // Safely deleting obsolete rows requires dependency checks in a transaction.
+      // Do not leave a stale participating row behind while reporting a successful save.
+      if (hasStaleSlateTeams(storedTeams ?? [], activeTeamIds)) {
+        return NextResponse.json({ error: staleParticipantNotice }, { status: 409 });
+      }
     }
 
     if (
@@ -388,22 +415,24 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const payload = normalizedTeams.map((team) => ({
-      slate_id: slateId,
-      team_id: team.team_id,
-      draft_order: team.draft_order,
-      is_participating: team.is_participating,
-    }));
+    if (hasTeamUpdates) {
+      const payload = normalizedTeams.map((team) => ({
+        slate_id: slateId,
+        team_id: team.team_id,
+        draft_order: team.draft_order,
+        is_participating: team.is_participating,
+      }));
 
-    const { error: upsertError } = await supabaseAdmin
-      .from("slate_teams")
-      .upsert(payload, { onConflict: "slate_id,team_id" });
+      const { error: upsertError } = await supabaseAdmin
+        .from("slate_teams")
+        .upsert(payload, { onConflict: "slate_id,team_id" });
 
-    if (upsertError) {
-      return NextResponse.json(
-        { error: `Failed to save slate teams: ${upsertError.message}` },
-        { status: 500 }
-      );
+      if (upsertError) {
+        return NextResponse.json(
+          { error: `Failed to save slate teams: ${upsertError.message}` },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({

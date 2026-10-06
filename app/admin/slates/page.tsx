@@ -42,6 +42,8 @@ type SlateListRow = {
   tournament_analysis?: string | null;
   show_tournament_analysis?: boolean;
   nba_team_abbreviations?: string[] | null;
+  participants_editable?: boolean;
+  participant_notice?: string | null;
 };
 
 type SlateTeamRow = {
@@ -243,6 +245,7 @@ export default function AdminSlatesPage() {
     isImportingGolfField ||
     isSyncingGolfRankings ||
     isRefreshingShotCast;
+  const participantsEditable = selectedSlate?.participants_editable === true;
 
   useEffect(() => {
     if (selectedSport === "ncaa") {
@@ -359,7 +362,9 @@ export default function AdminSlatesPage() {
         ).join(", "),
       });
 
-      setTeams(normalizeTeamOrder(safeResult.teams ?? []));
+      setTeams(safeResult.slate.participants_editable
+        ? normalizeTeamOrder(safeResult.teams ?? [])
+        : safeResult.teams ?? []);
       setGolfField(safeResult.golfField ?? null);
 
       if (safeResult.slate.sport === "golf") {
@@ -519,6 +524,7 @@ export default function AdminSlatesPage() {
   }
 
   function toggleParticipation(teamId: number) {
+    if (!participantsEditable) return;
     setTeams((current) =>
       normalizeTeamOrder(
         current.map((team) =>
@@ -537,6 +543,7 @@ export default function AdminSlatesPage() {
     teamId: number,
     direction: "up" | "down",
   ) {
+    if (!participantsEditable) return;
     setTeams((current) => {
       const normalized = normalizeTeamOrder(current);
       const team = normalized.find(
@@ -638,14 +645,14 @@ export default function AdminSlatesPage() {
                   value.trim().toUpperCase(),
                 )
                 .filter(Boolean),
-            teams: normalizedTeams.map(
+            teams: participantsEditable ? normalizedTeams.map(
               (team, index) => ({
                 team_id: team.team_id,
                 draft_order: index + 1,
                 is_participating:
                   team.is_participating,
               }),
-            ),
+            ) : undefined,
           }),
         },
       );
@@ -824,7 +831,7 @@ export default function AdminSlatesPage() {
   }
 
   async function handleReseed() {
-    if (!selectedSlateId) return;
+    if (!selectedSlateId || !participantsEditable) return;
 
     const confirmed = window.confirm(
       "Replace the current draft order using the previous completed slate?",
@@ -911,8 +918,8 @@ export default function AdminSlatesPage() {
   }
 
   const orderedTeams = useMemo(
-    () => normalizeTeamOrder(teams),
-    [teams],
+    () => participantsEditable ? normalizeTeamOrder(teams) : teams,
+    [teams, participantsEditable],
   );
 
   const participatingTeams = useMemo(
@@ -960,7 +967,8 @@ export default function AdminSlatesPage() {
             onChange={() =>
               toggleParticipation(team.team_id)
             }
-            disabled={isBusy}
+            disabled={isBusy || !participantsEditable}
+            aria-label={`${team.team_name} participating`}
             className="h-4 w-4 rounded border-slate-500"
           />
         </td>
@@ -972,7 +980,7 @@ export default function AdminSlatesPage() {
               onClick={() =>
                 moveTeam(team.team_id, "up")
               }
-              disabled={isBusy || sectionIndex === 0}
+              disabled={isBusy || !participantsEditable || sectionIndex === 0}
               className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-sky-400 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
               aria-label={`Move ${team.team_name} up`}
             >
@@ -986,6 +994,7 @@ export default function AdminSlatesPage() {
               }
               disabled={
                 isBusy ||
+                !participantsEditable ||
                 sectionIndex === sectionRows.length - 1
               }
               className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-sky-400 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
@@ -1576,6 +1585,11 @@ export default function AdminSlatesPage() {
               {selectedSlate.sport !== "golf" ||
               golfAdminTab === "teams" ? (
                 <div className="overflow-hidden rounded-2xl border border-slate-700">
+                  {selectedSlate.participant_notice ? (
+                    <p className="border-b border-slate-700 px-4 py-3 text-sm text-slate-300">
+                      {selectedSlate.participant_notice}
+                    </p>
+                  ) : null}
                   <div className="overflow-x-auto">
                   <table className="min-w-full border-collapse text-sm">
                     <thead className="bg-slate-800 text-slate-200">
@@ -1698,7 +1712,7 @@ export default function AdminSlatesPage() {
                   <button
                     type="button"
                     onClick={() => void handleReseed()}
-                    disabled={isBusy}
+                    disabled={isBusy || !participantsEditable}
                     className="rounded-xl border border-slate-500 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isReseeding
@@ -1711,7 +1725,7 @@ export default function AdminSlatesPage() {
                   <button
                     type="button"
                     onClick={() => void handleReseed()}
-                    disabled={isBusy}
+                    disabled={isBusy || !participantsEditable}
                     className="rounded-xl border border-slate-500 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isReseeding

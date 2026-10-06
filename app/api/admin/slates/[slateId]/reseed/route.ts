@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { authorizeSlateResource, loadActiveGroupTeamIds } from "@/lib/security/resourceAuthorization";
+import { hasStaleSlateTeams, loadSlateParticipantState, staleParticipantNotice } from "@/lib/slates/participantConfiguration.server";
+import { buildSuggestedOrderIds } from "@/lib/slates/participantOrder";
+import { validateSlateTeamConfigurations } from "@/lib/security/resourcePolicy";
 
 type RouteContext = {
   params: Promise<{
@@ -44,7 +47,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const { data: currentSlate, error: currentSlateError } = await supabaseAdmin
       .from("slates")
-      .select("id, start_date, end_date, sport, league_id, is_locked")
+      .select("id, date, start_date, end_date, sport, league_id, is_locked, archived_at")
       .eq("id", slateId)
       .single();
 
@@ -55,24 +58,24 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    const isFantasy = currentSlate.sport === "nba" || currentSlate.sport === "nfl";
-    if (isFantasy && (currentSlate.league_id !== authorization.target.leagueId ||
-        currentSlate.sport !== authorization.target.sportKey || currentSlate.is_locked)) {
+    if (currentSlate.league_id !== authorization.target.leagueId ||
+        currentSlate.sport !== authorization.target.sportKey) {
       return NextResponse.json({ error: "Cannot reseed this slate." }, { status: 400 });
     }
-    const activeTeamIds = isFantasy
-      ? new Set(await loadActiveGroupTeamIds(authorization.target.groupId))
-      : null;
-    let previousQuery = supabaseAdmin.from("slates")
+    const participantState = await loadSlateParticipantState(currentSlate);
+    if (!participantState.editable) {
+      return NextResponse.json({ error: participantState.notice }, { status: 409 });
+    }
+    const activeIds = await loadActiveGroupTeamIds(authorization.target.groupId);
+    const activeTeamIds = new Set(activeIds);
+    const previousQuery = supabaseAdmin.from("slates")
       .select("id, start_date, end_date, is_locked")
       .lt("start_date", currentSlate.start_date)
-      .eq("is_locked", true);
-    let teamsQuery = supabaseAdmin.from("teams").select("id, name");
-    if (isFantasy) {
-      previousQuery = previousQuery.eq("league_id", currentSlate.league_id!)
-        .eq("sport", currentSlate.sport);
-      teamsQuery = teamsQuery.eq("group_id", authorization.target.groupId);
-    }
+      .eq("is_locked", true)
+      .eq("league_id", authorization.target.leagueId)
+      .eq("sport", currentSlate.sport);
+    const teamsQuery = supabaseAdmin.from("teams").select("id, name")
+      .eq("group_id", authorization.target.groupId);
 
     const [
       { data: previousSlates, error: previousSlatesError },
@@ -123,44 +126,28 @@ export async function POST(request: Request, context: RouteContext) {
 
     const safeSlateTeams = (slateTeams ?? []) as SlateTeamRow[];
     const safePreviousResults = (previousResults ?? []) as TeamResultRow[];
+    if (hasStaleSlateTeams(safeSlateTeams, activeIds)) {
+      return NextResponse.json({ error: staleParticipantNotice }, { status: 409 });
+    }
 
     const configMap = new Map(
       safeSlateTeams.map((row) => [row.team_id, row])
     );
 
-    const previousOrderMap = new Map<number, number>();
-    safePreviousResults
-      .filter((row) => row.finish_position !== null)
-      .sort((a, b) => {
-        const aFinish = a.finish_position ?? 999;
-        const bFinish = b.finish_position ?? 999;
-        if (aFinish !== bFinish) return aFinish - bFinish;
-        return Number(a.fantasy_points ?? 0) - Number(b.fantasy_points ?? 0);
-      })
-      .forEach((row) => {
-        previousOrderMap.set(row.team_id, row.finish_position ?? 999);
-      });
-
-    const merged = (teams ?? [])
-      .filter((team) => !activeTeamIds || activeTeamIds.has(team.id) || configMap.has(team.id))
-      .map((team, index) => {
-      const config = configMap.get(team.id);
+    const eligibleTeams = (teams ?? []).filter((team) => activeTeamIds.has(team.id));
+    const suggestedIds = buildSuggestedOrderIds(safePreviousResults, eligibleTeams);
+    const merged = suggestedIds.map((teamId, index) => {
+      const config = configMap.get(teamId);
       return {
-        team_id: team.id,
-        draft_order: config?.draft_order ?? index + 1,
-        is_participating: activeTeamIds && !activeTeamIds.has(team.id)
-          ? false : config?.is_participating ?? true,
+        team_id: teamId,
+        draft_order: index + 1,
+        is_participating: config?.is_participating ?? true,
       };
     });
 
     const participating = merged
       .filter((row) => row.is_participating)
-      .sort((a, b) => {
-        const aPrev = previousOrderMap.get(a.team_id) ?? 999;
-        const bPrev = previousOrderMap.get(b.team_id) ?? 999;
-        if (aPrev !== bPrev) return bPrev - aPrev;
-        return a.draft_order - b.draft_order;
-      });
+      .sort((a, b) => a.draft_order - b.draft_order);
 
     const nonParticipating = merged
       .filter((row) => !row.is_participating)
@@ -172,6 +159,10 @@ export async function POST(request: Request, context: RouteContext) {
       draft_order: index + 1,
       is_participating: row.is_participating,
     }));
+    const validation = validateSlateTeamConfigurations(reseeded, activeIds);
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
 
     const { error: upsertError } = await supabaseAdmin
       .from("slate_teams")

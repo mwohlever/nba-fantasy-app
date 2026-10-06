@@ -40,6 +40,8 @@ function database(tables) {
   }};
 }
 const identity = load('lib/fantasyTeamIdentity.ts');
+const participantOrder = load('lib/slates/participantOrder.ts');
+const resourcePolicy = load('lib/security/resourcePolicy.ts');
 function fixture(sport = 'nba') {
   return {
     slates: [{ id: 1, league_id: 'l1', sport, start_date: '2026-09-01', end_date: '2026-09-01', date: '2026-09-01', rules_snapshot: null }],
@@ -184,14 +186,20 @@ for (const sport of ['nba','nfl']) test(`${sport}: reseed ignores other leagues/
     { id: 3, league_id: 'l1', sport: sport === 'nba' ? 'nfl' : 'nba', start_date: '2026-09-08', is_locked: true },
     { id: 4, league_id: 'l1', sport, start_date: '2026-09-11', is_locked: true },
   ];
-  tables.slate_teams = tables.slate_teams.map(t => ({ ...t, slate_id: 10 }));
+  tables.slate_teams = tables.slate_teams.filter(t => [11,14].includes(t.team_id))
+    .map(t => ({ ...t, slate_id: 10 }));
   tables.team_slate_results = [
-    { slate_id: 1, team_id: 11, finish_position: 1 }, { slate_id: 1, team_id: 14, finish_position: 2 },
+    { slate_id: 1, team_id: 11, finish_position: 1, fantasy_points: 100 }, { slate_id: 1, team_id: 14, finish_position: 2, fantasy_points: 90 },
     { slate_id: 2, team_id: 11, finish_position: 2 }, { slate_id: 3, team_id: 11, finish_position: 2 },
   ];
   const db = database(tables);
   const route = load('app/api/admin/slates/[slateId]/reseed/route.ts', {
     'next/server': next, '@/lib/supabaseAdmin': { supabaseAdmin: db },
+    '@/lib/slates/participantConfiguration.server': load('lib/slates/participantConfiguration.server.ts', {
+      '@/lib/supabaseAdmin': { supabaseAdmin: db },
+    }),
+    '@/lib/slates/participantOrder': participantOrder,
+    '@/lib/security/resourcePolicy': resourcePolicy,
     '@/lib/security/resourceAuthorization': {
       authorizeSlateResource: async () => ({ ok: true, target: { leagueId: 'l1', groupId: 'g1', sportKey: sport } }),
       loadActiveGroupTeamIds: async () => [11,14],
@@ -199,9 +207,8 @@ for (const sport of ['nba','nfl']) test(`${sport}: reseed ignores other leagues/
   });
   const response = await route.POST(new Request('http://localhost'), { params: Promise.resolve({ slateId: '10' }) });
   assert.equal(response.status, 200);
-  assert.deepEqual(Array.from(db.writes, r => r.team_id), [14,11,13]);
-  assert.equal(db.writes[2].is_participating, false);
-  assert.deepEqual(Array.from(db.writes, r => r.draft_order), [1,2,3]);
+  assert.deepEqual(Array.from(db.writes, r => r.team_id), [14,11]);
+  assert.deepEqual(Array.from(db.writes, r => r.draft_order), [1,2]);
   assert.equal(tables.team_slate_results.length, 4);
 });
 
@@ -221,6 +228,7 @@ for (const sport of ['nba', 'nfl']) test(`${sport}: creation preview and creatio
   ]);
   const db = database(tables);
   const route = load('app/api/slates/route.ts', {
+    '@/lib/slates/participantOrder': participantOrder,
     '@/lib/providers/nflWeeks': {}, // GET preview does not resolve provider schedules.
     'next/server': next,
     '@/lib/supabaseAdmin': { supabaseAdmin: db },

@@ -7,6 +7,7 @@ import { getActiveLeagueForSport } from "@/lib/groups/context";
 import { resolveGolfRules, resolveLeagueRules } from "@/lib/rules/leagueRules";
 import { buildGolfSlateRulesSnapshot } from "@/lib/slates/golfSlateRules";
 import { validateSlateTeamConfigurations } from "@/lib/security/resourcePolicy";
+import { buildSuggestedOrderIds } from "@/lib/slates/participantOrder";
 
 function isoDateFromGameCode(gameCode: string | null | undefined) {
   const raw = String(gameCode ?? "").slice(0, 8);
@@ -405,33 +406,6 @@ async function getMostRecentCompletedSlateSetup(
   }
 
   return { slate: null, results: [] as TeamSlateResultRow[] };
-}
-
-function buildSuggestedOrderIds(results: TeamSlateResultRow[], safeTeams: TeamRow[]) {
-  const rankedTeams = [...results]
-    .filter(
-      (row) =>
-        row.finish_position !== null &&
-        row.finish_position !== undefined &&
-        (row.fantasy_points ?? 0) > 0
-    )
-    .sort((a, b) => {
-      const aFinish = a.finish_position ?? Number.MAX_SAFE_INTEGER;
-      const bFinish = b.finish_position ?? Number.MAX_SAFE_INTEGER;
-
-      if (aFinish !== bFinish) return aFinish - bFinish;
-
-      return (b.fantasy_points ?? 0) - (a.fantasy_points ?? 0);
-    });
-
-  const inverseOrderIds = rankedTeams.map((row) => row.team_id).reverse();
-
-  const teamsMissingFromSlate = safeTeams
-    .filter((team) => !inverseOrderIds.includes(team.id))
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((team) => team.id);
-
-  return [...inverseOrderIds, ...teamsMissingFromSlate];
 }
 
 export async function GET(request: NextRequest) {
