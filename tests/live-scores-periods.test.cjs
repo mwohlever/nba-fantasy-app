@@ -33,13 +33,34 @@ test('uses the current scheduled regular-season week when the provider is outsid
   );
 });
 
-test('Live Scores initializes provider context once so manual week navigation survives refreshes', () => {
-  for (const file of ['app/ncaa-pickem/scores/page.tsx']) {
-    const source = fs.readFileSync(file, 'utf8').replace(/\s+/g, ' ');
-    assert.match(source, /const \[initialized, setInitialized\] = useState\(Boolean\(live.state.calendar\)\)/);
-    assert.match(source, /if \(!initialized\) \{[\s\S]*?setInitialized\(true\)/);
-    assert.match(source, /initialized \? .*season=.*week=.*: .*scores/);
+test('NCAA Scores resolves the provider week once; manual URL week survives rerenders and reload', async () => {
+  const { host, nodes } = require('./helpers/scores-harness.cjs');
+  const { installViewingBrowser } = require('./helpers/viewing-browser.cjs');
+  const Page = require('../app/ncaa-pickem/scores/page.tsx').default;
+  const browser = installViewingBrowser('/ncaa-pickem/scores');
+  const original = global.fetch, calls = [];
+  global.fetch = async input => {
+    const url = new URL(input, 'http://test'); calls.push(url);
+    return { ok: true, json: async () => url.pathname.endsWith('/scores')
+      ? { season: 2026, week: Number(url.searchParams.get('week') || 5), games: [] }
+      : { teamIds: [] } };
+  };
+  const h = host(Page().props.children.type);
+  async function settle() {
+    let tree;
+    for (let i = 0; i < 5; i++) { tree = h.render({}, true); await new Promise(resolve => setImmediate(resolve)); }
+    return tree;
   }
+  const weekControl = tree => nodes(tree).find(n => n.type === 'select' && nodes(n).some(option => option.type === 'option' && option.props.children?.includes('Week ')));
+  try {
+    let tree = await settle(); assert.equal(weekControl(tree).props.value, 5);
+    weekControl(tree).props.onChange({ target: { value: '6' }, currentTarget: { blur() {} } });
+    tree = await settle(); assert.equal(weekControl(tree).props.value, 6);
+    h.remount({}, true); tree = await settle(); assert.equal(weekControl(tree).props.value, 6);
+    assert.equal(calls.filter(url => url.pathname.endsWith('/scores') && !url.search).length, 1);
+    assert.equal(calls.filter(url => url.pathname.endsWith('/scores')).at(-1).search, '?season=2026&week=6');
+    assert.ok(browser.navigation.some(entry => entry.method === 'push' && entry.href.endsWith('season=2026&week=6')));
+  } finally { h.unmount(); global.fetch = original; }
 });
 
 // NFL now persists the authoritative week in the URL rather than local initialization.

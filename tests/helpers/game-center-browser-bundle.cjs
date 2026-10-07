@@ -4,7 +4,7 @@ const path = require('node:path');
 const { createRequire } = require('node:module');
 const ts = require('typescript');
 const root = path.resolve(__dirname, '../..');
-module.exports = function gameCenterBrowserBundle({ nbaLive = false } = {}) {
+module.exports = function gameCenterBrowserBundle({ nbaLive = false, nflLive = false } = {}) {
   const sources = {}, maps = {};
   const oldTs = require.extensions['.ts'], oldTsx = require.extensions['.tsx'];
   require.extensions['.ts'] ??= () => {}; require.extensions['.tsx'] ??= () => {};
@@ -17,13 +17,13 @@ module.exports = function gameCenterBrowserBundle({ nbaLive = false } = {}) {
     sources[filename] = source; maps[filename] = {};
     for (const match of source.matchAll(/require\(["']([^"']+)["']\)/g)) {
       const request = match[1]; if (request.endsWith('.development.js')) continue;
-      maps[filename][request] = nbaLive && request === 'next/navigation'
+      maps[filename][request] = (nbaLive || nflLive) && request === 'next/navigation'
         ? add(path.join(root, 'virtual-nba-live-navigation.js'), `const React=require('react');
           const subscribe=notify=>{window.addEventListener('popstate',notify);return()=>window.removeEventListener('popstate',notify)};
           exports.usePathname=()=>React.useSyncExternalStore(subscribe,()=>location.pathname);
           exports.useSearchParams=()=>new URLSearchParams(React.useSyncExternalStore(subscribe,()=>location.search));
           exports.useRouter=()=>({push:href=>history.pushState(null,'',href),replace:href=>history.replaceState(null,'',href)});`)
-        : nbaLive && request === '@/components/AppNav'
+        : (nbaLive || nflLive) && request === '@/components/AppNav'
         ? add(path.join(root, 'virtual-nba-live-nav.js'), 'exports.__esModule=true;exports.default=()=>null;')
         : request.includes('providers/GroupProvider')
         ? add(path.join(root, 'virtual-game-center-group.js'), 'exports.useGroupContext=()=>window.fixtureGroup;')
@@ -39,6 +39,7 @@ module.exports = function gameCenterBrowserBundle({ nbaLive = false } = {}) {
       bracket: 'components/bracket/BracketGameCenterModal.tsx',
       nba: 'components/live-scores/NbaGameCenter.tsx',
       'nba-modal': 'components/live-scores/NbaGameCenterModal.tsx',
+      ...(nflLive ? { 'nfl-live': 'components/live-scores/NflLiveScores.tsx' } : {}),
       ...(nbaLive ? { 'nba-live': 'components/live-scores/NbaLiveScores.tsx' } : {}),
     };
     const ids = Object.fromEntries(Object.entries(entries).map(([name, file]) => [name, add(path.join(root, file))]));

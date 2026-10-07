@@ -16,7 +16,10 @@ function installViewingBrowser(pathname, search = '', entries = {}, autoNavigate
   }
   context.navigate = navigate;
   if (global.window) delete global.window.localStorage;
-  global.window = { ...global.window, localStorage: {
+  global.window = { ...global.window, location: {
+    get pathname() { return context.pathname; },
+    get search() { return context.search; },
+  }, localStorage: {
     getItem: key => memory.get(key) ?? null,
     setItem: (key, value) => memory.set(key, value),
     removeItem: key => memory.delete(key),

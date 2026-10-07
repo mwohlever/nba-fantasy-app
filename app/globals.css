@@ -350,18 +350,21 @@ body {
   }
 }
 
-/* NFL inline replay needs the same viewport scrolling as NBA. Keep the
+/* NFL and NCAA inline replay need the same viewport scrolling as NBA. Keep the
  * football exception scoped so other football modal consumers are unchanged. */
 @media (max-width: 639px) {
   html:has(main.nfl-live-page),
   body:has(main.nfl-live-page),
-  main.nfl-live-page {
+  main.nfl-live-page,
+  html:has(main.ncaa-live-page),
+  body:has(main.ncaa-live-page),
+  main.ncaa-live-page {
     overflow-x: clip;
     overflow-y: visible;
   }
 }
 
-/* NCAA standings use document scrolling; its existing Games modal is unchanged. */
+/* NCAA standings use document scrolling. */
 @media (max-width: 639px) {
   html:has(main.ncaa-standings-page),
   body:has(main.ncaa-standings-page),

@@ -166,8 +166,9 @@ export function getGroupSwitchDestination({
   }
 
   let destinationSearch = normalizedSearch;
-  if (normalizedPathname === "/ncaa-pickem/scores" && searchParams.get("view") === "standings") {
-    if (!isEnabled("ncaa", targetEnabledSports) || searchParams.has("groupId") || searchParams.has("leagueId")) return fallback;
+  // NCAA detail is public provider context; scoped requests are reloaded after switching.
+  if (normalizedPathname === "/ncaa-pickem/scores" && (searchParams.get("view") === "standings" || searchParams.has("gameId"))) {
+    if (!isEnabled("ncaa", targetEnabledSports) || searchParams.has("groupId") || searchParams.has("leagueId") || searchParams.has("eventId")) return fallback;
     return ncaaLiveOverviewHref(parseNcaaLiveOverview(normalizedSearch));
   }
   const viewingGame = normalizedPathname.startsWith("/nba-skins") ? "nba-skins" : searchParams.get("sport");

@@ -8,7 +8,8 @@ import StandingsPanel from "@/components/live-scores/StandingsPanel";
 import { useNcaaLiveUrl } from "@/lib/live-scores/useNcaaLiveUrl";
 import { useNcaaStandingsScope } from "@/lib/live-scores/useNcaaStandingsScope";
 import NcaaScoreCard from "@/components/ncaa/NcaaScoreCard";
-import NcaaGameCenterModal from "@/components/ncaa/NcaaGameCenterModal";
+import NcaaGameCenter from "@/components/ncaa/NcaaGameCenter";
+import { useLiveRequest } from "@/lib/live-scores/useLiveRequest";
 
 type Team = {
   id: string;
@@ -52,6 +53,9 @@ type ScoresResponse = {
   error?: string;
 };
 
+const EMPTY_GAMES: Game[] = [];
+const EMPTY_FAVORITES = new Set<string>();
+
 function gameDateKey(game: Game) {
   return new Date(game.kickoffAt).toLocaleDateString("en-US", {
     year: "numeric",
@@ -87,23 +91,39 @@ export default function NcaaScoresPage() {
 }
 
 function NcaaScoresContent() {
-  const live = useNcaaLiveUrl();
   const { scope, waitingForScope } = useNcaaStandingsScope();
-  const gamesView = live.routeMatches && live.state.view === "games";
-  const [season, setSeason] = useState(live.state.calendar?.season ?? 2026);
-  const [week, setWeek] = useState(live.state.calendar?.week ?? 1);
-  const [initialized, setInitialized] = useState(Boolean(live.state.calendar));
+  const live = useNcaaLiveUrl(JSON.stringify(scope));
+  const gamesView = live.routeMatches && live.state.view !== "standings";
+  const { season, week } = live.state.calendar ?? { season: 2026, week: 1 };
+  const initialized = Boolean(live.state.calendar);
   const [filter, setFilter] = useState("top25");
-  const [games, setGames] = useState<Game[]>([]);
-  const [favoriteTeamIds, setFavoriteTeamIds] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const calendarKey = initialized ? `season=${season}&week=${week}` : "";
+  const request = useLiveRequest<ScoresResponse>(scope ? { ...scope, resource: `scores:${calendarKey || "current"}` } : null,
+    gamesView && scope ? `/api/ncaa-pickem/scores${calendarKey ? `?${calendarKey}` : ""}` : null);
+  const games = request.data?.games ?? EMPTY_GAMES;
+  const loading = waitingForScope || request.loading || (gamesView && Boolean(scope) && !initialized && !request.error);
+  const error = request.error || (!waitingForScope && !scope ? "NCAA Pick 'Em is not enabled for this Group." : "");
+  const favoritesKey = JSON.stringify(scope);
+  const favoritesReady = gamesView && Boolean(scope);
+  const [favorites, setFavorites] = useState<{ key: string; ids: Set<string> } | null>(null);
+  const favoriteTeamIds = favorites?.key === favoritesKey ? favorites.ids : EMPTY_FAVORITES;
+  const gameId = live.state.view === "detail" ? live.state.gameId : null;
+  const selectedGame = gameId && scope && !loading && !error
+    ? games.find(game => game.espnEventId === gameId) ?? null : null;
 
   useEffect(() => {
-    if (!gamesView) return;
+    if (request.data && !initialized && request.data.season && request.data.week) {
+      live.resolveCalendar({ season: request.data.season, week: request.data.week });
+    }
+  }, [request.data, initialized, live]);
+
+  useEffect(() => {
+    if (live.state.view !== "detail") return;
+    if (!/^\d+$/.test(live.state.gameId) || (request.data && initialized && !loading && !error && !selectedGame)) live.clearDetail();
+  }, [live, request.data, initialized, loading, error, selectedGame]);
+
+  useEffect(() => {
+    if (!favoritesReady) return;
     let cancelled = false;
 
     async function loadFavorites() {
@@ -119,7 +139,7 @@ function NcaaScoresContent() {
         if (!response.ok) return;
 
         if (!cancelled) {
-          setFavoriteTeamIds(new Set(data.teamIds ?? []));
+          setFavorites({ key: favoritesKey, ids: new Set(data.teamIds ?? []) });
         }
       } catch {
         // Favorites are optional UI state; scores should still load normally.
@@ -131,13 +151,13 @@ function NcaaScoresContent() {
     return () => {
       cancelled = true;
     };
-  }, [gamesView]);
+  }, [favoritesReady, favoritesKey]);
 
   async function toggleFavorite(teamId: string) {
     const wasFavorite = favoriteTeamIds.has(teamId);
 
-    setFavoriteTeamIds((current) => {
-      const next = new Set(current);
+    setFavorites((current) => {
+      const next = new Set(current?.key === favoritesKey ? current.ids : []);
 
       if (wasFavorite) {
         next.delete(teamId);
@@ -145,7 +165,7 @@ function NcaaScoresContent() {
         next.add(teamId);
       }
 
-      return next;
+      return { key: favoritesKey, ids: next };
     });
 
     try {
@@ -161,8 +181,9 @@ function NcaaScoresContent() {
         throw new Error("Unable to update favorite team.");
       }
     } catch {
-      setFavoriteTeamIds((current) => {
-        const next = new Set(current);
+      setFavorites((current) => {
+        if (current?.key !== favoritesKey) return current;
+        const next = new Set(current.ids);
 
         if (wasFavorite) {
           next.add(teamId);
@@ -170,72 +191,10 @@ function NcaaScoresContent() {
           next.delete(teamId);
         }
 
-        return next;
+        return { key: favoritesKey, ids: next };
       });
     }
   }
-
-  useEffect(() => {
-    if (!gamesView) return;
-    // Back/Forward can restore a different week before local controls sync.
-    if (live.state.calendar && (live.state.calendar.season !== season || live.state.calendar.week !== week)) return;
-    let cancelled = false;
-
-    async function loadScores() {
-      setLoading(true);
-      setError("");
-
-      try {
-        const response = await fetch(
-          initialized
-            ? `/api/ncaa-pickem/scores?season=${season}&week=${week}`
-            : "/api/ncaa-pickem/scores",
-          { cache: "no-store" },
-        );
-
-        const data = (await response.json()) as ScoresResponse;
-
-        if (!response.ok) {
-          throw new Error(data.error || "Unable to load NCAA scores.");
-        }
-
-        if (!cancelled) {
-          setGames(data.games ?? []);
-          if (!initialized) {
-            setSeason(data.season ?? season);
-            setWeek(data.week ?? week);
-            setInitialized(true);
-          }
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to load NCAA scores.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadScores();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [season, week, initialized, gamesView, live.state.calendar?.season, live.state.calendar?.week]);
-
-  useEffect(() => {
-    if (gamesView && live.state.calendar) {
-      setSeason(live.state.calendar.season);
-      setWeek(live.state.calendar.week);
-      setInitialized(true);
-    }
-  }, [gamesView, live.state.calendar?.season, live.state.calendar?.week]);
 
   const filteredGames = useMemo(() => {
     if (filter === "top25") {
@@ -327,10 +286,18 @@ function NcaaScoresContent() {
     CONFERENCES.find((item) => item.id === filter)?.label ?? "Scores";
 
   return (
-    <main className={`${live.state.view === "standings" ? "ncaa-standings-page " : ""}min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6`}>
+    <main className={`${live.state.view === "standings" ? "ncaa-standings-page " : live.state.view === "detail" ? "ncaa-live-page " : ""}min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6`}>
       <div className="mx-auto max-w-5xl space-y-4">
         <AppNav />
-        <LiveViewSelector value={live.state.view} onChange={view => { setSelectedGame(null); live.selectView(view, initialized ? { season, week } : null); }} />
+        {live.state.view === "detail" ? selectedGame && scope ? <NcaaGameCenter
+          key={`${scope.viewerId}:${scope.groupId}:${scope.leagueId}:${selectedGame.espnEventId}`}
+          game={selectedGame} scope={scope} tab={live.state.tab} period={live.state.period} statsTeam={live.state.statsTeam}
+          onDetailChange={live.selectDetail} onBack={live.backToGames}
+        /> : <section className="bg-white p-4">
+          <button type="button" onClick={live.backToGames} className="text-xs font-bold text-sky-700">← Back to games</button>
+          {error ? <p role="alert" className="mt-4 text-sm text-rose-700">{error}</p> : <p className="py-8 text-center text-sm text-slate-500">Loading NCAA scores…</p>}
+        </section> : <>
+        <LiveViewSelector value={live.state.view} onChange={view => live.selectView(view, initialized ? { season, week } : null)} />
         {live.state.view === "standings" ? <><h1 className="text-2xl font-black">NCAA Football Live</h1><StandingsPanel sport="ncaa" scope={scope} waitingForScope={waitingForScope} selection={live.state.selection} onChange={live.selectStandings} /></> : <>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -375,7 +342,6 @@ function NcaaScoresContent() {
                 <select
                   value={week}
                   onChange={(event) => {
-                    setWeek(Number(event.target.value));
                     live.selectCalendar({ season, week: Number(event.target.value) });
                     event.currentTarget.blur();
                   }}
@@ -420,7 +386,7 @@ function NcaaScoresContent() {
                     <NcaaScoreCard
                       key={`favorite-${game.espnEventId}`}
                       game={game}
-                      onClick={() => setSelectedGame(game)}
+                      onClick={() => live.openGame(game.espnEventId)}
                       favoriteTeamIds={favoriteTeamIds}
                       onToggleFavorite={toggleFavorite}
                     />
@@ -440,7 +406,7 @@ function NcaaScoresContent() {
                     <NcaaScoreCard
                       key={game.espnEventId}
                       game={game}
-                      onClick={() => setSelectedGame(game)}
+                      onClick={() => live.openGame(game.espnEventId)}
                       favoriteTeamIds={favoriteTeamIds}
                       onToggleFavorite={toggleFavorite}
                     />
@@ -451,13 +417,8 @@ function NcaaScoresContent() {
           </section>
         )}
         </>}
+        </>}
       </div>
-      {gamesView && selectedGame ? (
-        <NcaaGameCenterModal
-          game={selectedGame}
-          onClose={() => setSelectedGame(null)}
-        />
-      ) : null}
     </main>
   );
 }
