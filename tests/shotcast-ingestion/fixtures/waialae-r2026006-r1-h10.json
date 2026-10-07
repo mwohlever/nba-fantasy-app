@@ -1,0 +1,127 @@
+{
+  "source": {
+    "sourceUrl": "https://orchestrator.pgatour.com/graphql",
+    "sha256": "b60e91e0c88d90603e6dea757b6cf113c25089d41ce363290cbc022f2d549451",
+    "retrievedAt": "2026-10-06T11:00:35.523Z",
+    "operation": "ShotDetailsCompressedV3",
+    "variables": {
+      "tournamentId": "R2026006",
+      "playerId": "59095",
+      "round": 1,
+      "includeRadar": true
+    }
+  },
+  "reference": {
+    "descriptorSha256": "d8618bc9d38a730d6e6d8341ab7502bf8f653c362efb0f5079bc638895445113",
+    "sourceUrl": "/home/markwohlever/nba-fantasy-app-3d/tmp/shotcast-ingestion/packages/pga-2f61f589-ec68-4c2a-a188-c8effb517698/placement-check.json",
+    "sha256": "d13246d2764cf94c45e825dfbee379074ea33b3d2c0759a7d7d8a224b7e26e93",
+    "retrievedAt": "2026-10-06T11:00:35.665Z"
+  },
+  "input": {
+    "tournamentId": "R2026006",
+    "pgaPlayerId": "59095",
+    "roundNumber": 1,
+    "holeNumber": 10,
+    "pin": {
+      "tourcastX": 11050.44,
+      "tourcastY": 10259.26,
+      "tourcastZ": 11.84
+    },
+    "shots": [
+      {
+        "strokeNumber": 1,
+        "from": {
+          "tourcastX": 10137.592,
+          "tourcastY": 9821.615,
+          "tourcastZ": 9.941
+        },
+        "to": {
+          "tourcastX": 10930.474,
+          "tourcastY": 10252.798,
+          "tourcastZ": 7.213
+        }
+      },
+      {
+        "strokeNumber": 2,
+        "from": {
+          "tourcastX": 10930.474,
+          "tourcastY": 10252.798,
+          "tourcastZ": 7.213
+        },
+        "to": {
+          "tourcastX": 11037.69,
+          "tourcastY": 10254.604,
+          "tourcastZ": 11.77
+        }
+      },
+      {
+        "strokeNumber": 3,
+        "from": {
+          "tourcastX": 11037.69,
+          "tourcastY": 10254.604,
+          "tourcastZ": 11.77
+        },
+        "to": {
+          "tourcastX": 11050.44,
+          "tourcastY": 10259.26,
+          "tourcastZ": 11.84
+        }
+      }
+    ]
+  },
+  "expected": {
+    "tee": [
+      -157.569091796875,
+      -106.43359375,
+      -19.777041853871197
+    ],
+    "pin": [
+      119.671142578125,
+      29.0185546875,
+      -19.235471572331665
+    ],
+    "shots": [
+      {
+        "strokeNumber": 1,
+        "from": [
+          -157.569091796875,
+          -106.43359375,
+          -19.777041853871197
+        ],
+        "endpoint": [
+          83.120849609375,
+          26.77783203125,
+          -20.57729180450313
+        ]
+      },
+      {
+        "strokeNumber": 2,
+        "from": [
+          83.120849609375,
+          26.77783203125,
+          -20.57729180450313
+        ],
+        "endpoint": [
+          115.795654296875,
+          27.570556640625,
+          -19.252282164396593
+        ]
+      },
+      {
+        "strokeNumber": 3,
+        "from": [
+          115.795654296875,
+          27.570556640625,
+          -19.252282164396593
+        ],
+        "endpoint": [
+          119.671142578125,
+          29.0185546875,
+          -19.235471572331665
+        ]
+      }
+    ]
+  },
+  "packageId": "pga-a5d81a10-162d-ab8e-72f9-348e306d2a51",
+  "preparationId": "a5d81a10162dab8e72f9348e306d2a513b25eb40494ad7b7d3d150ca7e50fc53"
+}

@@ -1,8 +1,9 @@
-/** Read-only subset of the donor's package preparation API. No discovery or capture. */
+/** Read-only local delivery adapter for legacy research and validated course-only preparation. */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { normalizePackage, validateDescriptor, type PackageDescriptor } from "./package";
 import { readPreserved } from "./local";
+import { validatePreparedCourse } from "../preparation/prepareCourse.server";
 
 export const PREPARED_DIRECTORY = "tmp/shotcast-ingestion/packages";
 
@@ -12,6 +13,14 @@ export type PreparedCourseDescriptor = Pick<PackageDescriptor,
 >;
 
 export async function readPreparedCourseDescriptor(id: string): Promise<PreparedCourseDescriptor> {
+  if (!/^pga-[a-f0-9-]{36}$/.test(id)) throw new Error("Invalid prepared package ID");
+  const value: unknown = JSON.parse(await readFile(/*turbopackIgnore: true*/ path.join(process.cwd(), PREPARED_DIRECTORY, id, "descriptor.json"), "utf8"));
+  if (value && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === 2) {
+    validatePreparedCourse(value);
+    if (value.packageId !== id) throw new Error("Prepared package ID mismatch");
+    const { packageId, event, engine, configuration, assets, courseAssets, holes } = value;
+    return { packageId, event, engine, configuration, assets, courseAssets, holes };
+  }
   const { packageId, event, engine, configuration, assets, courseAssets, holes } = await readPreparedDescriptor(id);
   return { packageId, event, engine, configuration, assets, courseAssets, holes };
 }

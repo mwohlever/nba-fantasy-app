@@ -1,0 +1,2129 @@
+{
+  "capturedAt": "2026-10-07",
+  "oracleSha256": "90b55775443eaf2dde9aa95052afdcc7248363b5b211729789f5834923063ccb",
+  "livePageCapture": "HTTP403; controlled published-function oracle instead",
+  "cases": [
+    {
+      "proofId": "waialae-runtime",
+      "eventId": "R2026006",
+      "playerId": "59095",
+      "roundNumber": 1,
+      "holeNumber": 10,
+      "courseId": "006",
+      "packageId": "pga-a9373c45-aa7b-ce65-8419-c31dea2e3b64",
+      "rawOffsetConfig": {
+        "x": 3225.238265,
+        "y": 3122.877394,
+        "z": 0,
+        "rotate": 0.424586
+      },
+      "input": {
+        "tournamentId": "R2026006",
+        "pgaPlayerId": "59095",
+        "roundNumber": 1,
+        "holeNumber": 10,
+        "pin": {
+          "tourcastX": 11050.44,
+          "tourcastY": 10259.26,
+          "tourcastZ": 11.84
+        },
+        "shots": [
+          {
+            "strokeNumber": 1,
+            "from": {
+              "tourcastX": 10137.592,
+              "tourcastY": 9821.615,
+              "tourcastZ": 9.941
+            },
+            "to": {
+              "tourcastX": 10930.474,
+              "tourcastY": 10252.798,
+              "tourcastZ": 7.213
+            }
+          },
+          {
+            "strokeNumber": 2,
+            "from": {
+              "tourcastX": 10930.474,
+              "tourcastY": 10252.798,
+              "tourcastZ": 7.213
+            },
+            "to": {
+              "tourcastX": 11037.69,
+              "tourcastY": 10254.604,
+              "tourcastZ": 11.77
+            }
+          },
+          {
+            "strokeNumber": 3,
+            "from": {
+              "tourcastX": 11037.69,
+              "tourcastY": 10254.604,
+              "tourcastZ": 11.77
+            },
+            "to": {
+              "tourcastX": 11050.44,
+              "tourcastY": 10259.26,
+              "tourcastZ": 11.84
+            }
+          }
+        ]
+      },
+      "provider": {
+        "method": "actual published webpack registration + original PGA engine Ia/iE/sE functions; isolated browser; read-only closure exposure",
+        "engineSha256": "2a64bbe1e11db7343aab33ca91a357e87139ef0becbbc869d89c73c4a99f3018",
+        "appSha256": "09870190bcc511bcd988a7bee22edd9758a0640fa52019bb2e0d00f388232811",
+        "converterSha256": "3dedca469e5f54119c0d8883dbcf756f78f3c5b0d1a143daa65380a621400b77",
+        "offset": {
+          "quaternion": [
+            0,
+            0,
+            0.0037052033003419638,
+            0.9999931454658508
+          ],
+          "translation": [
+            3225.23828125,
+            3122.87744140625,
+            0
+          ]
+        },
+        "sourceInputs": {
+          "115-e08b82dce015bcfc.js": {
+            "sourceUrl": "https://tourcast.pgatour.com/_next/static/chunks/115-e08b82dce015bcfc.js",
+            "sha256": "83b918f422edd631956e5828e442c1b1a07a7744350d5864c06b2e20d90fb003",
+            "retrievedAt": "2026-10-07T10:29:11.511Z"
+          },
+          "page-9b53da48a23ead21.js": {
+            "sourceUrl": "https://tourcast.pgatour.com/_next/static/chunks/app/%5Bproduct%5D/page-9b53da48a23ead21.js",
+            "sha256": "09870190bcc511bcd988a7bee22edd9758a0640fa52019bb2e0d00f388232811",
+            "retrievedAt": "2026-10-07T10:29:11.551Z"
+          },
+          "engine": {
+            "sourceUrl": "https://static-assets.pgatour.com/golf-engine/3.3.1/golfEngine.min.js",
+            "sha256": "2a64bbe1e11db7343aab33ca91a357e87139ef0becbbc869d89c73c4a99f3018",
+            "retrievedAt": "2026-10-07T10:29:11.874Z"
+          },
+          "GetTeeTimes": {
+            "sourceUrl": "https://orchestrator.pgatour.com/graphql",
+            "sha256": "8d746c072b80c87d0c4b6072413c719d885617dc7ec76feab04d4e1da3d331ad",
+            "retrievedAt": "2026-10-07T10:29:12.248Z",
+            "operation": "GetTeeTimes",
+            "variables": {
+              "id": "R2026006"
+            }
+          },
+          "native-r1": {
+            "sourceUrl": "https://orchestrator.pgatour.com/graphql",
+            "sha256": "b60e91e0c88d90603e6dea757b6cf113c25089d41ce363290cbc022f2d549451",
+            "retrievedAt": "2026-10-07T10:29:12.560Z",
+            "operation": "ShotDetailsCompressedV3",
+            "variables": {
+              "tournamentId": "R2026006",
+              "playerId": "59095",
+              "round": 1,
+              "includeRadar": true
+            }
+          },
+          "c006-terrain10.glb": {
+            "sourceUrl": "https://tourcast.pgatour.com/models/R2026006/3D_Assets/terrain/cutGlb/terrain10.glb",
+            "sha256": "dff9fd5d6ccd17fcc64460221fb96b2641a571d9bf24e19cfbf2476edf8b7552",
+            "retrievedAt": "2026-10-07T10:29:12.759Z"
+          },
+          "c006-Green10.glb": {
+            "sourceUrl": "https://tourcast.pgatour.com/models/R2026006/3D_Assets/terrain/greens/Green10.glb",
+            "sha256": "cd8bd8c36ce0a68d544c03da67ff032df2bb2e8b3edda7f67f1138dd0ef8e487",
+            "retrievedAt": "2026-10-07T10:29:13.005Z"
+          }
+        },
+        "registered": [
+          {
+            "label": "tee-from",
+            "raw": {
+              "tourcastX": 10137.592,
+              "tourcastY": 9821.615,
+              "tourcastZ": 9.941
+            },
+            "converted": [
+              -157.569091796875,
+              -106.43359375,
+              3.0300168991088867
+            ]
+          },
+          {
+            "label": "pin",
+            "raw": {
+              "tourcastX": 11050.44,
+              "tourcastY": 10259.26,
+              "tourcastZ": 11.84
+            },
+            "converted": [
+              119.671142578125,
+              29.0185546875,
+              3.6088321208953857
+            ]
+          },
+          {
+            "label": "from-1",
+            "raw": {
+              "tourcastX": 10137.592,
+              "tourcastY": 9821.615,
+              "tourcastZ": 9.941
+            },
+            "converted": [
+              -157.569091796875,
+              -106.43359375,
+              3.0300168991088867
+            ]
+          },
+          {
+            "label": "to-1",
+            "raw": {
+              "tourcastX": 10930.474,
+              "tourcastY": 10252.798,
+              "tourcastZ": 7.213
+            },
+            "converted": [
+              83.120849609375,
+              26.77783203125,
+              2.1985223293304443
+            ]
+          },
+          {
+            "label": "from-2",
+            "raw": {
+              "tourcastX": 10930.474,
+              "tourcastY": 10252.798,
+              "tourcastZ": 7.213
+            },
+            "converted": [
+              83.120849609375,
+              26.77783203125,
+              2.1985223293304443
+            ]
+          },
+          {
+            "label": "to-2",
+            "raw": {
+              "tourcastX": 11037.69,
+              "tourcastY": 10254.604,
+              "tourcastZ": 11.77
+            },
+            "converted": [
+              115.795654296875,
+              27.570556640625,
+              3.587496042251587
+            ]
+          },
+          {
+            "label": "from-3",
+            "raw": {
+              "tourcastX": 11037.69,
+              "tourcastY": 10254.604,
+              "tourcastZ": 11.77
+            },
+            "converted": [
+              115.795654296875,
+              27.570556640625,
+              3.587496042251587
+            ]
+          },
+          {
+            "label": "to-3",
+            "raw": {
+              "tourcastX": 11050.44,
+              "tourcastY": 10259.26,
+              "tourcastZ": 11.84
+            },
+            "converted": [
+              119.671142578125,
+              29.0185546875,
+              3.6088321208953857
+            ]
+          },
+          {
+            "label": "published-tee",
+            "raw": {
+              "tourcastX": 10137.59,
+              "tourcastY": 9821.61,
+              "tourcastZ": 9.94
+            },
+            "converted": [
+              -157.569580078125,
+              -106.43505859375,
+              3.029711961746216
+            ]
+          }
+        ],
+        "coarse": [
+          {
+            "label": "tee-from",
+            "world": [
+              -157.569091796875,
+              -106.43359375,
+              -19.777041853871197
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              119.671142578125,
+              29.0185546875,
+              -19.23327796866215
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -157.569091796875,
+              -106.43359375,
+              -19.777041853871197
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              83.120849609375,
+              26.77783203125,
+              -20.577291804504057
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              83.120849609375,
+              26.77783203125,
+              -20.577291804504057
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              115.795654296875,
+              27.570556640625,
+              -19.28625962224578
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              115.795654296875,
+              27.570556640625,
+              -19.28625962224578
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              119.671142578125,
+              29.0185546875,
+              -19.23327796866215
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -157.569580078125,
+              -106.43505859375,
+              -19.77703505870886
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          }
+        ],
+        "detailed": [
+          {
+            "label": "tee-from",
+            "world": [
+              -157.569091796875,
+              -106.43359375,
+              -19.777041853871197
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              119.671142578125,
+              29.0185546875,
+              -19.235471572332244
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -157.569091796875,
+              -106.43359375,
+              -19.777041853871197
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              83.120849609375,
+              26.77783203125,
+              -20.577291804504057
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              83.120849609375,
+              26.77783203125,
+              -20.577291804504057
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              115.795654296875,
+              27.570556640625,
+              -19.252282164396092
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              115.795654296875,
+              27.570556640625,
+              -19.252282164396092
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              119.671142578125,
+              29.0185546875,
+              -19.235471572332244
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -157.569580078125,
+              -106.43505859375,
+              -19.77703505870886
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          }
+        ],
+        "strictCoarse": [
+          {
+            "label": "tee-from",
+            "world": [
+              -157.569091796875,
+              -106.43359375,
+              -19.777041853871197
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              119.671142578125,
+              29.0185546875,
+              -19.23327796866215
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -157.569091796875,
+              -106.43359375,
+              -19.777041853871197
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              83.120849609375,
+              26.77783203125,
+              -20.577291804504057
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              83.120849609375,
+              26.77783203125,
+              -20.577291804504057
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              115.795654296875,
+              27.570556640625,
+              -19.28625962224578
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              115.795654296875,
+              27.570556640625,
+              -19.28625962224578
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              119.671142578125,
+              29.0185546875,
+              -19.23327796866215
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -157.569580078125,
+              -106.43505859375,
+              -19.77703505870886
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          }
+        ],
+        "strictDetailed": [
+          {
+            "label": "tee-from",
+            "world": [
+              -157.569091796875,
+              -106.43359375,
+              -19.777041853871197
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              119.671142578125,
+              29.0185546875,
+              -19.235471572332244
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -157.569091796875,
+              -106.43359375,
+              -19.777041853871197
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              83.120849609375,
+              26.77783203125,
+              -20.577291804504057
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              83.120849609375,
+              26.77783203125,
+              -20.577291804504057
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              115.795654296875,
+              27.570556640625,
+              -19.252282164396092
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              115.795654296875,
+              27.570556640625,
+              -19.252282164396092
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              119.671142578125,
+              29.0185546875,
+              -19.235471572332244
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -157.569580078125,
+              -106.43505859375,
+              -19.77703505870886
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          }
+        ]
+      },
+      "maximumError": 9.272582701669307e-13
+    },
+    {
+      "proofId": "spyglass-r1",
+      "eventId": "R2026005",
+      "playerId": "50525",
+      "roundNumber": 1,
+      "holeNumber": 1,
+      "courseId": "205",
+      "packageId": "pga-edd97431-8542-76e6-657d-3b73cc2e4ef6",
+      "rawOffsetConfig": {
+        "x": 2649.998874,
+        "y": 3300.061931,
+        "z": 0,
+        "rotate": 0,
+        "courseOffset": [
+          {
+            "courseId": "205",
+            "x": 3249.926282,
+            "y": 3400.209492,
+            "z": 0,
+            "rotate": 0
+          }
+        ]
+      },
+      "input": {
+        "tournamentId": "R2026005",
+        "pgaPlayerId": "50525",
+        "roundNumber": 1,
+        "holeNumber": 1,
+        "pin": {
+          "tourcastX": 9019.42,
+          "tourcastY": 11607.57,
+          "tourcastZ": 70.8
+        },
+        "shots": [
+          {
+            "strokeNumber": 1,
+            "from": {
+              "tourcastX": 9669.644,
+              "tourcastY": 10199.654,
+              "tourcastZ": 193.35
+            },
+            "to": {
+              "tourcastX": 9665.526,
+              "tourcastY": 11073.654,
+              "tourcastZ": 126.086
+            }
+          },
+          {
+            "strokeNumber": 2,
+            "from": {
+              "tourcastX": 9665.526,
+              "tourcastY": 11073.654,
+              "tourcastZ": 126.086
+            },
+            "to": {
+              "tourcastX": 9338.851,
+              "tourcastY": 11604.462,
+              "tourcastZ": 76.119
+            }
+          },
+          {
+            "strokeNumber": 3,
+            "from": {
+              "tourcastX": 9338.851,
+              "tourcastY": 11604.462,
+              "tourcastZ": 76.119
+            },
+            "to": {
+              "tourcastX": 9021.382,
+              "tourcastY": 11604.277,
+              "tourcastZ": 70.841
+            }
+          },
+          {
+            "strokeNumber": 4,
+            "from": {
+              "tourcastX": 9021.382,
+              "tourcastY": 11604.277,
+              "tourcastZ": 70.841
+            },
+            "to": {
+              "tourcastX": 9019.42,
+              "tourcastY": 11607.57,
+              "tourcastZ": 70.8
+            }
+          }
+        ]
+      },
+      "provider": {
+        "method": "actual published webpack registration + original PGA engine Ia/iE/sE functions; isolated browser; read-only closure exposure",
+        "engineSha256": "2a64bbe1e11db7343aab33ca91a357e87139ef0becbbc869d89c73c4a99f3018",
+        "appSha256": "09870190bcc511bcd988a7bee22edd9758a0640fa52019bb2e0d00f388232811",
+        "converterSha256": "3dedca469e5f54119c0d8883dbcf756f78f3c5b0d1a143daa65380a621400b77",
+        "offset": {
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "translation": [
+            3249.92626953125,
+            3400.20947265625,
+            0
+          ]
+        },
+        "sourceInputs": {
+          "115-e08b82dce015bcfc.js": {
+            "sourceUrl": "https://tourcast.pgatour.com/_next/static/chunks/115-e08b82dce015bcfc.js",
+            "sha256": "83b918f422edd631956e5828e442c1b1a07a7744350d5864c06b2e20d90fb003",
+            "retrievedAt": "2026-10-07T10:29:14.246Z"
+          },
+          "page-9b53da48a23ead21.js": {
+            "sourceUrl": "https://tourcast.pgatour.com/_next/static/chunks/app/%5Bproduct%5D/page-9b53da48a23ead21.js",
+            "sha256": "09870190bcc511bcd988a7bee22edd9758a0640fa52019bb2e0d00f388232811",
+            "retrievedAt": "2026-10-07T10:29:14.299Z"
+          },
+          "engine": {
+            "sourceUrl": "https://static-assets.pgatour.com/golf-engine/3.3.1/golfEngine.min.js",
+            "sha256": "2a64bbe1e11db7343aab33ca91a357e87139ef0becbbc869d89c73c4a99f3018",
+            "retrievedAt": "2026-10-07T10:29:14.462Z"
+          },
+          "GetTeeTimes": {
+            "sourceUrl": "https://orchestrator.pgatour.com/graphql",
+            "sha256": "9e38e33c86040e296f7ddabaaffc436fcd29d7dbe32ad8122aa721660e0ece84",
+            "retrievedAt": "2026-10-07T10:29:14.702Z",
+            "operation": "GetTeeTimes",
+            "variables": {
+              "id": "R2026005"
+            }
+          },
+          "native-r1": {
+            "sourceUrl": "https://orchestrator.pgatour.com/graphql",
+            "sha256": "2b4f3bcea47e32d339a972c38f0bc2f046649d36bbd85f36db2a5baa171dceba",
+            "retrievedAt": "2026-10-07T10:29:15.014Z",
+            "operation": "ShotDetailsCompressedV3",
+            "variables": {
+              "tournamentId": "R2026005",
+              "playerId": "50525",
+              "round": 1,
+              "includeRadar": true
+            }
+          },
+          "c205-terrain01.glb": {
+            "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/cutGlb/terrain01.glb",
+            "sha256": "6d74d6d798364c0f2afb230c98f5040c93c79bb1bc332fadfb25bfabe035d6d9",
+            "retrievedAt": "2026-10-07T10:29:15.427Z"
+          },
+          "c205-Green01.glb": {
+            "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/greens/Green01.glb",
+            "sha256": "03176551e7450e15dd5e16e66506f1ed93c939c20e6c00d42fdee82091223b4f",
+            "retrievedAt": "2026-10-07T10:29:15.729Z"
+          }
+        },
+        "registered": [
+          {
+            "label": "tee-from",
+            "raw": {
+              "tourcastX": 9669.644,
+              "tourcastY": 10199.654,
+              "tourcastZ": 193.35
+            },
+            "converted": [
+              -302.618896484375,
+              -291.354736328125,
+              58.933082580566406
+            ]
+          },
+          {
+            "label": "pin",
+            "raw": {
+              "tourcastX": 9019.42,
+              "tourcastY": 11607.57,
+              "tourcastZ": 70.8
+            },
+            "converted": [
+              -500.80712890625,
+              137.778076171875,
+              21.57984161376953
+            ]
+          },
+          {
+            "label": "from-1",
+            "raw": {
+              "tourcastX": 9669.644,
+              "tourcastY": 10199.654,
+              "tourcastZ": 193.35
+            },
+            "converted": [
+              -302.618896484375,
+              -291.354736328125,
+              58.933082580566406
+            ]
+          },
+          {
+            "label": "to-1",
+            "raw": {
+              "tourcastX": 9665.526,
+              "tourcastY": 11073.654,
+              "tourcastZ": 126.086
+            },
+            "converted": [
+              -303.873779296875,
+              -24.959716796875,
+              38.43101119995117
+            ]
+          },
+          {
+            "label": "from-2",
+            "raw": {
+              "tourcastX": 9665.526,
+              "tourcastY": 11073.654,
+              "tourcastZ": 126.086
+            },
+            "converted": [
+              -303.873779296875,
+              -24.959716796875,
+              38.43101119995117
+            ]
+          },
+          {
+            "label": "to-2",
+            "raw": {
+              "tourcastX": 9338.851,
+              "tourcastY": 11604.462,
+              "tourcastZ": 76.119
+            },
+            "converted": [
+              -403.444580078125,
+              136.83056640625,
+              23.201072692871094
+            ]
+          },
+          {
+            "label": "from-3",
+            "raw": {
+              "tourcastX": 9338.851,
+              "tourcastY": 11604.462,
+              "tourcastZ": 76.119
+            },
+            "converted": [
+              -403.444580078125,
+              136.83056640625,
+              23.201072692871094
+            ]
+          },
+          {
+            "label": "to-3",
+            "raw": {
+              "tourcastX": 9021.382,
+              "tourcastY": 11604.277,
+              "tourcastZ": 70.841
+            },
+            "converted": [
+              -500.208984375,
+              136.774169921875,
+              21.59233856201172
+            ]
+          },
+          {
+            "label": "from-4",
+            "raw": {
+              "tourcastX": 9021.382,
+              "tourcastY": 11604.277,
+              "tourcastZ": 70.841
+            },
+            "converted": [
+              -500.208984375,
+              136.774169921875,
+              21.59233856201172
+            ]
+          },
+          {
+            "label": "to-4",
+            "raw": {
+              "tourcastX": 9019.42,
+              "tourcastY": 11607.57,
+              "tourcastZ": 70.8
+            },
+            "converted": [
+              -500.80712890625,
+              137.778076171875,
+              21.57984161376953
+            ]
+          },
+          {
+            "label": "published-tee",
+            "raw": {
+              "tourcastX": 9669.64,
+              "tourcastY": 10199.65,
+              "tourcastZ": 193.35
+            },
+            "converted": [
+              -302.6201171875,
+              -291.35595703125,
+              58.933082580566406
+            ]
+          }
+        ],
+        "coarse": [
+          {
+            "label": "tee-from",
+            "world": [
+              -302.618896484375,
+              -291.354736328125,
+              49.89744316657561
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              -500.80712890625,
+              137.778076171875,
+              12.480773731180307
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -302.618896484375,
+              -291.354736328125,
+              49.89744316657561
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              -303.873779296875,
+              -24.959716796875,
+              29.246308589210457
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              -303.873779296875,
+              -24.959716796875,
+              29.246308589210457
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              -403.444580078125,
+              136.83056640625,
+              14.096534948499539
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              -403.444580078125,
+              136.83056640625,
+              14.096534948499539
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              -500.208984375,
+              136.774169921875,
+              12.526929353685773
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-4",
+            "world": [
+              -500.208984375,
+              136.774169921875,
+              12.526929353685773
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-4",
+            "world": [
+              -500.80712890625,
+              137.778076171875,
+              12.480773731180307
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -302.6201171875,
+              -291.35595703125,
+              49.89745352666796
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          }
+        ],
+        "detailed": [
+          {
+            "label": "tee-from",
+            "world": [
+              -302.618896484375,
+              -291.354736328125,
+              49.89744316657561
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              -500.80712890625,
+              137.778076171875,
+              12.496472026741685
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -302.618896484375,
+              -291.354736328125,
+              49.89744316657561
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              -303.873779296875,
+              -24.959716796875,
+              29.246308589210457
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              -303.873779296875,
+              -24.959716796875,
+              29.246308589210457
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              -403.444580078125,
+              136.83056640625,
+              14.096534948499539
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              -403.444580078125,
+              136.83056640625,
+              14.096534948499539
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              -500.208984375,
+              136.774169921875,
+              12.536343050987853
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-4",
+            "world": [
+              -500.208984375,
+              136.774169921875,
+              12.536343050987853
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-4",
+            "world": [
+              -500.80712890625,
+              137.778076171875,
+              12.496472026741685
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -302.6201171875,
+              -291.35595703125,
+              49.89745352666796
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          }
+        ],
+        "strictCoarse": [
+          {
+            "label": "tee-from",
+            "world": [
+              -302.618896484375,
+              -291.354736328125,
+              49.89744316657561
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              -500.80712890625,
+              137.778076171875,
+              12.480773731180307
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -302.618896484375,
+              -291.354736328125,
+              49.89744316657561
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              -303.873779296875,
+              -24.959716796875,
+              29.246308589210457
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              -303.873779296875,
+              -24.959716796875,
+              29.246308589210457
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              -403.444580078125,
+              136.83056640625,
+              14.096534948499539
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              -403.444580078125,
+              136.83056640625,
+              14.096534948499539
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              -500.208984375,
+              136.774169921875,
+              12.526929353685773
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-4",
+            "world": [
+              -500.208984375,
+              136.774169921875,
+              12.526929353685773
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-4",
+            "world": [
+              -500.80712890625,
+              137.778076171875,
+              12.480773731180307
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -302.6201171875,
+              -291.35595703125,
+              49.89745352666796
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          }
+        ],
+        "strictDetailed": [
+          {
+            "label": "tee-from",
+            "world": [
+              -302.618896484375,
+              -291.354736328125,
+              49.89744316657561
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              -500.80712890625,
+              137.778076171875,
+              12.496472026741685
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -302.618896484375,
+              -291.354736328125,
+              49.89744316657561
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              -303.873779296875,
+              -24.959716796875,
+              29.246308589210457
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              -303.873779296875,
+              -24.959716796875,
+              29.246308589210457
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              -403.444580078125,
+              136.83056640625,
+              14.096534948499539
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              -403.444580078125,
+              136.83056640625,
+              14.096534948499539
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              -500.208984375,
+              136.774169921875,
+              12.536343050987853
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-4",
+            "world": [
+              -500.208984375,
+              136.774169921875,
+              12.536343050987853
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-4",
+            "world": [
+              -500.80712890625,
+              137.778076171875,
+              12.496472026741685
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -302.6201171875,
+              -291.35595703125,
+              49.89745352666796
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          }
+        ]
+      },
+      "maximumError": 1.5631940186722204e-12
+    },
+    {
+      "proofId": "pebble-r2",
+      "eventId": "R2026005",
+      "playerId": "50525",
+      "roundNumber": 2,
+      "holeNumber": 1,
+      "courseId": "005",
+      "packageId": "pga-5ac095f0-0635-03d0-0233-b07a6aff9d74",
+      "rawOffsetConfig": {
+        "x": 2649.998874,
+        "y": 3300.061931,
+        "z": 0,
+        "rotate": 0,
+        "courseOffset": [
+          {
+            "courseId": "205",
+            "x": 3249.926282,
+            "y": 3400.209492,
+            "z": 0,
+            "rotate": 0
+          }
+        ]
+      },
+      "input": {
+        "tournamentId": "R2026005",
+        "pgaPlayerId": "50525",
+        "roundNumber": 2,
+        "holeNumber": 1,
+        "pin": {
+          "tourcastX": 7566.2,
+          "tourcastY": 12477.68,
+          "tourcastZ": 87.93
+        },
+        "shots": [
+          {
+            "strokeNumber": 1,
+            "from": {
+              "tourcastX": 6558.25,
+              "tourcastY": 12054.898,
+              "tourcastZ": 67.616
+            },
+            "to": {
+              "tourcastX": 7102.537,
+              "tourcastY": 12460.478,
+              "tourcastZ": 77.963
+            }
+          },
+          {
+            "strokeNumber": 2,
+            "from": {
+              "tourcastX": 7102.537,
+              "tourcastY": 12460.478,
+              "tourcastZ": 77.963
+            },
+            "to": {
+              "tourcastX": 7507.924,
+              "tourcastY": 12475.433,
+              "tourcastZ": 85.246
+            }
+          },
+          {
+            "strokeNumber": 3,
+            "from": {
+              "tourcastX": 7507.924,
+              "tourcastY": 12475.433,
+              "tourcastZ": 85.246
+            },
+            "to": {
+              "tourcastX": 7563.913,
+              "tourcastY": 12475.55,
+              "tourcastZ": 87.826
+            }
+          },
+          {
+            "strokeNumber": 4,
+            "from": {
+              "tourcastX": 7563.913,
+              "tourcastY": 12475.55,
+              "tourcastZ": 87.826
+            },
+            "to": {
+              "tourcastX": 7566.2,
+              "tourcastY": 12477.68,
+              "tourcastZ": 87.93
+            }
+          }
+        ]
+      },
+      "provider": {
+        "method": "actual published webpack registration + original PGA engine Ia/iE/sE functions; isolated browser; read-only closure exposure",
+        "engineSha256": "2a64bbe1e11db7343aab33ca91a357e87139ef0becbbc869d89c73c4a99f3018",
+        "appSha256": "09870190bcc511bcd988a7bee22edd9758a0640fa52019bb2e0d00f388232811",
+        "converterSha256": "3dedca469e5f54119c0d8883dbcf756f78f3c5b0d1a143daa65380a621400b77",
+        "offset": {
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "translation": [
+            2649.998779296875,
+            3300.06201171875,
+            0
+          ]
+        },
+        "sourceInputs": {
+          "115-e08b82dce015bcfc.js": {
+            "sourceUrl": "https://tourcast.pgatour.com/_next/static/chunks/115-e08b82dce015bcfc.js",
+            "sha256": "83b918f422edd631956e5828e442c1b1a07a7744350d5864c06b2e20d90fb003",
+            "retrievedAt": "2026-10-07T10:29:14.246Z"
+          },
+          "page-9b53da48a23ead21.js": {
+            "sourceUrl": "https://tourcast.pgatour.com/_next/static/chunks/app/%5Bproduct%5D/page-9b53da48a23ead21.js",
+            "sha256": "09870190bcc511bcd988a7bee22edd9758a0640fa52019bb2e0d00f388232811",
+            "retrievedAt": "2026-10-07T10:29:14.299Z"
+          },
+          "engine": {
+            "sourceUrl": "https://static-assets.pgatour.com/golf-engine/3.3.1/golfEngine.min.js",
+            "sha256": "2a64bbe1e11db7343aab33ca91a357e87139ef0becbbc869d89c73c4a99f3018",
+            "retrievedAt": "2026-10-07T10:29:14.462Z"
+          },
+          "GetTeeTimes": {
+            "sourceUrl": "https://orchestrator.pgatour.com/graphql",
+            "sha256": "9e38e33c86040e296f7ddabaaffc436fcd29d7dbe32ad8122aa721660e0ece84",
+            "retrievedAt": "2026-10-07T10:29:14.702Z",
+            "operation": "GetTeeTimes",
+            "variables": {
+              "id": "R2026005"
+            }
+          },
+          "native-r2": {
+            "sourceUrl": "https://orchestrator.pgatour.com/graphql",
+            "sha256": "d73eaebe435b82ec7a2b909d3a58351019c32f90a2dfb477d50bf1a378026542",
+            "retrievedAt": "2026-10-07T10:29:15.968Z",
+            "operation": "ShotDetailsCompressedV3",
+            "variables": {
+              "tournamentId": "R2026005",
+              "playerId": "50525",
+              "round": 2,
+              "includeRadar": true
+            }
+          },
+          "c005-terrain01.glb": {
+            "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/3D_Assets/terrain/cutGlb/terrain01.glb",
+            "sha256": "aca3d8076b5a070514acd5d0f8850e5cf823ebb24b2fc0ba5ce628529f96560b",
+            "retrievedAt": "2026-10-07T10:29:16.146Z"
+          },
+          "c005-Green01.glb": {
+            "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/3D_Assets/terrain/greens/Green01.glb",
+            "sha256": "e115eaabf31bd387b39d8526e57524b59669c4d3efa2171e46e4ea28dc383492",
+            "retrievedAt": "2026-10-07T10:29:16.283Z"
+          }
+        },
+        "registered": [
+          {
+            "label": "tee-from",
+            "raw": {
+              "tourcastX": 6558.25,
+              "tourcastY": 12054.898,
+              "tourcastZ": 67.616
+            },
+            "converted": [
+              -651.044189453125,
+              374.27099609375,
+              20.609355926513672
+            ]
+          },
+          {
+            "label": "pin",
+            "raw": {
+              "tourcastX": 7566.2,
+              "tourcastY": 12477.68,
+              "tourcastZ": 87.93
+            },
+            "converted": [
+              -343.821044921875,
+              503.134765625,
+              26.801063537597656
+            ]
+          },
+          {
+            "label": "from-1",
+            "raw": {
+              "tourcastX": 6558.25,
+              "tourcastY": 12054.898,
+              "tourcastZ": 67.616
+            },
+            "converted": [
+              -651.044189453125,
+              374.27099609375,
+              20.609355926513672
+            ]
+          },
+          {
+            "label": "to-1",
+            "raw": {
+              "tourcastX": 7102.537,
+              "tourcastY": 12460.478,
+              "tourcastZ": 77.963
+            },
+            "converted": [
+              -485.1455078125,
+              497.8916015625,
+              23.76312255859375
+            ]
+          },
+          {
+            "label": "from-2",
+            "raw": {
+              "tourcastX": 7102.537,
+              "tourcastY": 12460.478,
+              "tourcastZ": 77.963
+            },
+            "converted": [
+              -485.1455078125,
+              497.8916015625,
+              23.76312255859375
+            ]
+          },
+          {
+            "label": "to-2",
+            "raw": {
+              "tourcastX": 7507.924,
+              "tourcastY": 12475.433,
+              "tourcastZ": 85.246
+            },
+            "converted": [
+              -361.58349609375,
+              502.449951171875,
+              25.982980728149414
+            ]
+          },
+          {
+            "label": "from-3",
+            "raw": {
+              "tourcastX": 7507.924,
+              "tourcastY": 12475.433,
+              "tourcastZ": 85.246
+            },
+            "converted": [
+              -361.58349609375,
+              502.449951171875,
+              25.982980728149414
+            ]
+          },
+          {
+            "label": "to-3",
+            "raw": {
+              "tourcastX": 7563.913,
+              "tourcastY": 12475.55,
+              "tourcastZ": 87.826
+            },
+            "converted": [
+              -344.51806640625,
+              502.485595703125,
+              26.769363403320312
+            ]
+          },
+          {
+            "label": "from-4",
+            "raw": {
+              "tourcastX": 7563.913,
+              "tourcastY": 12475.55,
+              "tourcastZ": 87.826
+            },
+            "converted": [
+              -344.51806640625,
+              502.485595703125,
+              26.769363403320312
+            ]
+          },
+          {
+            "label": "to-4",
+            "raw": {
+              "tourcastX": 7566.2,
+              "tourcastY": 12477.68,
+              "tourcastZ": 87.93
+            },
+            "converted": [
+              -343.821044921875,
+              503.134765625,
+              26.801063537597656
+            ]
+          },
+          {
+            "label": "published-tee",
+            "raw": {
+              "tourcastX": 6558.25,
+              "tourcastY": 12054.9,
+              "tourcastZ": 67.62
+            },
+            "converted": [
+              -651.044189453125,
+              374.271728515625,
+              20.610576629638672
+            ]
+          }
+        ],
+        "coarse": [
+          {
+            "label": "tee-from",
+            "world": [
+              -651.044189453125,
+              374.27099609375,
+              -25.931448491932315
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              -343.821044921875,
+              503.134765625,
+              -19.701478240711367
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -651.044189453125,
+              374.27099609375,
+              -25.931448491932315
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              -485.1455078125,
+              497.8916015625,
+              -22.706016572028602
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              -485.1455078125,
+              497.8916015625,
+              -22.706016572028602
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              -361.58349609375,
+              502.449951171875,
+              -20.491309862858543
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              -361.58349609375,
+              502.449951171875,
+              -20.491309862858543
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              -344.51806640625,
+              502.485595703125,
+              -19.734459635597887
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-4",
+            "world": [
+              -344.51806640625,
+              502.485595703125,
+              -19.734459635597887
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-4",
+            "world": [
+              -343.821044921875,
+              503.134765625,
+              -19.701478240711367
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -651.044189453125,
+              374.271728515625,
+              -25.93144484563163
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          }
+        ],
+        "detailed": [
+          {
+            "label": "tee-from",
+            "world": [
+              -651.044189453125,
+              374.27099609375,
+              -25.931448491932315
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              -343.821044921875,
+              503.134765625,
+              -19.69048752206254
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -651.044189453125,
+              374.27099609375,
+              -25.931448491932315
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              -485.1455078125,
+              497.8916015625,
+              -22.706016572028602
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              -485.1455078125,
+              497.8916015625,
+              -22.706016572028602
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              -361.58349609375,
+              502.449951171875,
+              -20.491309862858543
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              -361.58349609375,
+              502.449951171875,
+              -20.491309862858543
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              -344.51806640625,
+              502.485595703125,
+              -19.71951821699622
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-4",
+            "world": [
+              -344.51806640625,
+              502.485595703125,
+              -19.71951821699622
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-4",
+            "world": [
+              -343.821044921875,
+              503.134765625,
+              -19.69048752206254
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -651.044189453125,
+              374.271728515625,
+              -25.93144484563163
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          }
+        ],
+        "strictCoarse": [
+          {
+            "label": "tee-from",
+            "world": [
+              -651.044189453125,
+              374.27099609375,
+              -25.931448491932315
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              -343.821044921875,
+              503.134765625,
+              -19.701478240711367
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -651.044189453125,
+              374.27099609375,
+              -25.931448491932315
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              -485.1455078125,
+              497.8916015625,
+              -22.706016572028602
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              -485.1455078125,
+              497.8916015625,
+              -22.706016572028602
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              -361.58349609375,
+              502.449951171875,
+              -20.491309862858543
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              -361.58349609375,
+              502.449951171875,
+              -20.491309862858543
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              -344.51806640625,
+              502.485595703125,
+              -19.734459635597887
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-4",
+            "world": [
+              -344.51806640625,
+              502.485595703125,
+              -19.734459635597887
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-4",
+            "world": [
+              -343.821044921875,
+              503.134765625,
+              -19.701478240711367
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -651.044189453125,
+              374.271728515625,
+              -25.93144484563163
+            ],
+            "onGreen": null,
+            "xyWasNudged": false
+          }
+        ],
+        "strictDetailed": [
+          {
+            "label": "tee-from",
+            "world": [
+              -651.044189453125,
+              374.27099609375,
+              -25.931448491932315
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "pin",
+            "world": [
+              -343.821044921875,
+              503.134765625,
+              -19.69048752206254
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-1",
+            "world": [
+              -651.044189453125,
+              374.27099609375,
+              -25.931448491932315
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-1",
+            "world": [
+              -485.1455078125,
+              497.8916015625,
+              -22.706016572028602
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-2",
+            "world": [
+              -485.1455078125,
+              497.8916015625,
+              -22.706016572028602
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-2",
+            "world": [
+              -361.58349609375,
+              502.449951171875,
+              -20.491309862858543
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-3",
+            "world": [
+              -361.58349609375,
+              502.449951171875,
+              -20.491309862858543
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-3",
+            "world": [
+              -344.51806640625,
+              502.485595703125,
+              -19.71951821699622
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "from-4",
+            "world": [
+              -344.51806640625,
+              502.485595703125,
+              -19.71951821699622
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "to-4",
+            "world": [
+              -343.821044921875,
+              503.134765625,
+              -19.69048752206254
+            ],
+            "onGreen": true,
+            "xyWasNudged": false
+          },
+          {
+            "label": "published-tee",
+            "world": [
+              -651.044189453125,
+              374.271728515625,
+              -25.93144484563163
+            ],
+            "onGreen": false,
+            "xyWasNudged": false
+          }
+        ]
+      },
+      "maximumError": 3.7765346405649325e-12
+    }
+  ]
+}
