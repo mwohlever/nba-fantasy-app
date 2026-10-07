@@ -20,8 +20,41 @@ export type DraftHistory = {
   initialized: boolean;
   picks: DraftPick[];
   corrections: Array<{ id: number; pick_id: number | null; team_id: number; old_player_id: number | null; new_player_id: number | null; old_player_name?: string | null; new_player_name?: string | null; actor_name?: string; created_at: string }>;
+  /** Display-only NFL configuration from the existing authoritative draft read. */
+  board?: { participantIds: number[]; rosterSize: number };
   turn: { state: "empty" | "active" | "complete" | "closed" | "needs_review"; overallPick?: number; round?: number; pickInRound?: number; teamId?: number };
 };
+
+export type DraftBoardRow = {
+  overallPick: number;
+  round: number;
+  pickInRound: number;
+  teamId: number;
+  pick?: DraftPick;
+};
+
+/** Build informational slots only. Never infer a cursor or change historical picks. */
+export function buildDraftBoard(configuration: NonNullable<DraftHistory["board"]>, picks: DraftPick[]): DraftBoardRow[] | null {
+  const { participantIds, rosterSize } = configuration;
+  if (!participantIds.length || new Set(participantIds).size !== participantIds.length ||
+    participantIds.some(id => !Number.isSafeInteger(id) || id <= 0) || !Number.isSafeInteger(rosterSize) || rosterSize < 1) return null;
+  const rows = Array.from({ length: participantIds.length * rosterSize }, (_, index) => {
+    const roundIndex = Math.floor(index / participantIds.length);
+    const offset = index % participantIds.length;
+    return { overallPick: index + 1, round: roundIndex + 1, pickInRound: offset + 1,
+      teamId: participantIds[roundIndex % 2 ? participantIds.length - 1 - offset : offset] } as DraftBoardRow;
+  });
+  for (const pick of picks) {
+    const row = rows[pick.overall_pick - 1];
+    // Ambiguous/legacy history keeps its existing display rather than being hidden
+    // or "repaired" by a generated board.
+    if (!row || row.pick || row.teamId !== pick.team_id || row.round !== pick.round_number || row.pickInRound !== pick.pick_in_round) return null;
+    row.pick = pick;
+  }
+  const lastPick = Math.max(0, ...picks.map(pick => pick.overall_pick));
+  if (rows.slice(0, lastPick).some(row => !row.pick)) return null;
+  return rows;
+}
 
 /** Chronology never rewinds when an assignment is reversed. */
 export function getDraftTurn(participantIds: number[], rosterSize: number, lastPick: number, rosterCounts: Record<number, number>): DraftHistory["turn"] {

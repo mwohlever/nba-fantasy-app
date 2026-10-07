@@ -2613,6 +2613,7 @@ export default function LineupBuilder({
 
           {draftPageTab === "order" && (sport ?? selectedSport) !== "golf" &&
             <DraftOrder loading={isSlateLoading} history={draftContext?.scope === refreshScopeKey ? draftContext.history ?? null : null} teams={orderedTeamsForSlate}
+              showCompleteBoard={(sport ?? selectedSport) === "nfl"}
               actionLabel={canEnterOrderPick ? orderTeam?.id === currentTeamId ? "Make My Pick" : `Make Pick for ${orderTeam?.name}` : undefined}
               canEdit={canEditPicks} editing={editingPicks} canEditPick={canEditPick} onEdit={beginCorrection}
               playerPosition={id => players.find(p => p.id === id)?.position_group}

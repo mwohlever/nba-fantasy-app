@@ -22,6 +22,8 @@ export async function readDraftHistory(slateId: number, groupId: string, leagueI
   const unsupported = data.rules_snapshot?.draft?.type && data.rules_snapshot.draft.type !== "snake";
   const turn = (!initialized && populated) || unsupported ? { state: "needs_review" as const } : getDraftTurn(data.participant_ids, rosterSize, Math.max(0, ...picks.map(p => p.overall_pick)), counts);
   return { available: true, initialized, picks, corrections: data.corrections,
+    ...(sport === "nfl" && !unsupported && (initialized || !populated)
+      ? { board: { participantIds: data.participant_ids, rosterSize } } : {}),
     turn: data.is_locked && turn.state !== "complete" ? { state: "closed" } : turn };
 }
 
