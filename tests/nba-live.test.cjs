@@ -18,7 +18,10 @@ for (const ext of ['.ts', '.tsx']) require.extensions[ext] = function(module, fi
 };
 
 const { normalizeNbaGame, nbaStatusDetail } = require('../lib/providers/nbaLiveScores.ts');
-const { normalizeNbaPlays, defaultNbaPlayPeriod, nbaFullCourtMarker, nbaPeriodLabel, nbaPlayAttackIndicator, nbaPlayPeriods, latestMeaningfulNbaPlay } = require('../lib/live-scores/nbaPlays.ts');
+const React = require('react');
+const { renderToStaticMarkup } = require('react-dom/server');
+const NbaPlayCourt = require('../components/live-scores/NbaPlayCourt.tsx').default;
+const { nbaBoxscorePlayers, normalizeNbaPlays, defaultNbaPlayPeriod, nbaFullCourtMarker, nbaPeriodLabel, nbaPlayAttackIndicator, nbaPlayPeriods, latestMeaningfulNbaPlay } = require('../lib/live-scores/nbaPlays.ts');
 const { buildNbaOwnership, canonicalNbaPlayerName, matchingNbaSlate, nbaAthleteId } = require('../lib/live-scores/nbaOwnership.ts');
 const { fetchNbaGameDetail } = require('../lib/live-scores/nbaGameDetail.ts');
 const { nbaDateKey, shiftNbaDate } = require('../lib/live-scores/nbaDate.ts');
@@ -84,6 +87,106 @@ test('NBA free throws use structured metadata and regulation origins instead of 
   assert.equal(nbaFullCourtMarker(nonFreeThrow, context), null);
 });
 
+test('NBA semantic events use typed ESPN plays, never shot positions or attack arrows', () => {
+  const raw = (id, typeId, typeText, extra = {}) => ({
+    id, type: { id: typeId, text: typeText }, text: typeText, period: { number: 1 },
+    team: { id: '5' }, shootingPlay: false, coordinate: { x: 25, y: 25 }, ...extra,
+  });
+  const cases = [
+    ['timeout', '16', 'Full Timeout', 'TIMEOUT', '5'],
+    ['turnover', '62', 'Bad Pass\nTurnover', 'TURNOVER', '5'],
+    ['shooting', '44', 'Shooting Foul', 'SHOOTING FOUL', '5'],
+    ['personal', '45', 'Personal Foul', 'PERSONAL FOUL', '5'],
+    ['take', '22', 'Personal Take Foul', 'PERSONAL TAKE FOUL', '5'],
+    ['offensive', '42', 'Offensive Foul', 'OFFENSIVE FOUL', '5'],
+    ['technical', '35', 'Technical Foul', 'TECHNICAL FOUL', '5'],
+    ['double', '30', 'Double Technical Foul', 'DOUBLE TECHNICAL FOUL', undefined],
+    ['flagrant', '32', 'Flagrant Foul Type 1', 'FLAGRANT FOUL TYPE 1', '5'],
+    ['three-seconds', '29', 'Defensive 3-Seconds Technical', 'DEFENSIVE 3 SECONDS', '5'],
+    ['challenge', '213', 'Challenge', "COACH'S CHALLENGE", '5'],
+    ['supported', '214', "Coach's Challenge (Supported)", "COACH'S CHALLENGE", '5', 'SUPPORTED'],
+    ['overturned', '215', "Coach's Challenge (Overturned)", "COACH'S CHALLENGE", '5', 'OVERTURNED'],
+    ['stands', '216', "Coach's Challenge (Stands)", "COACH'S CHALLENGE", '5', 'STANDS'],
+    ['ref-supported', '278', 'Ref-Initiated Review (Supported)', 'REF REVIEW', undefined, 'SUPPORTED'],
+    ['ref-overturned', '279', 'Ref-Initiated Review (Overturned)', 'REF REVIEW', undefined, 'OVERTURNED'],
+    ['ref-stands', '280', 'Ref-Initiated Review (Stands)', 'REF REVIEW', undefined, 'STANDS'],
+    ['jump', '615', 'Jumpball', 'JUMP BALL', undefined],
+  ];
+  const plays = normalizeNbaPlays(cases.map(([id, typeId, typeText]) => raw(id, typeId, typeText)));
+  for (const [index, [id, typeId, , label, teamId, secondary]] of cases.entries()) {
+    const play = plays[index];
+    assert.equal(play.id, id);
+    assert.equal(play.typeId, typeId);
+    assert.equal(play.semanticEvent.primaryLabel, label);
+    assert.equal(play.semanticEvent.teamId, teamId);
+    assert.equal(play.semanticEvent.secondaryLabel, secondary);
+    assert.equal(play.coordinate, null);
+    assert.equal(nbaFullCourtMarker(play, { homeTeamId: '5', awayTeamId: '18' }), null);
+    assert.equal(nbaPlayAttackIndicator(play, { homeTeamId: '5', awayTeamId: '18', homeTeamAbbreviation: 'CLE' }), null);
+  }
+  const [substitution, unknown] = normalizeNbaPlays([raw('sub', '584', 'Substitution'), raw('other', '999', 'Unknown')]);
+  assert.equal(substitution.semanticEvent, undefined);
+  assert.equal(unknown.semanticEvent, undefined);
+  const syntheticShot = { ...plays[0], shootingPlay: true, pointsAttempted: 2, coordinate: { x: 25, y: 25 } };
+  assert.equal(nbaFullCourtMarker(syntheticShot, { homeTeamId: '5', awayTeamId: '18' }), null);
+});
+
+test('foul player labels require a single charged participant and matching box-score team', () => {
+  const boxscore = { players: [
+    { team: { id: '5' }, statistics: [{ athletes: [{ athlete: { id: '3992', shortName: 'J. Harden' } }] }] },
+    { team: { id: '18' }, statistics: [{ athletes: [{ athlete: { id: '42', shortName: 'J. Brunson' } }] }] },
+  ] };
+  const players = nbaBoxscorePlayers(boxscore);
+  const foul = (id, participants, teamId = '5', typeId = '44') => ({ id, type: { id: typeId, text: 'Shooting Foul' }, team: { id: teamId }, participants, text: 'foul' });
+  const participant = id => ({ athlete: { id } });
+  const [known, missing, unresolved, wrongTeam, multiple, doubleTechnical] = normalizeNbaPlays([
+    foul('known', [participant('3992')]), foul('missing', []), foul('unresolved', [participant('999')]),
+    foul('wrong-team', [participant('42')]), foul('multiple', [participant('3992'), participant('42')]),
+    foul('double', [participant('3992'), participant('42')], '5', '30'),
+  ], players);
+  assert.equal(known.semanticEvent.chargedPlayerId, '3992');
+  assert.equal(known.semanticEvent.playerLabel, 'J. HARDEN');
+  assert.equal(missing.semanticEvent.playerLabel, undefined);
+  assert.equal(unresolved.semanticEvent.playerLabel, undefined);
+  assert.equal(wrongTeam.semanticEvent.playerLabel, undefined);
+  assert.equal(multiple.semanticEvent.playerLabel, undefined);
+  assert.equal(doubleTechnical.semanticEvent.teamId, undefined);
+  assert.equal(doubleTechnical.semanticEvent.playerLabel, undefined);
+  assert.equal(doubleTechnical.semanticEvent.chargedPlayerId, undefined);
+  const ambiguous = nbaBoxscorePlayers({ players: [...boxscore.players, { team: { id: '18' }, statistics: [{ athletes: [{ athlete: { id: '3992', shortName: 'J. Harden' } }] }] }] });
+  assert.equal(ambiguous.has('3992'), false);
+});
+
+test('full and sticky NBA courts share the semantic overlay without mounting a shot replay', () => {
+  const players = nbaBoxscorePlayers({ players: [{ team: { id: '5' }, statistics: [{ athletes: [{ athlete: { id: '3992', shortName: 'J. Harden' } }] }] }] });
+  const [play] = normalizeNbaPlays([{ id: 'foul', type: { id: '44', text: 'Shooting Foul' }, text: 'James Harden shooting foul', team: { id: '5' }, participants: [{ athlete: { id: '3992' } }], period: { number: 1 }, clock: { displayValue: '8:42' } }], players);
+  const props = { play, homeTeamId: '5', awayTeamId: '18', homeTeamAbbreviation: 'CLE', awayTeamAbbreviation: 'NYK' };
+  for (const compact of [false, true]) {
+    const html = renderToStaticMarkup(React.createElement(NbaPlayCourt, { ...props, compact }));
+    assert.match(html, /data-semantic-event="foul"/);
+    assert.match(html, /SHOOTING FOUL · CLE/);
+    assert.match(html, /J\. HARDEN/);
+    assert.doesNotMatch(html, /← CLE|CLE →|fill-emerald-500|fill-rose-500/);
+    if (!compact) assert.match(html, /James Harden shooting foul/);
+  }
+});
+
+test('typed period endings remain manually selectable but never become the automatic latest play', () => {
+  const plays = normalizeNbaPlays([
+    { id: 'shot', text: 'Player makes jumper', type: { id: '92', text: 'Jump Shot' }, period: { number: 1 } },
+    { id: 'q1', text: 'End of the 1st Quarter', type: { id: '412', text: 'End Period' }, period: { number: 1 } },
+    { id: 'half', text: 'End of the 2nd Quarter', type: { id: '412', text: 'End Period' }, period: { number: 2 } },
+    { id: 'ot', text: 'End of the 1st Overtime', type: { id: '412', text: 'End Period' }, period: { number: 5 } },
+    { id: 'game', text: 'End of Game', type: { id: '402', text: 'End Game' }, period: { number: 4 } },
+  ]);
+  assert.deepEqual(plays.slice(1).map(p => p.semanticEvent.primaryLabel), ['END OF Q1', 'HALFTIME', 'END OF OT', 'END OF GAME']);
+  assert.equal(latestMeaningfulNbaPlay(plays).id, 'shot');
+  assert.equal(latestMeaningfulNbaPlay(plays.slice(1)), null);
+  const manuallySelected = plays.find(p => p.id === 'q1');
+  assert.match(renderToStaticMarkup(React.createElement(NbaPlayCourt, { play: manuallySelected })), /END OF Q1/);
+  assert.equal(latestMeaningfulNbaPlay(normalizeNbaPlays([{ id: 'legacy', text: 'End of the 1st Quarter' }])), null);
+});
+
 test('NBA date selection keeps exact calendar dates and YYYYMMDD API keys', () => {
   assert.equal(nbaDateKey('2026-04-15'), '20260415');
   assert.equal(shiftNbaDate('2026-03-01', -1), '2026-02-28');
@@ -118,7 +221,8 @@ test('compact replay eligibility is mobile-only and supplements a hidden normal 
   assert.match(gameCenter, /shouldShowCompactNbaReplay\(narrow,normalReplayVisible\)/);
   assert.match(gameCenter, /replayEnabled=\{!compactVisible\}/);
   assert.match(gameCenter, /NbaPlayCourt compact play=\{selected\}/);
-  assert.match(gameCenter, /presentation==="inline"\?"top-0":"top-\[-1rem\]"/);
+  assert.match(gameCenter, /data-nba-sticky-replay className="sticky top-0/);
+  assert.match(gameCenter, /periodNavigation\(true\)/);
 });
 
 test('QA game shot transforms preserve ESPN rim distance for both display sides', () => {
@@ -195,4 +299,85 @@ test('missing or wrong ESPN NBA event context is unavailable instead of an empty
     global.fetch = async () => Response.json({ header: { id: '999', competitions: [{ competitors: [competitor('away', 'AWY', '1'), competitor('home', 'HME', '2')] }] } });
     await assert.rejects(fetchNbaGameDetail('123'), /game is unavailable/);
   } finally { global.fetch = originalFetch; }
+});
+
+test('NBA game detail resolves a charged foul player from its own box score', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => Response.json({
+    header: { competitions: [{ competitors: [competitor('away', '18', '90'), competitor('home', '5', '91')] }] },
+    boxscore: { players: [{ team: { id: '5' }, statistics: [{ athletes: [{ athlete: { id: '3992', shortName: 'J. Harden' } }] }] }] },
+    plays: [{ id: 'foul', type: { id: '44', text: 'Shooting Foul' }, team: { id: '5' }, participants: [{ athlete: { id: '3992' } }], text: 'James Harden shooting foul' }],
+  });
+  try {
+    const detail = await fetchNbaGameDetail('12345');
+    assert.equal(detail.plays[0].semanticEvent.playerLabel, 'J. HARDEN');
+    assert.equal(detail.plays[0].semanticEvent.chargedPlayerId, '3992');
+  } finally { global.fetch = originalFetch; }
+});
+
+test('turnover identity requires one participant and an unambiguous matching box-score team', () => {
+  const boxscore = { players: [
+    { team: { id: '5' }, statistics: [{ athletes: [{ athlete: { id: '42', shortName: 'Test Player' } }] }] },
+    { team: { id: '18' }, statistics: [{ athletes: [{ athlete: { id: '99', shortName: 'Opponent' } }] }] },
+  ] };
+  const raw = (participants, teamId = '5') => ({ id: 'turnover', type: { id: '62', text: 'Bad Pass Turnover' },
+    team: teamId ? { id: teamId } : null, text: 'Untrusted narrative names an opponent', participants });
+  const participant = id => ({ athlete: { id } });
+  const players = nbaBoxscorePlayers(boxscore);
+  const [positive] = normalizeNbaPlays([raw([participant('42')])], players);
+  assert.equal(positive.semanticEvent.playerLabel, 'TEST PLAYER');
+  assert.equal(positive.semanticEvent.chargedPlayerId, '42');
+  for (const input of [raw([]), raw([participant('missing')]), raw([participant('99')]),
+    raw([participant('42'), participant('99')]), raw([participant('42')], null)]) {
+    const [play] = normalizeNbaPlays([input], players);
+    assert.equal(play.semanticEvent.primaryLabel, 'TURNOVER');
+    assert.equal(play.semanticEvent.playerLabel, undefined);
+    assert.equal(play.semanticEvent.chargedPlayerId, undefined);
+  }
+  for (const conflict of [{ teamId: '18', shortName: 'Test Player' }, { teamId: '5', shortName: 'Different Name' }]) {
+    const conflicting = nbaBoxscorePlayers({ players: [...boxscore.players, {
+      team: { id: conflict.teamId }, statistics: [{ athletes: [{ athlete: { id: '42', shortName: conflict.shortName } }] }],
+    }] });
+    assert.equal(conflicting.has('42'), false);
+    assert.equal(normalizeNbaPlays([raw([participant('42')])], conflicting)[0].semanticEvent.playerLabel, undefined);
+  }
+});
+
+test('semantic normalization preserves the current PBP logo eligibility and shot behavior', () => {
+  const { nbaDisplayTeamId } = require('../lib/live-scores/playTeamLogo.ts');
+  const teams = [{ id: '5', logo: '/home.png' }, { id: '18', logo: '/away.png' }];
+  const rows = [
+    ['made', '92', 'Jump Shot', '5', true, 2, '5'],
+    ['missed', '92', 'Jump Shot', '18', true, 0, '18'],
+    ['free-throw', '97', 'Free Throw - 1 of 2', '5', true, 1, '5'],
+    ['rebound', '155', 'Defensive Rebound', '18', false, 0, '18'],
+    ['turnover', '62', 'Bad Pass Turnover', '5', false, 0, '5'],
+    ['foul', '44', 'Shooting Foul', '18', false, 0, '18'],
+    ['timeout', '16', 'Full Timeout', '5', false, 0, '5'],
+    ['substitution', '584', 'Substitution', '18', false, 0, '18'],
+    ['challenge', '214', "Coach's Challenge (Supported)", '5', false, 0, '5'],
+    ['review', '278', 'Ref-Initiated Review (Supported)', '5', false, 0, null],
+    ['jump', '615', 'Jumpball', '5', false, 0, null],
+    ['end', '412', 'End Period', '5', false, 0, null],
+    ['unknown', '999', 'Unknown', '5', false, 0, null],
+    ['unmatched', '92', 'Jump Shot', 'unknown', true, 2, null],
+  ];
+  const plays = normalizeNbaPlays(rows.map(([id, typeId, typeText, teamId, shootingPlay, scoreValue]) => ({
+    id, type: { id: typeId, text: typeText }, text: typeText, team: { id: teamId }, shootingPlay, scoreValue,
+    pointsAttempted: id === 'free-throw' ? 1 : 2, coordinate: { x: 25, y: 10 }, period: { number: 1 },
+  })));
+  const context = { homeTeamId: '5', awayTeamId: '18', homeTeamAbbreviation: 'CLE', awayTeamAbbreviation: 'NYK' };
+  for (const [i, row] of rows.entries()) {
+    const play = plays[i];
+    assert.equal(nbaDisplayTeamId(play, teams), row[6], row[0]);
+    if (play.semanticEvent) {
+      assert.equal(nbaFullCourtMarker(play, context), null, row[0]);
+      assert.equal(nbaPlayAttackIndicator(play, context), null, row[0]);
+    }
+  }
+  assert.equal(nbaFullCourtMarker(plays[0], context).made, true);
+  assert.equal(nbaFullCourtMarker(plays[1], context).made, false);
+  assert.equal(nbaFullCourtMarker(plays[2], context).left, 19);
+  assert.equal(plays[3].semanticEvent, undefined, 'Rebound retains existing behavior');
+  assert.equal(plays[7].semanticEvent, undefined, 'Substitution retains existing behavior');
 });

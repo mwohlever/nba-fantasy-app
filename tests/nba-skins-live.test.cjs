@@ -415,7 +415,9 @@ test('inline replay observes the viewport, modal replay observes its scroll cont
     observer.callback([{ isIntersecting: false }]); pt = await settle(ph, p);
     const courts = nodes(pt).filter(n => n.type === Court); assert.equal(courts.length, 2);
     assert.equal(courts[0].props.replayEnabled, false); assert.equal(courts[1].props.compact, true);
-    assert.ok(nodes(pt).some(n => n.props?.className?.includes(`sticky ${presentation === 'inline' ? 'top-0' : 'top-[-1rem]'}`)));
+    const sticky = nodes(pt).find(n => n.props?.['data-nba-sticky-replay']);
+    assert.ok(sticky.props.className.includes('sticky top-0'));
+    assert.ok(nodes(sticky).some(n => n.props?.['aria-label'] === 'NBA quarters'), 'Quarters stay with compact court');
     find(pt, 'button', 'Q1').props.onClick(); pt = await settle(ph, p); assert.equal(nodes(pt).filter(n => n.type === Court)[1].props.play.id, 'first');
     observer.callback([{ isIntersecting: true }]); pt = await settle(ph, p); assert.equal(nodes(pt).filter(n => n.type === Court).length, 1);
     ph.unmount(); assert.equal(observer.disconnected, true);
