@@ -68,7 +68,7 @@ test('NBA semantics, sticky quarters, logos, ownership and inline history at 360
           assert.equal(request.method(), 'GET', 'Fixture permits read-only application requests');
           requests.push(url.href);
           const groupId = url.searchParams.get('groupId'), leagueId = url.searchParams.get('leagueId');
-          const body = url.pathname.endsWith('/scores') ? { games: [game] } : { ...detail,
+          const body = url.pathname.endsWith('/favorites') ? { teamIds: [] } : url.pathname.endsWith('/scores') ? { games: [game] } : { ...detail,
             ownership: { groupId, leagueId, players: { '42': { name: groupId === 'a' ? 'Mark' : 'Josh', isYou: true } } } };
           return route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
         }

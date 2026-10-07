@@ -118,7 +118,7 @@ test('Skins page reuses NBA Live, authorizes Skins-only Groups, and keys by view
 for (const mode of ['nba', 'nba-skins']) test(`${mode}: shared scoreboard date controls, open/close Game Center, refresh and states`, async () => {
   reset(mode === 'nba' ? '/live-scores' : '/nba-skins/live', mode === 'nba' ? 'sport=nba&season=2025' : 'season=2025');
   const calls = []; let payload = { games: [game] }, ok = true;
-  global.fetch = async url => { calls.push(url); return { ok, json: async () => payload }; };
+  global.fetch = async url => { if (url.endsWith("/favorites")) return Response.json({ teamIds: [] }); calls.push(url); return { ok, json: async () => payload }; };
   const h = host(Live), props = { context: mode, viewerId: 'viewer' }; let tree = await settle(h, props);
   assert.equal(new URL(calls[0], 'http://test').searchParams.get('date'), nbaDateKey(easternToday()));
   assert.ok(calls.every(url => !url.includes('season=')));
@@ -294,7 +294,7 @@ test('unavailable and mismatched detail never silently selects another game', as
 
 function deferredFetch() {
   const requests = [];
-  global.fetch = (url, options) => new Promise((resolve, reject) => requests.push({ url, signal: options.signal, reject,
+  global.fetch = (url, options) => url.endsWith("/favorites") ? Promise.resolve(Response.json({ teamIds: [] })) : new Promise((resolve, reject) => requests.push({ url, signal: options.signal, reject,
     resolve: (body, ok = true) => resolve({ ok, json: async () => body }) }));
   return requests;
 }
@@ -461,7 +461,7 @@ test('live scoreboard/detail polling, visibility refresh and unmount cleanup are
   window.clearInterval = id => intervals.delete(id);
   document.addEventListener = (type, callback) => listeners.set(callback, type);
   document.removeEventListener = (type, callback) => listeners.delete(callback);
-  global.fetch = async url => { calls++; const body = detail(); body.header.competitions[0].status.type.state = 'in'; return { ok: true, json: async () => url.includes('/scores?') ? { games: [{ ...game, status: 'in' }] } : body }; };
+  global.fetch = async url => { if (url.endsWith('/favorites')) return Response.json({ teamIds: [] }); calls++; const body = detail(); body.header.competitions[0].status.type.state = 'in'; return { ok: true, json: async () => url.includes('/scores?') ? { games: [{ ...game, status: 'in' }] } : body }; };
   const h = host(Live); await settle(h, { viewerId: 'viewer' });
   assert.ok([...intervals.values()].some(i => i.delay === 30000));
   [...intervals.values()][0].callback(); await tick(); assert.equal(calls, 2);

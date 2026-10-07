@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export function createFavoriteHandlers(table: "ncaa_favorite_teams" | "live_score_favorite_teams", sport?: "nfl") {
+export function createFavoriteHandlers(table: "ncaa_favorite_teams" | "live_score_favorite_teams", sport?: "nfl" | "nba") {
 function validTeamId(value: unknown): value is string {
   return typeof value === "string" && /^\d+$/.test(value);
 }
