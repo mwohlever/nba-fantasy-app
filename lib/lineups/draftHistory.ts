@@ -49,6 +49,23 @@ export function effectiveDraftPick(pick: DraftPick, corrections: DraftHistory["c
   };
 }
 
+/** A refill is an audited roster adjustment, never a rewind of the snake cursor. */
+export function hasRecordedDraftVacancy(history: DraftHistory, teamId: number, playerIds: number[]) {
+  if (!history.available || !history.initialized || history.turn.state === "closed") return false;
+  const picks = history.picks.filter(pick => pick.team_id === teamId);
+  if (playerIds.length >= picks.length) return false;
+  const effective = picks.map(pick => effectiveDraftPick(pick, history.corrections));
+  if (!effective.some(pick => pick.playerId === null && pick.trail.length > 0)) return false;
+  const activeIds = new Set(effective.flatMap(pick => pick.playerId === null ? [] : [pick.playerId]));
+  // The existing RPC records commissioner additions as standalone roster events.
+  // Replay those too, including removals of an earlier refill.
+  for (const correction of history.corrections.filter(c => c.team_id === teamId && c.pick_id === null).sort((a, b) => a.id - b.id)) {
+    if (correction.old_player_id !== null) activeIds.delete(correction.old_player_id);
+    if (correction.new_player_id !== null) activeIds.add(correction.new_player_id);
+  }
+  return activeIds.size === playerIds.length && playerIds.every(id => activeIds.has(id));
+}
+
 export function draftStateLabel(history: DraftHistory | null | undefined, locked: boolean) {
   if (history?.turn.state === "complete") return "Draft Complete";
   if (locked || history?.turn.state === "closed") return "Draft Locked";

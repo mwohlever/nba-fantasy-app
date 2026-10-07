@@ -121,9 +121,10 @@ function routeFixture({role='player', commissioner=false, rpcError=null, sport='
     '@/lib/groups/context':{getActiveSlateAccessForUser:async()=>({context:{group:{id:'g'},team:{id:1},canAdministerGroup:commissioner},league:{id:'l'},slate:{sport,rulesSnapshot:null}}),teamBelongsToGroup:async()=>true},
     '@/lib/security/slateSport':load('lib/security/slateSport.ts', {'next/server':{NextResponse:{json:(body,options)=>({body,status:options?.status??200})}}, '@/lib/lineups/draftContext':load('lib/lineups/draftContext.ts')}),
     '@/lib/lineups/draftPermissions':load('lib/lineups/draftPermissions.ts'),
+    '@/lib/lineups/draftHistory':model,
     '@/lib/rules/leagueRules':rules,'@/lib/playerProjections':{getPlayerProjectionsForSeason:async()=>({projections:{}})},
     '@/lib/draftNotifications':{notifyNextDrafter:async(...args)=>{notifications.push(args)}},
-    '@/lib/lineups/draftHistory.server':{isMissingDraftInfrastructure:server.isMissingDraftInfrastructure,mutateFantasyDraft:async input=>{calls.push(input);return {data:{lineupId:1,isPick:true,overallPick:7},error:rpcError}}},
+    '@/lib/lineups/draftHistory.server':{isMissingDraftInfrastructure:server.isMissingDraftInfrastructure,readDraftHistory:async()=>({available:true,initialized:true,picks:[],corrections:[],turn:{state:'empty'}}),mutateFantasyDraft:async input=>{calls.push(input);return {data:{lineupId:1,isPick:true,overallPick:7},error:rpcError}}},
   });
   return {calls,notifications,post:(extra={})=>route.POST({json:async()=>({slateId:1,teamId:1,playerIds:[10],expectedPlayerIds:[],overallPick:999,isProxy:false,actorId:'forged',...extra})})};
 }

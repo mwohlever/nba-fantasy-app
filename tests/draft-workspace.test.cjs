@@ -697,3 +697,21 @@ test('NBA/NFL Projection cards select fixed targets; Info researches; normal poo
     p.unmount();h.unmount();
   }
 });
+
+test('a rejected player draft reveals the backend conflict and refreshes without retrying the write', async () => {
+  const {h,props,tree,respond,calls}=await setup('nfl',{role:'admin'});
+  const reason='Roster correction required before drafting can continue';
+  find(tree,Court).props.setDraftingPlayer({id:11,name:'New QB',position_group:'QB',is_active:true});
+  let next=h.render(props); assert.equal(find(next,Modal).props.draftingPlayer.id,11);
+  global.fetch=async(url,options)=>{
+    calls.push([url,options]);
+    return options?.method==='POST' ? reply({error:reason},false) : reply(respond(url));
+  };
+  assert.equal(await find(next,Modal).props.handleAssignPlayerToTeam({id:11,name:'New QB',position_group:'QB',is_active:true},1,{position:'QB',slotIndex:0}),false);
+  await tick(); next=h.render(props);
+  assert.equal(find(next,Modal).props.draftingPlayer,null);
+  assert.ok(nodes(next).some(n=>n.props?.children===reason));
+  assert.equal(calls.filter(([,options])=>options?.method==='POST').length,1);
+  assert.ok(calls.some(([url,options])=>url.startsWith('/api/lineups?') && !options?.method));
+  h.unmount();
+});

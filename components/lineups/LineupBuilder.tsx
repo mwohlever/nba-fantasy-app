@@ -1322,7 +1322,7 @@ export default function LineupBuilder({
     finally { refreshInFlightRef.current = false; if (refreshMountedRef.current) setIsRefreshingStats(false); }
   }
 
-  async function loadDraftState(slateId: number, routine = false, isScopeCurrent = isRenderScopeCurrent): Promise<RefreshOutcome> {
+  async function loadDraftState(slateId: number, routine = false, isScopeCurrent = isRenderScopeCurrent, preserveSaveMessage = false): Promise<RefreshOutcome> {
     if (!refreshMountedRef.current || !scopeReady || !isScopeCurrent()) return { status: "skipped" };
     const loadId = ++latestSlateLoadRef.current;
     const isCurrent = refreshScopeRef.current.capture();
@@ -1360,7 +1360,7 @@ export default function LineupBuilder({
       setDraftContext({ scope: refreshScopeKey, history: lineups.draftContext.history, participants: lineups.draftContext.participants, canProxyDraft: lineups.draftContext.canProxyDraft === true, slate: lineups.draftContext.slate, gamesByTeam: games?.gamesByTeam ?? {} });
       setRefreshTimestamp({ scope: refreshScopeKey, value: new Date().toISOString() });
       setRefreshFeedback({ scope: refreshScopeKey, text: routine ? "Updated just now" : "" });
-      setSaveMessage("");
+      if (!preserveSaveMessage) setSaveMessage("");
       if (isGolfDraft) {
         // Score reads are display-only. An unavailable or slow upcoming-score endpoint
         // must never hold the Golf acquisition roster in its loading state.
@@ -2181,9 +2181,12 @@ export default function LineupBuilder({
 
       if (activeOrderTarget && !isOrderAssignmentCurrent()) return false;
       if (!added) {
-        if (activeOrderTarget) {
-          setOrderPickTarget(null); setDraftingPlayer(null); setPendingRosterSlotChoice(null);
-          if (selectedSlateIdNumber) void loadSlateLineups(selectedSlateIdNumber);
+        // Reveal the server's conflict message above the draft workspace.
+        // Refresh state for review without retrying the rejected write.
+        if (isDraftPage) {
+          if (activeOrderTarget) setOrderPickTarget(null);
+          setDraftingPlayer(null); setPendingRosterSlotChoice(null);
+          if (selectedSlateIdNumber) void loadDraftState(selectedSlateIdNumber, false, isRenderScopeCurrent, true);
         }
         return false;
       }

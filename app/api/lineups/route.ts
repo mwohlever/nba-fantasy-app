@@ -1,4 +1,5 @@
 import { canProxyDraftForGroup } from "@/lib/lineups/draftPermissions";
+import { hasRecordedDraftVacancy } from "@/lib/lineups/draftHistory";
 import { isMissingDraftInfrastructure, mutateFantasyDraft, readDraftHistory } from "@/lib/lineups/draftHistory.server";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -52,6 +53,7 @@ type SlateRow = {
   date: string | null;
   start_date: string | null;
   end_date: string | null;
+  archived_at?: string | null;
   is_locked: boolean;
   sport: string | null;
 };
@@ -547,7 +549,7 @@ export async function POST(request: Request) {
       await supabaseAdmin
         .from("slates")
         .select(
-          "id, date, start_date, end_date, is_locked, sport, league_id",
+          "id, date, start_date, end_date, is_locked, sport, league_id, archived_at",
         )
         .eq("id", slateId)
         .single();
@@ -891,9 +893,33 @@ export async function POST(request: Request) {
       const projection = projectionResult?.projections[addedPlayerIds[0]];
       let mutation;
       try {
+        let correction = false;
+        if (sport === "nfl" && isSingleNewDraftPick && slateAccess.context.canAdministerGroup) {
+          const history = await readDraftHistory(slateId, slateAccess.context.group.id, slateAccess.league.id, sport);
+          correction = hasRecordedDraftVacancy(history, teamId, previousPlayerIds);
+          if (correction) {
+            const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+            const endDate = slate.end_date ?? slate.date;
+            if (slate.archived_at || (endDate && endDate < today)) {
+              throw new Error("Use commissioner corrections for completed or archived slates.");
+            }
+            // Correction RPCs intentionally allow historical/nonparticipating teams.
+            // A refill from the live Draft UI must retain normal participant checks.
+            const [participant, receiver] = await Promise.all([
+              supabaseAdmin.from("slate_teams").select("team_id").eq("slate_id", slateId).eq("team_id", teamId).eq("is_participating", true).maybeSingle(),
+              supabaseAdmin.from("teams").select("user_id").eq("id", teamId).eq("group_id", slateAccess.context.group.id).single(),
+            ]);
+            if (participant.error || receiver.error) throw new Error("Failed to validate the receiving draft participant.");
+            const membership = receiver.data && await supabaseAdmin.from("group_memberships").select("user_id")
+              .eq("group_id", slateAccess.context.group.id).eq("user_id", receiver.data.user_id).eq("is_active", true).maybeSingle();
+            if (membership?.error) throw new Error("Failed to validate the receiving draft participant.");
+            if (!participant.data || !membership?.data) throw new Error("Receiving participant is not active in this draft");
+          }
+        }
         mutation = await mutateFantasyDraft({
           slateId, groupId: slateAccess.context.group.id, leagueId: slateAccess.league.id, sport,
           teamId, actorId: currentUser.id, desiredIds: uniquePlayerIds, expectedIds: body.expectedPlayerIds,
+          correction,
           requestedSlot: requestedRosterSlot,
           projection: projection ? { projected_fantasy_points: projection.projection, projection_confidence: projection.confidence,
             projection_source: projection.source, projected_at: projection.projection == null ? null : new Date().toISOString() } : null,
