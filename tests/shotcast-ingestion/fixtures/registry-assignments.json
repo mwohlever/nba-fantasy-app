@@ -1,0 +1,193 @@
+{
+  "description": "Compact player-membership projection of accepted Phase 4C preserved GetTeeTimes evidence; not a raw provider payload. Tests hash the reconstructed projection separately.",
+  "events": [
+    {
+      "event": {
+        "provider": "pga-tour",
+        "eventId": "R2026006",
+        "season": 2026,
+        "tournamentName": "Sony Open in Hawaii",
+        "courses": [
+          {
+            "id": "006",
+            "name": "Waialae Country Club",
+            "host": true,
+            "scoringLevel": "TOURCAST"
+          }
+        ],
+        "schedule": {
+          "sourceUrl": "https://data-api.pgatour.com/schedule/R/2026",
+          "sha256": "63f5b82eca8eb29cfce3ec4e705a5d1ac6de4b4edabf0b03a663d4075773fd22",
+          "retrievedAt": "2026-10-07T11:17:03.847Z"
+        },
+        "inventory": {
+          "sourceUrl": "https://data-api.pgatour.com/leaderboard/R2026006",
+          "sha256": "3eb6abbb25773f7a09ec363d9abd9dc91b2375c84d210106f218cfb1933d5fb5",
+          "retrievedAt": "2026-10-07T11:17:03.845Z"
+        }
+      },
+      "playerId": "59095",
+      "finalLeaderboardCourseId": "006",
+      "teeTimesEvidence": {
+        "sourceUrl": "https://orchestrator.pgatour.com/graphql",
+        "sha256": "8d746c072b80c87d0c4b6072413c719d885617dc7ec76feab04d4e1da3d331ad",
+        "retrievedAt": "2026-10-07T11:17:04.358Z",
+        "operation": "GetTeeTimes",
+        "variables": {
+          "id": "R2026006"
+        }
+      },
+      "rounds": [
+        {
+          "roundInt": 1,
+          "groups": [
+            {
+              "courseId": "006",
+              "players": [
+                {
+                  "id": "59095"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "roundInt": 2,
+          "groups": [
+            {
+              "courseId": "006",
+              "players": [
+                {
+                  "id": "59095"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "roundInt": 3,
+          "groups": [
+            {
+              "courseId": "006",
+              "players": [
+                {
+                  "id": "59095"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "roundInt": 4,
+          "groups": [
+            {
+              "courseId": "006",
+              "players": [
+                {
+                  "id": "59095"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "event": {
+        "provider": "pga-tour",
+        "eventId": "R2026005",
+        "season": 2026,
+        "tournamentName": "AT&T Pebble Beach Pro-Am",
+        "courses": [
+          {
+            "id": "005",
+            "name": "Pebble Beach Golf Links",
+            "host": true,
+            "scoringLevel": "TOURCAST"
+          },
+          {
+            "id": "205",
+            "name": "Spyglass Hill Golf Course",
+            "host": false,
+            "scoringLevel": "TOURCAST"
+          }
+        ],
+        "schedule": {
+          "sourceUrl": "https://data-api.pgatour.com/schedule/R/2026",
+          "sha256": "63f5b82eca8eb29cfce3ec4e705a5d1ac6de4b4edabf0b03a663d4075773fd22",
+          "retrievedAt": "2026-10-07T11:17:04.991Z"
+        },
+        "inventory": {
+          "sourceUrl": "https://data-api.pgatour.com/leaderboard/R2026005",
+          "sha256": "315bf882366f31b699727da5b8f72855b0f859d3ff69909277157c620c28e9b8",
+          "retrievedAt": "2026-10-07T11:17:04.982Z"
+        }
+      },
+      "playerId": "50525",
+      "finalLeaderboardCourseId": "005",
+      "teeTimesEvidence": {
+        "sourceUrl": "https://orchestrator.pgatour.com/graphql",
+        "sha256": "9e38e33c86040e296f7ddabaaffc436fcd29d7dbe32ad8122aa721660e0ece84",
+        "retrievedAt": "2026-10-07T11:17:05.530Z",
+        "operation": "GetTeeTimes",
+        "variables": {
+          "id": "R2026005"
+        }
+      },
+      "rounds": [
+        {
+          "roundInt": 1,
+          "groups": [
+            {
+              "courseId": "205",
+              "players": [
+                {
+                  "id": "50525"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "roundInt": 2,
+          "groups": [
+            {
+              "courseId": "005",
+              "players": [
+                {
+                  "id": "50525"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "roundInt": 3,
+          "groups": [
+            {
+              "courseId": "005",
+              "players": [
+                {
+                  "id": "50525"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "roundInt": 4,
+          "groups": [
+            {
+              "courseId": "005",
+              "players": [
+                {
+                  "id": "50525"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

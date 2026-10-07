@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 2,
+  "kind": "pga-course-preparation",
+  "preparationVersion": "1",
+  "preparationId": "edd97431854276e6657d3b73cc2e4ef6ff70f659ebc6696521ea652579d63743",
+  "packageId": "pga-edd97431-8542-76e6-657d-3b73cc2e4ef6",
+  "identity": {
+    "provider": "pga-tour",
+    "eventId": "R2026005",
+    "season": 2026,
+    "tournamentName": "AT&T Pebble Beach Pro-Am",
+    "courseId": "205",
+    "courseName": "Spyglass Hill Golf Course",
+    "eventCourseKey": "pga-tour:R2026005:205",
+    "relationship": "alternate",
+    "physicalCourseId": null,
+    "assetRoot": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/",
+    "configurationIdentity": "9a4ea93715658b508c2cce8c889e530a022d418f8240c9530cfb60d62ed38dde",
+    "registrationProfile": "pga-f32-z-up-interior-v1",
+    "nativeUnit": "feet",
+    "worldUnit": "metres",
+    "feetToMetres": 0.3048,
+    "rotationUnit": "degrees",
+    "worldAxes": "xy-horizontal-z-up"
+  },
+  "eventIdentity": {
+    "provider": "pga-tour",
+    "eventId": "R2026005",
+    "season": 2026,
+    "tournamentName": "AT&T Pebble Beach Pro-Am",
+    "courses": [
+      {
+        "id": "005",
+        "name": "Pebble Beach Golf Links",
+        "host": true,
+        "scoringLevel": "TOURCAST"
+      },
+      {
+        "id": "205",
+        "name": "Spyglass Hill Golf Course",
+        "host": false,
+        "scoringLevel": "TOURCAST"
+      }
+    ],
+    "schedule": {
+      "sourceUrl": "https://data-api.pgatour.com/schedule/R/2026",
+      "sha256": "63f5b82eca8eb29cfce3ec4e705a5d1ac6de4b4edabf0b03a663d4075773fd22",
+      "retrievedAt": "2026-10-07T11:17:04.991Z"
+    },
+    "inventory": {
+      "sourceUrl": "https://data-api.pgatour.com/leaderboard/R2026005",
+      "sha256": "315bf882366f31b699727da5b8f72855b0f859d3ff69909277157c620c28e9b8",
+      "retrievedAt": "2026-10-07T11:17:04.982Z"
+    }
+  },
+  "event": {
+    "id": "R2026005",
+    "name": "AT&T Pebble Beach Pro-Am",
+    "course": {
+      "id": "205",
+      "name": "Spyglass Hill Golf Course",
+      "identitySource": "https://data-api.pgatour.com/leaderboard/R2026005"
+    },
+    "assetRoot": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/"
+  },
+  "engine": {
+    "version": "3.3.1",
+    "profile": "pga-f32-z-up-interior-v1",
+    "source": "https://static-assets.pgatour.com/golf-engine/3.3.1/golfEngine.min.js"
+  },
+  "configuration": {
+    "offset": {
+      "x": 3249.926282,
+      "y": 3400.209492,
+      "z": 0,
+      "rotate": 0
+    },
+    "selection": "course-override",
+    "rawConfig": {
+      "x": 2649.998874,
+      "y": 3300.061931,
+      "z": 0,
+      "rotate": 0,
+      "courseOffset": [
+        {
+          "courseId": "205",
+          "x": 3249.926282,
+          "y": 3400.209492,
+          "z": 0,
+          "rotate": 0
+        }
+      ]
+    },
+    "courseId": "205",
+    "source": {
+      "identifier": "bootstrap",
+      "localPath": "tmp/shotcast-ingestion/packages/pga-edd97431-8542-76e6-657d-3b73cc2e4ef6/bootstrap.bin",
+      "sha256": "4e1ff0d18a4a1fd2ef0baf8c058342caac0808f4ca58afa3d40ab5d326cfee83",
+      "sourceUrl": "https://tourcast.pgatour.com/tourcast.html?id=R2026005"
+    }
+  },
+  "assets": [
+    {
+      "id": "course-data",
+      "role": "course-data",
+      "identifier": "course-data",
+      "localPath": "tmp/shotcast-ingestion/packages/pga-edd97431-8542-76e6-657d-3b73cc2e4ef6/course-data.bin",
+      "sha256": "7dc2d881137479742ba09b735a832dedbcc44d4e0d9c4aac9822b2e43dbac40c",
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/data/courseData.json"
+    },
+    {
+      "id": "course-image",
+      "role": "image",
+      "identifier": "course-image",
+      "localPath": "tmp/shotcast-ingestion/packages/pga-edd97431-8542-76e6-657d-3b73cc2e4ef6/course-image.bin",
+      "sha256": "553f34d17c30576a2fa0bb2008a6651e347958f1a5b4432d3db84e82792e8425",
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/course.jpg"
+    },
+    {
+      "id": "course-world",
+      "role": "world-file",
+      "identifier": "course-world",
+      "localPath": "tmp/shotcast-ingestion/packages/pga-edd97431-8542-76e6-657d-3b73cc2e4ef6/course-world.bin",
+      "sha256": "833ddb92c581bba7692fc49d55ef0307b4165a1da7dcc8f1d5874dc21646bafb",
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/course.tfw"
+    },
+    {
+      "id": "h1-green",
+      "role": "green",
+      "identifier": "h1-green",
+      "localPath": "tmp/shotcast-ingestion/packages/pga-edd97431-8542-76e6-657d-3b73cc2e4ef6/h1-green.bin",
+      "sha256": "03176551e7450e15dd5e16e66506f1ed93c939c20e6c00d42fdee82091223b4f",
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/greens/Green01.glb"
+    },
+    {
+      "id": "h1-image",
+      "role": "image",
+      "identifier": "h1-image",
+      "localPath": "tmp/shotcast-ingestion/packages/pga-edd97431-8542-76e6-657d-3b73cc2e4ef6/h1-image.bin",
+      "sha256": "06a853198199908fc2f60d26934751e5dd17d83537f4a4714c297be3b7d05374",
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/terrain01.jpg"
+    },
+    {
+      "id": "h1-mask",
+      "role": "mask",
+      "identifier": "h1-mask",
+      "localPath": "tmp/shotcast-ingestion/packages/pga-edd97431-8542-76e6-657d-3b73cc2e4ef6/h1-mask.bin",
+      "sha256": "704ac9336db4edcf8a9f01b00cedace0a920ee498602652ac21b10ce2a74ad80",
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/cutouts/1.png"
+    },
+    {
+      "id": "h1-terrain",
+      "role": "terrain",
+      "identifier": "h1-terrain",
+      "localPath": "tmp/shotcast-ingestion/packages/pga-edd97431-8542-76e6-657d-3b73cc2e4ef6/h1-terrain.bin",
+      "sha256": "6d74d6d798364c0f2afb230c98f5040c93c79bb1bc332fadfb25bfabe035d6d9",
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/cutGlb/terrain01.glb"
+    },
+    {
+      "id": "h1-world",
+      "role": "world-file",
+      "identifier": "h1-world",
+      "localPath": "tmp/shotcast-ingestion/packages/pga-edd97431-8542-76e6-657d-3b73cc2e4ef6/h1-world.bin",
+      "sha256": "c7dad12198d09789dc170b30d417f0b6909871264333c991cbd16b9fd94db83f",
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/terrain01.tfw"
+    }
+  ],
+  "courseAssets": {
+    "imagery": "course-image",
+    "worldFile": "course-world",
+    "data": "course-data"
+  },
+  "holes": [
+    {
+      "hole": 1,
+      "terrain": "h1-terrain",
+      "imagery": "h1-image",
+      "worldFile": "h1-world",
+      "mask": "h1-mask",
+      "green": "h1-green"
+    }
+  ],
+  "inputs": {
+    "bootstrap": {
+      "sourceUrl": "https://tourcast.pgatour.com/tourcast.html?id=R2026005",
+      "sha256": "4e1ff0d18a4a1fd2ef0baf8c058342caac0808f4ca58afa3d40ab5d326cfee83",
+      "retrievedAt": "2026-10-07T11:17:04.978Z"
+    },
+    "leaderboard": {
+      "sourceUrl": "https://data-api.pgatour.com/leaderboard/R2026005",
+      "sha256": "315bf882366f31b699727da5b8f72855b0f859d3ff69909277157c620c28e9b8",
+      "retrievedAt": "2026-10-07T11:17:04.982Z"
+    },
+    "schedule": {
+      "sourceUrl": "https://data-api.pgatour.com/schedule/R/2026",
+      "sha256": "63f5b82eca8eb29cfce3ec4e705a5d1ac6de4b4edabf0b03a663d4075773fd22",
+      "retrievedAt": "2026-10-07T11:17:04.991Z"
+    },
+    "engine": {
+      "sourceUrl": "https://static-assets.pgatour.com/golf-engine/3.3.1/golfEngine.min.js",
+      "sha256": "2a64bbe1e11db7343aab33ca91a357e87139ef0becbbc869d89c73c4a99f3018",
+      "retrievedAt": "2026-10-07T11:17:05.051Z"
+    },
+    "application": {
+      "sourceUrl": "https://tourcast.pgatour.com/_next/static/chunks/app/%5Bproduct%5D/page-9b53da48a23ead21.js",
+      "sha256": "09870190bcc511bcd988a7bee22edd9758a0640fa52019bb2e0d00f388232811",
+      "retrievedAt": "2026-10-07T11:17:05.105Z"
+    },
+    "tee-times": {
+      "sourceUrl": "https://orchestrator.pgatour.com/graphql",
+      "sha256": "9e38e33c86040e296f7ddabaaffc436fcd29d7dbe32ad8122aa721660e0ece84",
+      "retrievedAt": "2026-10-07T11:17:05.530Z",
+      "operation": "GetTeeTimes",
+      "variables": {
+        "id": "R2026005"
+      }
+    },
+    "course-data": {
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/data/courseData.json",
+      "sha256": "7dc2d881137479742ba09b735a832dedbcc44d4e0d9c4aac9822b2e43dbac40c",
+      "retrievedAt": "2026-10-07T11:17:05.235Z"
+    },
+    "course-image": {
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/course.jpg",
+      "sha256": "553f34d17c30576a2fa0bb2008a6651e347958f1a5b4432d3db84e82792e8425",
+      "retrievedAt": "2026-10-07T11:17:05.222Z"
+    },
+    "course-world": {
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/course.tfw",
+      "sha256": "833ddb92c581bba7692fc49d55ef0307b4165a1da7dcc8f1d5874dc21646bafb",
+      "retrievedAt": "2026-10-07T11:17:05.212Z"
+    },
+    "h1-green": {
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/greens/Green01.glb",
+      "sha256": "03176551e7450e15dd5e16e66506f1ed93c939c20e6c00d42fdee82091223b4f",
+      "retrievedAt": "2026-10-07T11:17:05.282Z"
+    },
+    "h1-image": {
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/terrain01.jpg",
+      "sha256": "06a853198199908fc2f60d26934751e5dd17d83537f4a4714c297be3b7d05374",
+      "retrievedAt": "2026-10-07T11:17:05.447Z"
+    },
+    "h1-mask": {
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/cutouts/1.png",
+      "sha256": "704ac9336db4edcf8a9f01b00cedace0a920ee498602652ac21b10ce2a74ad80",
+      "retrievedAt": "2026-10-07T11:17:05.232Z"
+    },
+    "h1-terrain": {
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/cutGlb/terrain01.glb",
+      "sha256": "6d74d6d798364c0f2afb230c98f5040c93c79bb1bc332fadfb25bfabe035d6d9",
+      "retrievedAt": "2026-10-07T11:17:05.468Z"
+    },
+    "h1-world": {
+      "sourceUrl": "https://tourcast.pgatour.com/models/R2026005/205/3D_Assets/terrain/terrain01.tfw",
+      "sha256": "c7dad12198d09789dc170b30d417f0b6909871264333c991cbd16b9fd94db83f",
+      "retrievedAt": "2026-10-07T11:17:05.235Z"
+    }
+  },
+  "holeCapabilities": {
+    "1": {
+      "course3d": true,
+      "detailedGreen": true,
+      "registrationValidated": true,
+      "shotCoordinates": true,
+      "pin": true,
+      "radarFlight": false,
+      "simulatedPutt": false
+    }
+  },
+  "registrationProof": {
+    "preparationId": "edd97431854276e6657d3b73cc2e4ef6ff70f659ebc6696521ea652579d63743",
+    "hole": 1,
+    "reference": {
+      "sourceUrl": "accepted-phase4c:provider-runtime-oracle",
+      "sha256": "90b55775443eaf2dde9aa95052afdcc7248363b5b211729789f5834923063ccb",
+      "retrievedAt": "2026-10-07T11:17:05.975Z"
+    },
+    "nativeSha256": "2b4f3bcea47e32d339a972c38f0bc2f046649d36bbd85f36db2a5baa171dceba",
+    "worldSha256": "4f534dec9a921657a85441f219ee6fa43c18708c3e95182bad42c2c6a0c2f1f5",
+    "comparisons": 10,
+    "maximumResidualMetres": 1.5631940186722204e-12,
+    "toleranceMetres": 1e-08
+  }
+}
