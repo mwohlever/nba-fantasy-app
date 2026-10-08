@@ -5,7 +5,8 @@ const cache = new Map();
 function moduleUrl(filename) {
   filename = path.resolve(filename);
   if (cache.has(filename)) return cache.get(filename);
-  const js = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ES2020 } }).outputText.replace(/from ['"](\.\.?\/[^'"]+)['"]/g, (_, spec) => `from '${moduleUrl(path.resolve(path.dirname(filename), spec + '.ts'))}'`);
+  // Next owns this build-time guard; plain Node tests have no Client Components.
+  const js = ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.ES2020 } }).outputText.replace(/import ["']server-only["'];?/g, '').replace(/from ['"](\.\.?\/[^'"]+)['"]/g, (_, spec) => `from '${moduleUrl(path.resolve(path.dirname(filename), spec + '.ts'))}'`);
   const url = `data:text/javascript;base64,${Buffer.from(js).toString('base64')}`;
   cache.set(filename, url); return url;
 }
