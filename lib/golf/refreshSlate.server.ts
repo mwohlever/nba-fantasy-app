@@ -1,7 +1,5 @@
 import "server-only";
-import { shotcastObservation } from "@/lib/golf/holeAcceptance";
 import type { GolfObservationBatch } from "@/lib/golf/reconcileState";
-import { fetchGolfRoundScorecard } from "@/lib/providers/pgaTourShots";
 import { reconcileGolf } from "@/lib/golf/reconcileGolf";
 import { loadGolfRosters } from '@/lib/golf/fantasy.server';
 import { relevantGolfRosterPeriodKey } from '@/lib/golf/relevantRosterPeriod';
@@ -1716,7 +1714,7 @@ export async function refreshGolfSlate(slateId: number, body: GolfRefreshInput, 
        * tournament field without returning any round objects.
        *
        * Preserve a scheduled round so the scorecard can show
-       * all 18 holes and open the pre-round ShotCast layouts.
+       * all 18 holes before play begins.
        * No golf_holes rows are created until real scoring data
        * arrives.
        */
@@ -1959,35 +1957,9 @@ export async function refreshGolfSlate(slateId: number, body: GolfRefreshInput, 
       lineup_players: (roster.periods.find(p => p.period === activePeriod)?.playerIds ?? []).map(player_id => ({ player_id })),
     }));
 
-    // Supplement only drafted golfers' live round during the existing Refresh.
-    // No timer, field-wide scan, historical backfill, or per-hole replay requests.
-    const draftedPlayerIds = new Set((lineupsData ?? []).flatMap(lineup =>
-      (lineup.lineup_players ?? []).map(player => Number(player.player_id))));
-    const shotcastCandidates = tournament.status === "in_progress" ? competitors.filter(competitor =>
-      competitor.status === "active" && competitor.currentRound != null &&
-      draftedPlayerIds.has(playerIdByEspnId.get(competitor.espnPlayerId)!)) : [];
-    let shotcastFailures = 0;
-    for (const batch of chunkRows(shotcastCandidates, 4)) {
-      const cards = await Promise.allSettled(batch.map(async competitor => {
-        const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
-        const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
-        const roundId = roundIdByKey.get(`${eventPlayerId}:${competitor.currentRound}`);
-        if (!roundId) return [];
-        const card = await fetchGolfRoundScorecard({
-          year: Number(slate.start_date.slice(0, 4)), tournamentName: slate.display_name ?? tournament.name,
-          playerName: competitor.displayName, roundNumber: competitor.currentRound!, cacheBust: observedAt,
-        });
-        return card.holes.flatMap(hole => {
-          const observation = shotcastObservation(hole, card.observedAt);
-          return observation ? [{ ...observation, round_id: roundId }] : [];
-        });
-      }));
-      for (const card of cards) {
-        if (card.status === "fulfilled") holeRows.push(...card.value);
-        else { shotcastFailures += 1; console.warn("Golf ShotCast supplement unavailable", card.reason); }
-      }
-    }
-
+    // ESPN is the sole source of new scoring observations. Missing holes stay
+    // unresolved until ESPN reports them; accepted historical scores are retained
+    // by the existing reconciliation/provenance safeguards.
     await assertLease();
     const accepted = await reconcileGolf(slateId, {
       observedAt, events: eventPlayerRows, rounds: roundRows, holes: holeRows,
@@ -2332,7 +2304,6 @@ export async function refreshGolfSlate(slateId: number, body: GolfRefreshInput, 
       eventPlayersUpserted: eventPlayerRows.length,
       playerStatsUpserted: eventPlayerRows.length,
       teamResultsUpserted: accepted.teamWrites.length,
-      shotcastFailures,
       acceptedRevision: accepted.revision,
       scoringChanged: accepted.scoringChanged,
       playerFinishedNotifications,

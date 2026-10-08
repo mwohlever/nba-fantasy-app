@@ -31,7 +31,7 @@ require.extensions[".ts"] = function compileTypeScript(module, filename) {
   module._compile(compiled.outputText, filename);
 };
 
-const { acceptGolfHole, shotcastObservation } = require('../lib/golf/holeAcceptance.ts');
+const { acceptGolfHole } = require('../lib/golf/holeAcceptance.ts');
 const { reconcileGolfState } = require('../lib/golf/reconcileState.ts');
 const { parseGolfTournamentsFromPayload } = require('../lib/providers/golf.ts');
 const { createCompactScoreboard, mergeLeaderboardCompetitorStatuses } = require('../lib/client/refreshGolfFromBrowser.ts');
@@ -74,20 +74,23 @@ test('newer coherent ESPN correction to a WORSE score updates hole, round, and f
  assert.equal(result.events[0].fantasy_score,1); assert.equal(result.teamWrites[0].fantasy_points,1);
  assert.equal(roundOf(result).tee_time,'2026-09-08T11:00:00Z');
 });
-test('ShotCast final evidence improves an incomplete ESPN observation', () => {
- const state=fixture(); const r=state.events[0].golf_rounds[0]; r.golf_holes=[];r.holes_completed=0;r.strokes=null;r.score_to_par=null;
+test('unreported ESPN holes remain absent until complete scoring evidence arrives', () => {
+ const state=fixture(), r=state.events[0].golf_rounds[0];
+ r.golf_holes=[];r.holes_completed=0;r.strokes=null;r.score_to_par=null;
  state.events[0].holes_completed=0;
- const observation=shotcastObservation({holeNumber:1,par:4,shots:[1,2,3].map(n=>({strokeNumber:n,finalStroke:n===3}))},t(2));
- const result=run(state,{observedAt:t(2),holes:[{...observation,round_id:10}]});
- assert.equal(roundOf(result).strokes,3); assert.equal(result.teamWrites[0].fantasy_points,-1);
+ const pending={...hole(3,'espn',2),relative_to_par:null,reconciliation:{source:'espn',observedAt:t(2),final:false}};
+ const result=run(state,{observedAt:t(2),holes:[pending]});
+ assert.equal(roundOf(result).golf_holes.length,0);assert.equal(roundOf(result).strokes,null);
+ const later=run({...state,events:result.events,teams:result.teamRows},espn(3,3),3);
+ assert.equal(roundOf(later).strokes,3);assert.equal(later.teamRows[0].fantasy_points,-1);
 });
-test('newer completed ShotCast holes cross a Hole-10 start into the accepted scorecard', () => {
+test('newer completed ESPN holes cross a Hole-10 start into the accepted scorecard', () => {
  const state=fixture(), round=state.events[0].golf_rounds[0];
  round.golf_holes=Array.from({length:9},(_,index)=>hole(4,'espn',1,index+10));
  Object.assign(round,{holes_completed:9,strokes:36,score_to_par:0});
  Object.assign(state.events[0],{holes_completed:9,last_hole:18});
  const observations=[1,2].map(number=>({
-   ...shotcastObservation({holeNumber:number,par:4,shots:[1,2,3,4,5].map(strokeNumber=>({strokeNumber,finalStroke:strokeNumber===5}))},t(2)),round_id:10,
+   ...hole(5,'espn',2,number),
  }));
  const result=run(state,{observedAt:t(2),holes:observations});
  assert.equal(roundOf(result).holes_completed,11); assert.equal(result.events[0].holes_completed,11);
@@ -140,13 +143,12 @@ test('repeated refreshes converge; provenance confirmations do not rewrite team 
  assert.equal(roundOf(repeated).accepted_revision,2);assert.equal(repeated.scoringChanged,false);
  const exact=run({...state,events:repeated.events},espn(5,3),4);assert.equal(exact.holeWrites.length,0);
 });
-test('new ShotCast reconstruction does not override a completed official hole',()=>{
+test('legacy reconstructed evidence cannot override a completed official hole',()=>{
  assert.equal(acceptGolfHole(hole(),hole(3,'shotcast',3)),false);
 });
-test('malformed, nonfinal and gapped shots cannot become a completed hole',()=>{
- assert.equal(shotcastObservation({holeNumber:1,par:4,shots:[{strokeNumber:3,finalStroke:true}]},t(2)),null);
- assert.equal(shotcastObservation({holeNumber:1,par:4,shots:[{strokeNumber:1,finalStroke:false}]},t(2)),null);
- assert.equal(acceptGolfHole(hole(),{...hole(5),reconciliation:{source:'espn',observedAt:t(3),final:false}}),false);
+test('nonfinal or incomplete ESPN holes cannot become accepted final scores',()=>{
+ assert.equal(acceptGolfHole(undefined,{...hole(3),reconciliation:{source:'espn',observedAt:t(2),final:false}}),false);
+ assert.equal(acceptGolfHole(undefined,{...hole(3),relative_to_par:null}),false);
 });
 test('explicit official retraction needs provider evidence; omission/null is insufficient',()=>{
  const next={...hole(),strokes:null,relative_to_par:null,reconciliation:{source:'espn',observedAt:t(3),final:false,operation:'retract',officialValidated:true}};
@@ -158,10 +160,10 @@ test('Traditional missing-round penalty remains four rounds and uses configured 
  const state=fixture();state.events[0].status='cut';state.events[0].rounds_completed=2;state.events[0].penalty_strokes=20;state.events[0].fantasy_score=20;
  const result=run(state,espn(5));assert.equal(result.events[0].penalty_strokes,20);assert.equal(result.events[0].fantasy_score,21);
 });
-test('modal has no persistent score overlay; accepted revision remounts replay after new props',()=>{
+test('modal displays accepted server scores without replay acquisition',()=>{
  const source=require('node:fs').readFileSync(path.join(repositoryRoot,'components/lineups/GolfPlayerModal.tsx'),'utf8');
  assert.doesNotMatch(source,/reconciledHoleMap|setReconciledHoleMap/);
- assert.match(source,/new Map\(round.holes.map/);assert.match(source,/key=\{`[^`]*round.accepted_revision/);
+ assert.match(source,/new Map\(round.holes.map/);assert.doesNotMatch(source,/GolfHoleReplay|hole-replay|fetch\(/);
 });
 
 test('gradual historical card coverage never double-counts aggregate holes or strokes', () => {
@@ -169,7 +171,7 @@ test('gradual historical card coverage never double-counts aggregate holes or st
   Object.assign(state.events[0].golf_rounds[0], { holes_completed: 18, strokes: 72, score_to_par: 0, status: 'finished' });
   Object.assign(state.events[0], { holes_completed: 18, rounds_completed: 1, status: 'round_complete' });
   for (let n = 2; n <= 18; n++) {
-    const result = run(state, { observedAt: t(n), holes: [hole(4, 'shotcast', n, n)] }, n);
+    const result = run(state, { observedAt: t(n), holes: [hole(4, 'espn', n, n)] }, n);
     assert.equal(roundOf(result).holes_completed, 18);
     assert.equal(roundOf(result).strokes, 72);
     assert.equal(result.events[0].fantasy_score, 0);
@@ -307,43 +309,8 @@ test('backfilling an event-only historical aggregate does not count new rounds t
   const state = fixture();
   Object.assign(state.events[0], { holes_completed: 36, rounds_completed: 2, official_score_to_par: -4, fantasy_score: -4, status: 'round_complete' });
   Object.assign(state.events[0].golf_rounds[0], { holes_completed: 0, strokes: null, score_to_par: null, golf_holes: [], status: 'scheduled' });
-  const result = run(state, { observedAt: t(2), holes: [hole(3, 'shotcast', 2)] });
+  const result = run(state, { observedAt: t(2), holes: [hole(3, 'espn', 2)] });
   assert.equal(result.events[0].holes_completed, 36);
   assert.equal(result.events[0].rounds_completed, 2);
   assert.equal(result.events[0].fantasy_score, -4);
-});
-
-test('replay route returns accepted scores rather than conflicting shot reconstruction', async () => {
-  const fs = require('node:fs'), vm = require('node:vm');
-  const calls = [];
-  const records = {
-    slates: { id: 7, sport: 'golf', display_name: 'Fixture', start_date: '2026-09-08' },
-    golf_players: { id: 100, display_name: 'Golfer' },
-    golf_event_players: { id: 1, golf_rounds: [{ id: 10, round_number: 1 }] },
-  };
-  const db = { from(table) {
-    const q = { then: resolve => Promise.resolve({ data: records[table], error: null }).then(resolve) };
-    for (const method of ['select', 'eq', 'single', 'maybeSingle']) q[method] = () => q;
-    return q;
-  } };
-  const accepted = run(fixture(), espn(5));
-  const mocks = {
-    'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
-    '@/lib/supabaseAdmin': { supabaseAdmin: db },
-    '@/lib/security/resourceAuthorization': { authorizeSlateResource: async () => ({ ok: true }) },
-    '@/lib/golf/holeAcceptance': { shotcastObservation },
-    '@/lib/golf/reconcileGolf': { reconcileGolf: async (slate, batch) => { calls.push({ slate, batch }); return { ...accepted, revision: 2 }; } },
-    '@/lib/providers/pgaTourShots': { fetchGolfHoleReplay: async () => ({ observedAt: t(1), par: 4,
-      shots: [1, 2, 3].map(n => ({ strokeNumber: n, finalStroke: n === 3 })) }) },
-  };
-  const module = { exports: {} };
-  vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(repositoryRoot, 'app/api/golf/hole-replay/route.ts'), 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText, { module, exports: module.exports, console, require: id => mocks[id] });
-  const result = await module.exports.GET({ nextUrl: new URL('http://localhost/?slateId=7&playerId=100&round=1&hole=1') });
-  assert.equal(result.status, 200);
-  assert.equal(calls[0].slate, 7);
-  assert.equal(calls[0].batch.holes[0].reconciliation.observedAt, t(1));
-  assert.equal(result.body.reconciledHole.strokes, 5);
-  assert.equal(result.body.acceptedRevision, 2);
 });

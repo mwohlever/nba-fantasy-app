@@ -35,7 +35,7 @@ export default function GameCard({ sportKey, name, href, description, compact = 
           height={36}
           className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/10"
         />
-        <span className="min-w-0 flex-1 truncate text-sm font-bold text-white">
+        <span className="min-w-0 flex-1 whitespace-normal break-words text-sm font-bold leading-5 text-white">
           {name || platformGame?.label}
         </span>
         <span className="shrink-0 text-xs font-bold text-teal-300">

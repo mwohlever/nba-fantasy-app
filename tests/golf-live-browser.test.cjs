@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-/* Real Golf Live + scorecard + ShotCast action, synthetic Group/auth/Next adapters. All requests intercepted; no production data writes. */
+/* Real Golf Live + scorecard + noninteractive hole scores, synthetic Group/auth/Next adapters. All requests intercepted; no production data writes. */
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
-test('Golf Live mobile/desktop selectors, direct links, reload, history, Group scope, errors and ShotCast context', {
+test('Golf Live mobile/desktop selectors, direct links, reload, history, Group scope, errors and noninteractive hole scores', {
   skip: !process.env.FOOTBALL_BROWSER_MODULE && 'Set FOOTBALL_BROWSER_MODULE to use installed Playwright',
 }, async () => {
   const { chromium } = require(process.env.FOOTBALL_BROWSER_MODULE);
@@ -77,7 +77,7 @@ test('Golf Live mobile/desktop selectors, direct links, reload, history, Group s
           if (delayDetails) await delayDetails;
           result = { playerStats: [{ player_id: 7, status: 'finished', current_round: 4, rounds_completed: 4, fantasy_points: -12,
             rounds: [{ round_number: 4, score_to_par: -4, strokes: 68, holes_completed: 18, holes: [{ hole_number: 1, par: 4, strokes: 3, relative_to_par: -1 }] }] }] };
-        } else if (url.pathname === '/api/golf/hole-replay') result = { replay: null, message: 'Fixture ShotCast unavailable' };
+        }
         else if (url.pathname.endsWith('/scoreboard')) result = { season: { year: season }, leagues: [{ calendar: calendar.filter(event => event.startDate.startsWith(url.searchParams.get('dates') ?? String(season))) }], events: url.searchParams.has('dates') ? ['401850978', '401850915', '401703531', '401703489'].map(scoreboardEvent) : liveDefault ? [{ id: '401850915', name: 'Bank of Utah Championship', date: '2026-10-01', endDate: '2026-10-04', competitions: [{ status: { period: 2, type: { name: 'STATUS_IN_PROGRESS', state: 'in' } }, competitors: [] }] }] : [] };
         else if (url.pathname.endsWith('/leaderboard')) result = { events: url.searchParams.get('event') === '401850982' ? [{ id: '401850982', name: 'Hero World Challenge', date: `${season}-12-03`, endDate: `${season}-12-06`, status: { type: { name: 'STATUS_SCHEDULED', state: 'pre' } }, competitions: [] }] : url.searchParams.get('event') === '401703489' ? [scoreboardEvent('401703489')] : [] };
         else return route.fulfill({ status: 404, body: '' }); // headshots use existing initials fallback
@@ -118,10 +118,11 @@ test('Golf Live mobile/desktop selectors, direct links, reload, history, Group s
       await page.getByRole('button', { name: /Scottie Scheffler/ }).click();
       const modal = page.getByLabel('Scottie Scheffler Golf scorecard'); await modal.waitFor();
       await modal.getByRole('button', { name: /Round 4/ }).click();
-      await modal.getByRole('button', { name: /Hole 1/ }).first().click();
-      await page.getByText('Fixture ShotCast unavailable').waitFor();
-      const replay = new URL(calls.find(call => call.includes('/api/golf/hole-replay')));
-      assert.equal(replay.searchParams.get('slateId'), '20'); assert.equal(replay.searchParams.get('playerId'), '7');
+      await modal.locator('[aria-label^="Hole 1 ·"]').first().click();
+      assert.equal(await modal.getByLabel('Close hole details').count(), 0);
+      assert.equal(await modal.getByRole('button', { name: /Hole \d/ }).count(), 0);
+      assert.equal(await modal.locator('[aria-label^="Hole "]').count(), 18);
+      assert.ok(!calls.some(call => /hole-replay|shotcast/.test(call)));
       await page.getByLabel('Close Golf scorecard').click();
       // A late detail response must not reopen a modal or populate the next tournament.
       let release; delayDetails = new Promise(resolve => { release = resolve; });
@@ -136,8 +137,10 @@ test('Golf Live mobile/desktop selectors, direct links, reload, history, Group s
       assert.equal(page.url(), selectedUrl);
       await page.getByRole('button', { name: /Scottie Scheffler/ }).click(); await modal.waitFor();
       await modal.getByRole('button', { name: /Round 4/ }).click();
-      await modal.getByRole('button', { name: /Hole 1/ }).first().click(); await page.getByText('Fixture ShotCast unavailable').waitFor();
-      assert.ok(calls.some(call => call.includes('/api/golf/hole-replay?slateId=30')));
+      await modal.locator('[aria-label^="Hole 1 ·"]').first().click(); assert.equal(await modal.getByLabel('Close hole details').count(), 0);
+      assert.equal(await modal.getByRole('button', { name: /Hole \d/ }).count(), 0);
+      assert.equal(await modal.locator('[aria-label^="Hole "]').count(), 18);
+      assert.ok(!calls.some(call => /hole-replay|shotcast/.test(call)));
       await page.getByLabel('Close Golf scorecard').click();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       const selectorBox = await selector.boundingBox(); assert.ok(selectorBox.height <= 40, JSON.stringify(selectorBox));
@@ -164,8 +167,10 @@ test('Golf Live mobile/desktop selectors, direct links, reload, history, Group s
       assert.equal(await selector.inputValue(), '401703531');
       await page.getByRole('button', { name: /Scottie Scheffler/ }).click(); await modal.waitFor();
       await modal.getByRole('button', { name: /Round 4/ }).click();
-      await modal.getByRole('button', { name: /Hole 1/ }).first().click(); await page.getByText('Fixture ShotCast unavailable').waitFor();
-      assert.ok(calls.some(call => call.includes('/api/golf/hole-replay?slateId=40')), 'historical scorecard retains its matching slate');
+      await modal.locator('[aria-label^="Hole 1 ·"]').first().click(); assert.equal(await modal.getByLabel('Close hole details').count(), 0);
+      assert.equal(await modal.getByRole('button', { name: /Hole \d/ }).count(), 0);
+      assert.equal(await modal.locator('[aria-label^="Hole "]').count(), 18);
+      assert.ok(!calls.some(call => /hole-replay|shotcast/.test(call)), 'historical scorecards make no replay requests');
       await page.getByLabel('Close Golf scorecard').click();
       assert.deepEqual(await selector.locator('optgroup').evaluateAll(groups => groups.map(group => ({ label: group.label, ids: [...group.children].map(option => option.value) }))), [
         { label: '2025 tournaments', ids: ['401703531', '401703489'] },
@@ -176,7 +181,7 @@ test('Golf Live mobile/desktop selectors, direct links, reload, history, Group s
       assert.equal(await page.getByText('Team B', { exact: true }).count(), 0);
       assert.equal(await page.getByText('Your golfer', { exact: true }).count(), 0);
       await page.getByRole('button', { name: /Scottie Scheffler/ }).click(); await modal.waitFor();
-      await page.getByText(/Scorecard and ShotCast details are unavailable for this tournament/).waitFor();
+      await page.getByText(/Scorecard details are unavailable for this tournament/).waitFor();
       await page.getByLabel('Close Golf scorecard').click();
       await selector.selectOption('401703531'); await page.getByRole('heading', { name: 'TOUR Championship' }).waitFor();
       await page.getByLabel('Golf tournament season').selectOption('2027');

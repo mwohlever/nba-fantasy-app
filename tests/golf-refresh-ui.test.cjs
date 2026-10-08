@@ -130,7 +130,7 @@ test('Best Ball future rounds render one selected not-started scorecard', () => 
   h.unmount();
 });
 
-test('Best Ball team avatars and hole replay links reuse existing identity and focus state', () => {
+test('Best Ball team avatars and hole scorecard links reuse existing identity and focus state', () => {
   const h = host(GolfFantasyRows), board = bestBallBoard();
   board.courseHoles = [{ holeNumber: 10, par: 4 }, { holeNumber: 11, par: 3 }, { holeNumber: 12, par: 5 }];
   board.events[0].golf_rounds.find(round => round.round_number === 1).golf_holes = [
@@ -178,8 +178,9 @@ test('Best Ball team avatars and hole replay links reuse existing identity and f
     espn_player_id: '1001', headshot_url: 'https://example.test/opening-headshot.png', country: undefined, owgr_rank: undefined }, focus: { roundNumber: 1, holeNumber: 10 } });
   assert.deepEqual(opened.slice(1).map(entry => entry.focus), [{ roundNumber: 1, holeNumber: 14 }, { roundNumber: 1, holeNumber: 17 }]);
   const modal = require('node:fs').readFileSync('components/lineups/GolfPlayerModal.tsx', 'utf8');
-  assert.match(modal, /focus \? \[focus\.roundNumber\]/); assert.match(modal, /initialHoleNumber=\{focus\?\.roundNumber === round\.round_number \? focus\.holeNumber : null\}/);
-  assert.match(modal, /<GolfHoleReplayPanel/);
+  assert.match(modal, /focus \? \[focus\.roundNumber\]/);
+  assert.doesNotMatch(modal, /initialHoleNumber|selectedHoleNumber|Close hole details/);
+  assert.doesNotMatch(modal, /GolfHoleReplayPanel|hole-replay/);
   detail.unmount();
   h.unmount();
 });
@@ -237,12 +238,11 @@ test('Golf modal progress uses the accepted round count and preserves the course
   assert.match(modal, /Round \$\{round\.round_number\} · Thru \$\{holesCompleted\}/);
 });
 
-test('Golf refresh requests fresh completed ShotCast evidence and Scores reloads accepted revisions', () => {
+test('Golf refresh uses ESPN evidence and Scores reloads accepted revisions', () => {
   const refresh = require('node:fs').readFileSync('lib/golf/refreshSlate.server.ts', 'utf8');
   const scores = require('node:fs').readFileSync('components/lineups/GolfScoresDashboard.tsx', 'utf8');
-  const provider = require('node:fs').readFileSync('lib/providers/pgaTourShots.ts', 'utf8');
-  assert.match(refresh, /cacheBust: observedAt/);
-  assert.match(provider, /roundNumber: number; cacheBust\?: string \| null/);
+  assert.match(refresh, /source: "espn" as const, observedAt/);
+  assert.doesNotMatch(refresh, /fetchGolfRoundScorecard|shotcastObservation/);
   assert.match(scores, /window\.addEventListener\("golf-accepted-change", reloadAcceptedBoard\)/);
 });
 

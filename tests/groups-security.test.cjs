@@ -135,7 +135,6 @@ test("mutating resource routes use target ownership and refresh routes retain in
     "app/api/admin/recompute-slate-results/route.ts",
     "app/api/admin/backfill-player-stats/route.ts",
     "app/api/admin/golf/import-field/route.ts",
-    "app/api/admin/golf/shotcast/route.ts",
     "app/api/admin/slate-nba-games/route.ts",
     "app/api/admin/slates/[slateId]/reseed/route.ts",
   ]) {

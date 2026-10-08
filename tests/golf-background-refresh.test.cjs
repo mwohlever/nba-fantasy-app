@@ -239,10 +239,12 @@ test('real notification logger suppresses duplicate event keys while distinct sl
   await notifications.sendLoggedNotification(input('slate_complete:1:20'));
   assert.equal(first.sent, 1); assert.equal(duplicate.duplicate, true); assert.equal(sends, 3);
 });
-test('authoritative server ingestion selects the exact slate event/year and reconciles within that slate', async () => {
+test('live ESPN-only ingestion selects the exact slate event/year and reconciles its reported holes', async () => {
   reset();
   db.slates = [slate(1, { external_event_id: 'event-a', has_cut: false, rules_snapshot: null }), slate(2, { external_event_id: 'event-b', has_cut: false, rules_snapshot: null })];
   db.golf_event_players = [{ id: 101, slate_id: 1, player_id: 7 }, { id: 102, slate_id: 2, player_id: 7 }];
+  db.golf_rounds = [{ id: 211, event_player_id: 101, round_number: 1 }, { id: 212, event_player_id: 102, round_number: 1 }];
+  db.slate_teams = [{ slate_id: 1, team_id: 11, is_participating: true }, { slate_id: 2, team_id: 22, is_participating: true }];
   const providerCalls = [], acceptedCalls = [], writes = [];
   const ingestionDb = { from: table => {
     const q = query(table);
@@ -250,20 +252,20 @@ test('authoritative server ingestion selects the exact slate event/year and reco
     q.delete = () => { writes.push({ table, delete: true }); return q; };
     return q;
   } };
-  const competitor = { espnPlayerId: 'p7', displayName: 'Golfer', status: 'scheduled', rounds: [], roundsCompleted: 0, holesCompleted: 0,
-    currentRound: null, lastHole: null, teeTime: null, teeTimeRaw: null, officialScoreToPar: null, officialScoreDisplay: null, leaderboardOrder: 1 };
+  const competitor = { espnPlayerId: 'p7', displayName: 'Golfer', status: 'active', rounds: [{ roundNumber: 1, strokes: 3, scoreToPar: -1, scoreDisplay: '-1', holesCompleted: 1, teeTime: null, teeTimeRaw: null, holes: [{ holeNumber: 1, strokes: 3, relativeToPar: -1, scoreDisplay: '-1' }] }], roundsCompleted: 0, holesCompleted: 1,
+    currentRound: 1, lastHole: 1, teeTime: null, teeTimeRaw: null, officialScoreToPar: -1, officialScoreDisplay: '-1', leaderboardOrder: 1 };
   const providers = {
     fetchGolfTournamentByEventId: async (eventId, year) => {
       providerCalls.push({ eventId, year });
-      return { espnEventId: eventId, name: 'Tournament', startDate: '2026-09-24', endDate: '2026-09-27', status: 'scheduled', currentRound: 1, completed: false, competitors: [competitor] };
+      return { espnEventId: eventId, name: 'Tournament', startDate: '2026-09-24', endDate: '2026-09-27', status: 'in_progress', currentRound: 1, completed: false, competitors: [competitor] };
     }, fetchGolfCoursesByEventId: async () => [],
   };
   const ingestion = load('lib/golf/refreshSlate.server.ts', {
     'server-only': {}, '@/lib/supabaseAdmin': { supabaseAdmin: ingestionDb }, '@/lib/providers/golf': providers,
-    '@/lib/providers/pgaTourShots': {}, '@/lib/providers/pgaTourTeeTimes': { resolvePgaTourTournament: async () => null },
-    '@/lib/golf/holeAcceptance': {}, '@/lib/golf/fieldIdentityReconciliation': { reconcileGolfFieldIdentities: async () => ({ playerIdByEspnId: new Map([['p7', 7]]), counts: { retained: 1, resolved: 0, created: 0 } }) },
+    '@/lib/providers/pgaTourTeeTimes': { resolvePgaTourTournament: async () => null },
+    '@/lib/golf/fieldIdentityReconciliation': { reconcileGolfFieldIdentities: async () => ({ playerIdByEspnId: new Map([['p7', 7]]), counts: { retained: 1, resolved: 0, created: 0 } }) },
     '@/lib/scoring/golf': load('lib/scoring/golf.ts'), '@/lib/golf/cutLine': {},
-    '@/lib/golf/fantasy.server': { loadGolfRosters: async () => [] }, '@/lib/golf/relevantRosterPeriod': { relevantGolfRosterPeriodKey: () => 'full_tournament' },
+    '@/lib/golf/fantasy.server': { loadGolfRosters: async (id) => [{ teamId: id === 1 ? 11 : 22, periods: [{ period: 'full_tournament', playerIds: [7] }] }] }, '@/lib/golf/relevantRosterPeriod': { relevantGolfRosterPeriodKey: () => 'full_tournament' },
     '@/lib/golf/reconcileGolf': { reconcileGolf: async (id, batch) => { acceptedCalls.push({ id, batch }); return { revision: 1, teamWrites: [], teamRows: [], scoringChanged: false }; } },
     '@/lib/playerFinishedNotifications': { notifyNewlyFinishedPlayers: async () => ({ attempted: 0, sent: 0, failed: 0, skipped: 0 }) }, '@/lib/slateCompleteNotifications': {},
   });
@@ -271,12 +273,17 @@ test('authoritative server ingestion selects the exact slate event/year and reco
   for (const id of [1, 2]) {
     const response = await ingestion.refreshGolfSlate(id, {}, async () => { checks++; });
     const result = await response.json();
+    assert.equal(Object.hasOwn(result, 'shotcastFailures'), false);
     assert.equal(response.status, 200, JSON.stringify(result)); assert.equal(result.tournament.eventId, `event-${id === 1 ? 'a' : 'b'}`);
   }
   assert.deepEqual(providerCalls, [{ eventId: 'event-a', year: '2026' }, { eventId: 'event-b', year: '2026' }]);
   assert.deepEqual(acceptedCalls.map(c => c.id), [1, 2]);
   assert.ok(acceptedCalls[0].batch.events.every(row => row.slate_id === 1));
   assert.ok(acceptedCalls[1].batch.events.every(row => row.slate_id === 2));
+  assert.equal(acceptedCalls[0].batch.holes.length, 1);
+  assert.equal(acceptedCalls[0].batch.holes[0].round_id, 211);
+  assert.equal(acceptedCalls[1].batch.holes[0].round_id, 212);
+  assert.ok(acceptedCalls.every(c => c.batch.holes.every(h => h.reconciliation.source === 'espn' && h.reconciliation.final && h.strokes === 3)));
   assert.ok(checks >= 6);
   const before = writes.length;
   const lost = await ingestion.refreshGolfSlate(1, {}, async () => { throw new Error('lease lost'); });

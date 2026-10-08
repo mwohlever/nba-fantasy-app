@@ -60,7 +60,7 @@ export default function PlatformGroupCard({ group }: { group: GroupCard }) {
         </button>
       </div>
       {group.leagues.length ? (
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-2">
           {group.leagues.map((league) => {
             const sportKey = sportKeyFromLeagueSportKey(league.sportKey);
             const destination = hrefForSport(sportKey);

@@ -12,7 +12,7 @@ import {
 
 import {
   fetchPgaTourCourseMetadata,
-} from "@/lib/shotcast/importShotCastManifest";
+} from "@/lib/providers/pgaTourCourse";
 
 import {
   upsertGolfCourseHoles,
@@ -217,7 +217,7 @@ export async function POST(
      * tournament field import.
      *
      * PGA can publish the official field before enabling the
-     * host-course / ShotCast payload. In that state we still
+     * host-course payload. In that state we still
      * need the golfers immediately for drafting.
      */
     let courseSync:

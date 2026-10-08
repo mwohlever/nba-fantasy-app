@@ -59,24 +59,6 @@ type GolfFieldSummary = {
   lastRefreshedAt: string | null;
 };
 
-type ShotCastSummary = {
-  tournamentId: string;
-  generatedAt: string | null;
-  updatedAt: string | null;
-  summary: {
-    holesRequested?: number;
-    holesAvailable?: number;
-    localImages?: number;
-    alignedMaps?: number;
-    alignedGreens?: number;
-    holesFailed?: number;
-  } | null;
-  course: {
-    id?: string;
-    name?: string | null;
-  } | null;
-};
-
 type SlateDetailResponse = {
   success: boolean;
   slate: SlateListRow;
@@ -201,20 +183,6 @@ export default function AdminSlatesPage() {
   const [golfField, setGolfField] =
     useState<GolfFieldSummary | null>(null);
   const detailRequestRef = useRef(0);
-  const shotCastRequestRef = useRef(0);
-
-  const [
-    shotCast,
-    setShotCast,
-  ] = useState<ShotCastSummary | null>(
-    null,
-  );
-
-  const [
-    shotCastTournamentId,
-    setShotCastTournamentId,
-  ] = useState("");
-
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isReseeding, setIsReseeding] = useState(false);
@@ -227,11 +195,6 @@ export default function AdminSlatesPage() {
     useState(false);
   const [isSyncingGolfRankings, setIsSyncingGolfRankings] =
     useState(false);
-
-  const [
-    isRefreshingShotCast,
-    setIsRefreshingShotCast,
-  ] = useState(false);
 
   const [message, setMessage] = useState("");
 
@@ -246,8 +209,7 @@ export default function AdminSlatesPage() {
     isDiscarding ||
     isRefreshingGolfField ||
     isImportingGolfField ||
-    isSyncingGolfRankings ||
-    isRefreshingShotCast;
+    isSyncingGolfRankings;
   const participantsEditable = selectedSlate?.participants_editable === true;
 
   useEffect(() => {
@@ -260,8 +222,6 @@ export default function AdminSlatesPage() {
     setSelectedSlate(null);
     setTeams([]);
     setGolfField(null);
-    setShotCast(null);
-    setShotCastTournamentId("");
     setGolfAdminTab("tournament");
     void loadSlates();
   }, [selectedSport, router]);
@@ -269,12 +229,9 @@ export default function AdminSlatesPage() {
   useEffect(() => {
     const slateId = Number(selectedSlateId);
     const requestId = ++detailRequestRef.current;
-    ++shotCastRequestRef.current;
     setSelectedSlate(null);
     setTeams([]);
     setGolfField(null);
-    setShotCast(null);
-    setShotCastTournamentId("");
     if (!Number.isSafeInteger(slateId) || slateId <= 0) return;
     void loadSlateDetail(slateId, requestId);
   }, [selectedSlateId]);
@@ -370,16 +327,6 @@ export default function AdminSlatesPage() {
         : safeResult.teams ?? []);
       setGolfField(safeResult.golfField ?? null);
 
-      if (safeResult.slate.sport === "golf") {
-        void loadShotCastStatus(
-          slateId,
-          requestId,
-        );
-      } else {
-        ++shotCastRequestRef.current;
-        setShotCast(null);
-        setShotCastTournamentId("");
-      }
     } catch (error) {
       console.error(error);
       if (requestId !== detailRequestRef.current) return;
@@ -389,142 +336,6 @@ export default function AdminSlatesPage() {
     }
   }
 
-  async function loadShotCastStatus(
-    slateId: number,
-    detailRequestId = detailRequestRef.current,
-  ) {
-    const requestId = ++shotCastRequestRef.current;
-    try {
-      const response = await fetch(
-        `/api/admin/golf/shotcast?slateId=${slateId}`,
-        {
-          cache: "no-store",
-        },
-      );
-
-      const result =
-        await response.json();
-
-      if (
-        detailRequestId !== detailRequestRef.current ||
-        requestId !== shotCastRequestRef.current
-      ) return;
-
-      if (!response.ok) {
-        setShotCast(null);
-        return;
-      }
-
-      const nextShotCast =
-        result.shotcast as
-          | ShotCastSummary
-          | null;
-
-      setShotCast(nextShotCast);
-
-      /*
-       * This field is an explicit admin override only.
-       *
-       * Do not populate it from the existing ShotCast manifest.
-       * Leaving it blank allows the server to resolve the PGA
-       * tournament automatically from the selected slate.
-       */
-      setShotCastTournamentId("");
-    } catch (error) {
-      console.error(error);
-      if (
-        detailRequestId !== detailRequestRef.current ||
-        requestId !== shotCastRequestRef.current
-      ) return;
-      setShotCast(null);
-    }
-  }
-
-  async function handleRefreshShotCast() {
-    if (!selectedSlateId) {
-      return;
-    }
-
-    const tournamentId =
-      shotCastTournamentId
-        .trim()
-        .toUpperCase();
-
-    if (
-      tournamentId &&
-      !/^R\d{7}$/.test(
-        tournamentId,
-      )
-    ) {
-      setMessage(
-        "The optional PGA tournament ID override must look like R2026013.",
-      );
-
-      return;
-    }
-
-    try {
-      setIsRefreshingShotCast(true);
-      setMessage("");
-
-      const response = await fetch(
-        "/api/admin/golf/shotcast",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            slateId:
-              Number(
-                selectedSlateId,
-              ),
-            tournamentId,
-            round: 1,
-          }),
-          cache: "no-store",
-        },
-      );
-
-      const result =
-        await response.json();
-
-      if (!response.ok) {
-        setMessage(
-          result.error ||
-            "Failed to refresh ShotCast assets.",
-        );
-
-        return;
-      }
-
-      await loadShotCastStatus(
-        Number(selectedSlateId),
-      );
-
-      setMessage(
-        `ShotCast refreshed: ${
-          result.summary
-            ?.localImages ?? 0
-        } photos, ${
-          result.summary
-            ?.alignedMaps ?? 0
-        } aligned maps, ${
-          result.summary
-            ?.alignedGreens ?? 0
-        } aligned greens.`,
-      );
-    } catch (error) {
-      console.error(error);
-
-      setMessage(
-        "Something went wrong while refreshing ShotCast.",
-      );
-    } finally {
-      setIsRefreshingShotCast(false);
-    }
-  }
 
   function toggleParticipation(teamId: number) {
     if (!participantsEditable) return;
@@ -1503,93 +1314,6 @@ export default function AdminSlatesPage() {
               {selectedSlate.sport === "golf" &&
               golfAdminTab === "tools" ? (
                 <div className="space-y-4">
-                  <div className="rounded-2xl border border-violet-800 bg-violet-950/25 p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
-                          ShotCast Course Assets
-                        </div>
-
-                        <div className="mt-2 text-sm font-bold text-white">
-                          {shotCast
-                            ? `${
-                                shotCast.summary
-                                  ?.localImages ?? 0
-                              } photos · ${
-                                shotCast.summary
-                                  ?.alignedMaps ?? 0
-                              } maps`
-                            : "Not imported"}
-                        </div>
-
-                        <div className="mt-1 text-xs text-violet-200/80">
-                          {shotCast
-                            ? `Last updated ${formatRefreshTime(
-                                shotCast.updatedAt,
-                              )}`
-                            : "No ShotCast course assets are loaded for this tournament."}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 border-t border-violet-900/70 pt-4">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-                        Course Importer
-                      </div>
-
-                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
-                    <div className="flex-1">
-                      <label
-                        htmlFor="shotcast-tournament-id"
-                        className="mb-1 block text-xs font-medium text-slate-300"
-                      >
-                        PGA Tournament ID Override
-                      </label>
-
-                      <input
-                        id="shotcast-tournament-id"
-                        type="text"
-                        value={
-                          shotCastTournamentId
-                        }
-                        onChange={(event) =>
-                          setShotCastTournamentId(
-                            event.target.value
-                              .toUpperCase(),
-                          )
-                        }
-                        disabled={isBusy}
-                        placeholder="Auto-resolve from slate"
-                        className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm font-bold uppercase text-white outline-none focus:border-violet-400"
-                      />
-
-                      <div className="mt-1 text-xs text-slate-400">
-                        Leave blank to resolve the PGA tournament automatically from this slate.
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void handleRefreshShotCast()
-                      }
-                      disabled={isBusy}
-                      className="rounded-xl border border-violet-500 bg-violet-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isRefreshingShotCast
-                        ? "Refreshing ShotCast..."
-                        : shotCast
-                          ? "Refresh ShotCast"
-                          : "Import ShotCast"}
-                    </button>
-                  </div>
-
-                      <div className="mt-2 text-xs leading-5 text-slate-400">
-                        Refreshes all 18 hole layouts and checks whether PGA has published coordinate-aligned maps.
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>

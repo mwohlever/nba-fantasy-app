@@ -345,7 +345,7 @@ export default function GolfLivePage() {
         golfStat={selectedStat}
         golfSlateId={slate?.id ?? null}
         golfStatsLoading={isPlayerStatsLoading}
-        golfStatsError={playerStatsError ?? (slate ? null : "Scorecard and ShotCast details are unavailable for this tournament in this Group.")}
+        golfStatsError={playerStatsError ?? (slate ? null : "Scorecard details are unavailable for this tournament in this Group.")}
       />
     </main>
   );

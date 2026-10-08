@@ -27,7 +27,7 @@ export function acceptGolfHole(current: AcceptedHole | undefined, next: HoleObse
   if (prior?.providerUpdatedAt && evidence.providerUpdatedAt &&
       Date.parse(evidence.providerUpdatedAt) < Date.parse(prior.providerUpdatedAt)) return false;
   if (evidence.operation === "retract") {
-    // Neither adapter infers this from an absent/null/zero score. Reserved for explicit official evidence.
+    // An absent/null/zero score is never a retraction. Explicit official evidence is required.
     return !!current && evidence.source === "espn" && evidence.officialValidated === true &&
       !!evidence.correctionReason?.trim() && Number.isFinite(Date.parse(evidence.providerUpdatedAt ?? "")) &&
       next.strokes === null && next.relative_to_par === null;
@@ -37,12 +37,12 @@ export function acceptGolfHole(current: AcceptedHole | undefined, next: HoleObse
       next.strokes! - next.relative_to_par! > 6) return false;
   if (current?.strokes != null && current.relative_to_par != null) {
     const differs = current.strokes !== next.strokes || current.relative_to_par !== next.relative_to_par;
-    // Reconstruction can fill missing official holes, but cannot correct a scored official card.
+    // Preserve compatibility with legacy evidence; it cannot correct a scored official card.
     if (differs && evidence.source === "shotcast" && prior?.source !== "shotcast") return false;
     // A different official score must be corroborated by coherent round aggregates and coverage.
     if (differs && evidence.source === "espn" && !evidence.officialValidated) return false;
     if (evidence.source === "espn" && prior?.source === "shotcast" && !evidence.officialValidated) return false;
-    // A repeated ShotCast fetch must not demote official provenance even when scores agree.
+    // Legacy reconstructed evidence must not demote official provenance when scores agree.
     if (!differs && evidence.source === "shotcast" && prior?.source === "espn") return false;
   }
   if (prior?.operation === "retract" && !evidence.officialValidated) return false;
@@ -59,22 +59,5 @@ export function summarizeGolfHoles(holes: AcceptedHole[]) {
     holes_completed: completed.length,
     strokes: completed.length ? completed.reduce((s, h) => s + h.strokes!, 0) : null,
     score_to_par: completed.length ? completed.reduce((s, h) => s + h.relative_to_par!, 0) : null,
-  };
-}
-
-/** No public provider timestamps/retractions are exposed by the current normalized adapters. */
-export function shotcastObservation(input: {
-  holeNumber: number; par: number | null;
-  shots: Array<{ strokeNumber: number; finalStroke: boolean }>;
-}, observedAt: string): HoleObservation | null {
-  const numbers = [...new Set(input.shots.map(s => s.strokeNumber))].sort((a,b) => a-b);
-  const strokes = numbers.at(-1);
-  // Require an unbroken sequence ending at the explicitly final stroke; never max(strokes) alone.
-  if (!strokes || input.par == null || numbers.some((n,i) => n !== i+1) ||
-      !input.shots.some(s => s.strokeNumber === strokes && s.finalStroke) ||
-      input.shots.some(s => s.finalStroke && s.strokeNumber !== strokes)) return null;
-  return {
-    hole_number: input.holeNumber, strokes, relative_to_par: strokes - input.par,
-    reconciliation: { source: "shotcast", observedAt, final: true },
   };
 }

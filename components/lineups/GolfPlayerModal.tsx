@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
-import GolfHoleReplayPanel from "@/components/lineups/GolfHoleReplayPanel";
 import { golfHolePar, golfHoleResultClass } from "@/lib/golf/scorePresentation";
 import type {
   GolfHoleStat,
@@ -69,22 +68,6 @@ function holeValue(hole: GolfHoleStat) {
   return hole.relative_to_par > 0
     ? `+${hole.relative_to_par}`
     : String(hole.relative_to_par);
-}
-
-function holeResultName(
-  relative: number | null | undefined,
-) {
-  if (relative === null || relative === undefined) {
-    return "Not played";
-  }
-
-  if (relative <= -3) return "Albatross or better";
-  if (relative === -2) return "Eagle";
-  if (relative === -1) return "Birdie";
-  if (relative === 0) return "Par";
-  if (relative === 1) return "Bogey";
-  if (relative === 2) return "Double bogey";
-  return `+${relative}`;
 }
 
 function holeTitle(
@@ -234,19 +217,13 @@ function RoundScorecard({
   contextLabel,
   isExpanded,
   onToggle,
-  slateId,
-  playerId,
-  initialHoleNumber = null,
 }: {
   round: GolfRoundStat;
   contextLabel: string;
   isExpanded: boolean;
   onToggle: () => void;
-  slateId: number | null;
-  playerId: number;
-  initialHoleNumber?: number | null;
 }) {
-  // Accepted server props are the only scorecard state. Replay requests reload the parent data.
+  // Accepted server props are the only scorecard state.
   const holesByNumber = new Map(round.holes.map(hole => [hole.hole_number, hole]));
 
   const playedHoles =
@@ -288,9 +265,6 @@ function RoundScorecard({
           0,
         )
       : round.strokes;
-
-  const [selectedHoleNumber, setSelectedHoleNumber] =
-    useState<number | null>(initialHoleNumber);
 
   const roundProgress =
     displayHolesCompleted >= 18
@@ -391,91 +365,27 @@ function RoundScorecard({
                       score_display: null,
                     } satisfies GolfHoleStat);
 
-                  const isSelected =
-                    selectedHoleNumber === holeNumber;
-
-                  const par = golfHolePar(hole);
-
-                  const yardage =
-                    hole.yards === null ||
-                    hole.yards === undefined
-                      ? null
-                      : Number(hole.yards);
-
                   return (
                     <div
                       key={`score-${holeNumber}`}
                       className="relative"
                     >
-                      <button
-                        type="button"
+                      <div
                         className={`flex h-9 w-full items-center justify-center rounded-lg border text-xs font-black ${golfHoleResultClass(hole.relative_to_par)}`}
                         title={holeTitle(holeNumber, hole)}
                         aria-label={holeTitle(
                           holeNumber,
                           hole,
                         )}
-                        aria-expanded={isSelected}
-                        onClick={() =>
-                          setSelectedHoleNumber(
-                            isSelected
-                              ? null
-                              : holeNumber,
-                          )
-                        }
                       >
                         {holeValue(hole)}
-                      </button>
-
+                      </div>
                     </div>
                   );
                 },
               )}
             </div>
           </div>
-
-          {selectedHoleNumber !== null ? (() => {
-            const selectedHole =
-              holesByNumber.get(
-                selectedHoleNumber,
-              );
-
-            const selectedPar =
-                golfHolePar(selectedHole);
-
-            const selectedYardage =
-              selectedHole?.yards === null ||
-              selectedHole?.yards === undefined
-                ? null
-                : Number(selectedHole.yards);
-
-            return slateId ? (
-              <GolfHoleReplayPanel
-                key={`${slateId}:${playerId}:${round.round_number}:${selectedHoleNumber}:${round.accepted_revision ?? 0}`}
-                slateId={slateId}
-                playerId={playerId}
-                roundNumber={round.round_number}
-                holeNumber={selectedHoleNumber}
-                fallbackPar={selectedPar}
-                fallbackYardage={
-                  selectedYardage
-                }
-                fallbackResult={holeResultName(
-                  selectedHole
-                    ?.relative_to_par,
-                )}
-                onClose={() =>
-                  setSelectedHoleNumber(null)
-                }
-              />
-            ) : (
-              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                Shot tracking is unavailable because
-                this scorecard is not connected to a
-                Golf slate.
-              </div>
-            );
-          })() : null}
         </div>
       ) : null}
     </section>
@@ -485,7 +395,6 @@ function RoundScorecard({
 export default function GolfPlayerModal({
   player,
   stat,
-  slateId,
   focus = null,
   isLoading = false,
   loadError = null,
@@ -780,9 +689,6 @@ export default function GolfPlayerModal({
                       onToggle={() =>
                         toggleRound(round.round_number)
                       }
-                      slateId={slateId}
-                      playerId={player.id}
-                      initialHoleNumber={focus?.roundNumber === round.round_number ? focus.holeNumber : null}
                     />
                   );
                 })}

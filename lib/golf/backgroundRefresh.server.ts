@@ -45,7 +45,6 @@ export async function runClaimedGolfSlate(slateId: number, input: GolfRefreshInp
       playerRows: Number(result.eventPlayersUpserted ?? result.eventPlayersUpdated ?? 0),
       teamRows: Number(result.teamResultsUpserted ?? result.teamResultsUpdated ?? 0),
       acceptedRevision: Number(result.acceptedRevision ?? 0), scoringChanged: Boolean(result.scoringChanged),
-      shotcastFailures: Number(result.shotcastFailures ?? 0),
       playerNotificationsFailed: Number(result.playerFinishedNotifications?.failed ?? 0),
       completionNotificationsFailed: Number(result.slateCompleteNotifications?.failed ?? 0),
     };

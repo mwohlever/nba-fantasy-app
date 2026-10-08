@@ -108,18 +108,8 @@ test('Golf authorization preserves commissioner, member refresh, internal, and s
   const internal = new Request('http://localhost/',{headers:{authorization:'Bearer test-secret'}});
   assert.equal((await auth.authorizeSlateResource(internal,2,{allowInternal:true})).ok,true);
 });
-test('saved manifests require authorized slate and cannot resolve another Group via tournament ID',async()=>{
-  const {mocks}=setup(); const route=load('app/api/golf/shotcast-manifest/route.ts',mocks);
-  assert.equal((await route.GET(request('tournamentId=R2025001'))).status,400);
-  assert.equal((await route.GET(request('slateId=2&tournamentId=R2025001'))).status,404);
-  assert.equal((await route.GET(request('slateId=1&tournamentId=R2025001'))).body.owner,'a');
-  const other=load('app/api/golf/shotcast-manifest/route.ts',setup({group:'b'}).mocks);
-  assert.equal((await other.GET(request('slateId=2&tournamentId=R2025001'))).body.owner,'b');
-});
 test('Golf handlers reject cross-Group requests before providers or mutations',async()=>{
-  for (const [file,method] of [['app/api/golf/hole-replay/route.ts','GET'],
-    ['app/api/refresh-stats-golf/route.ts','POST'],['app/api/admin/golf/import-field/route.ts','POST'],
-    ['app/api/admin/golf/shotcast/route.ts','POST']]) {
+  for (const [file,method] of [['app/api/refresh-stats-golf/route.ts','POST'],['app/api/admin/golf/import-field/route.ts','POST']]) {
     const {mocks,db}=setup({role:'admin'});
     for (const match of source(file).matchAll(/from\s+["']([^"']+)["']/g)) {
       if (!(match[1] in mocks)) mocks[match[1]]=new Proxy({}, {get:()=>()=>{throw Error('Provider reached before authorization');}});
@@ -198,29 +188,11 @@ test('creation and refresh retain league/slate ownership, caller contracts stay 
   assert.doesNotMatch(refresh,/\.eq\(\s*"external_event_id"/);
   assert.match(refresh,/\.eq\("id", slateId\)/);
   assert.match(refresh,/onConflict:\s*"slate_id,player_id"/);
-  assert.match(source('app/api/admin/golf/shotcast/route.ts'),/onConflict:\s*"slate_id,tournament_id"/);
   const login=source('app/login/page.tsx');
   assert.doesNotMatch(login,/\/api\/teams/);
   assert.match(login,/legacyGroupSlug: groupSlug/);
   assert.match(login,/legacyTeamName: teamName/);
   assert.match(source('app/api/auth/bridge/route.ts'),/resolvePinAccountId/);
-  assert.match(source('components/lineups/GolfHoleReplayPanel.tsx'),/shotcast-manifest\?slateId=/);
-});
-test('commissioner imports save the same tournament independently for each slate',async()=>{
-  for (const [group,id] of [['a',1],['b',2]]) {
-    const {mocks,db}=setup({group,role:'admin'}), courses=[];
-    mocks['@/lib/shotcast/importShotCastManifest']={importShotCastManifest:async()=>({course:{id:'course'},holes:[],generatedAt:'2025-04-01T00:00:00Z'})};
-    mocks['@/lib/providers/pgaTourField']={};
-    mocks['@/lib/golf/upsertGolfCourseHoles']={upsertGolfCourseHoles:async input=>{courses.push(input.slateId);return {holesUpserted:0};}};
-    const req=request(''); req.json=async()=>({slateId:id,tournamentId:'R2025001'});
-    const result=await load('app/api/admin/golf/shotcast/route.ts',mocks).POST(req);
-    assert.equal(result.status,200);
-    assert.deepEqual(courses,[id]);
-    assert.equal(db.writes.length,1);
-    assert.equal(db.writes[0].table,'golf_slate_shotcast_manifests');
-    assert.equal(db.writes[0].value.slate_id,id);
-    assert.equal(db.writes[0].options.onConflict,'slate_id,tournament_id');
-  }
 });
 test('Golf lifecycle refresh writes only players belonging to the authorized historical slate',async()=>{
   for (const [group,id] of [['a',1],['b',2]]) {

@@ -3,9 +3,6 @@
 import { useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import TeamAvatar from "@/components/ui/TeamAvatar";
-import GolfHoleReplayPanel, {
-  type InlineGolfHoleReplay,
-} from "@/components/lineups/GolfInlineHoleReplayModal";
 import type {
   OrderedTeam,
   Player,
@@ -203,22 +200,6 @@ function effectiveHoleRelative(
     : null;
 }
 
-
-function resultName(relative: number | null | undefined) {
-  if (relative === null || relative === undefined) {
-    return "Not played";
-  }
-
-  if (relative <= -3) return "Albatross or better";
-  if (relative === -2) return "Eagle";
-  if (relative === -1) return "Birdie";
-  if (relative === 0) return "Par";
-  if (relative === 1) return "Bogey";
-  if (relative === 2) return "Double bogey";
-
-  return `+${relative}`;
-}
-
 function statusMeta(row: LeagueGolferRow) {
   const status = row.stat?.status ?? "scheduled";
 
@@ -342,22 +323,11 @@ function scorecardContext(row: LeagueGolferRow) {
 }
 
 export default function GolfLeagueView({
-  slateId,
   teams,
   getPlayersForTeam,
   getRawPlayerStat,
   setProfilePlayer,
 }: Props) {
-  const [selectedHoleKey, setSelectedHoleKey] =
-    useState<string | null>(null);
-
-  const [
-    inlineHoleReplay,
-    setInlineHoleReplay,
-  ] = useState<InlineGolfHoleReplay | null>(
-    null,
-  );
-
   const [sortBy, setSortBy] =
     useState<LeagueSort>("score");
 
@@ -789,7 +759,6 @@ export default function GolfLeagueView({
                   event.target.value as LeagueRoundView,
                 );
 
-                setSelectedHoleKey(null);
               }}
               className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm font-semibold text-white"
             >
@@ -1182,103 +1151,22 @@ export default function GolfLeagueView({
                         const hole =
                           holesByNumber.get(holeNumber);
 
-                        const holeKey =
-                          `${row.player.id}:` +
-                          `${row.displayRound?.round_number ?? 0}:` +
-                          `${holeNumber}`;
-
-                        const isSelected =
-                          selectedHoleKey === holeKey;
-
-                        const par = holePar(hole);
-
-                        const yards =
-                          hole?.yards === null ||
-                          hole?.yards === undefined
-                            ? null
-                            : Number(hole.yards);
-
                         return (
                           <div
                             key={`score-${holeNumber}`}
                             className="relative"
                           >
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-
-                                if (isSelected) {
-                                  setSelectedHoleKey(null);
-                                  setInlineHoleReplay(null);
-                                  return;
-                                }
-
-                                setSelectedHoleKey(holeKey);
-
-                                setInlineHoleReplay({
-                                  playerId:
-                                    row.player.id,
-                                  roundNumber:
-                                    row.displayRound
-                                      ?.round_number ??
-                                    1,
-                                  holeNumber,
-                                  par,
-                                  yardage: yards,
-                                  result:
-                                    resultName(
-                                      effectiveHoleRelative(
-                                        hole,
-                                      ),
-                                    ),
-                                });
-                              }}
-                              aria-expanded={isSelected}
-                              aria-label={
-                                hole?.strokes === null ||
-                                hole?.strokes === undefined
-                                  ? `Open Hole ${holeNumber} layout and details`
-                                  : `Open shot replay for Hole ${holeNumber}`
-                              }
-                              className={`flex h-8 w-full items-center justify-center rounded-md border text-[10px] font-black transition ${
-                                isSelected
-                                  ? "relative z-10 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950"
-                                  : ""
-                              } ${relativeClass(
-                                effectiveHoleRelative(
-                                  hole,
-                                ),
-                              )}`}
+                            <div
+                              title={`Hole ${holeNumber}${holePar(hole) !== null ? ` · Par ${holePar(hole)}` : ""}${hole?.strokes != null ? ` · ${hole.strokes} strokes` : " · Not played"}`}
+                              className={`flex h-8 w-full items-center justify-center rounded-md border text-[10px] font-black ${relativeClass(effectiveHoleRelative(hole))}`}
                             >
-                              {relativeLabel(
-                                effectiveHoleRelative(
-                                  hole,
-                                ),
-                              )}
-                            </button>
+                              {relativeLabel(effectiveHoleRelative(hole))}
+                            </div>
                           </div>
                         );
                       })}
                     </div>
                   </div>
-                  {inlineHoleReplay &&
-                  selectedHoleKey?.startsWith(
-                    `${row.player.id}:${row.displayRound?.round_number ?? 0}:`,
-                  ) ? (
-                    <div className="px-4 pb-4">
-                      <GolfHoleReplayPanel
-                        slateId={slateId}
-                        replay={inlineHoleReplay}
-                        inline
-                        onClose={() => {
-                          setInlineHoleReplay(null);
-                          setSelectedHoleKey(null);
-                        }}
-                      />
-                    </div>
-                  ) : null}
-
                 </div>
               </article>
             </div>
