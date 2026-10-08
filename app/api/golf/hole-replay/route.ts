@@ -4,6 +4,7 @@ import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchGolfHoleReplay } from "@/lib/providers/pgaTourShots";
+import { golfShotcastCapabilitySummary, resolveGolfShotcastCapability } from "@/lib/golf/shotcastCapability.server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ type SlateRow = {
   sport: string;
   display_name: string | null;
   start_date: string;
+  external_event_id: string | null;
 };
 
 type PlayerRow = {
@@ -102,7 +104,7 @@ export async function GET(
       supabaseAdmin
         .from("slates")
         .select(
-          "id, sport, display_name, start_date",
+          "id, sport, display_name, start_date, external_event_id",
         )
         .eq("id", slateId)
         .single(),
@@ -203,6 +205,11 @@ export async function GET(
           refreshToken?.trim() || null,
       });
 
+    const shotcastCapability = golfShotcastCapabilitySummary(await resolveGolfShotcastCapability(supabaseAdmin, {
+      espnEventId: slate.external_event_id, golfPlayerId: playerId,
+      round: roundNumber, hole: holeNumber, replay,
+    }));
+
     if (!replay) {
       return NextResponse.json(
         {
@@ -211,6 +218,7 @@ export async function GET(
           message:
             "Shot tracking is not available for this hole yet.",
           replay: null,
+          shotcastCapability,
         },
         {
           headers: noStoreHeaders(),
@@ -243,6 +251,7 @@ export async function GET(
         available:
           replay.shots.length > 0,
         replay,
+        shotcastCapability,
         reconciledHole,
         acceptedRevision: accepted.revision,
         scoringChanged: accepted.scoringChanged,
