@@ -364,6 +364,16 @@ body {
   }
 }
 
+/* CFP inline replay also follows document scrolling above the fixed bottom nav. */
+@media (max-width: 639px) {
+  html:has(main.bracket-live-page),
+  body:has(main.bracket-live-page),
+  main.bracket-live-page {
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+}
+
 /* NCAA standings use document scrolling. */
 @media (max-width: 639px) {
   html:has(main.ncaa-standings-page),

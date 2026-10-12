@@ -70,6 +70,6 @@ test("Live Scores page is round-first, uses the authenticated sync boundary, and
   assert.match(source, /window\.setInterval\(\(\) => \{ void load\(\); \}, hasLiveGame \? 20_000 : 120_000\)/);
   assert.match(source, /<AppNav \/>/);
   assert.match(source, /mx-auto max-w-5xl space-y-6/);
-  assert.match(source, /BracketGameCenterModal/);
+  assert.match(source, /BracketGameCenter/);
   assert.doesNotMatch(source, /NcaaGameCenterModal|ncaa-pickem/);
 });

@@ -846,7 +846,15 @@ export default function FootballGameCenter({
   onPeriodChange,
   statsTeam: urlStatsTeam,
   onStatsTeamChange,
+  extraTab,
+  matchupHeader,
+  unavailableDetails,
 }: {
+  /** CFP keeps this shell using official topology when provider details are absent. */
+  matchupHeader?: (detail: FootballGameDetail | null) => import("react").ReactNode;
+  unavailableDetails?: string;
+  /** Optional bracket-only extension; existing football consumers retain their three tabs. */
+  extraTab?: { label: string; active?: boolean; onSelect?: () => void; onRefresh?: () => void; content: (detail: FootballGameDetail | null) => import("react").ReactNode };
   presentation?: "inline" | "modal";
   /** NFL Live owns its scoped request. Legacy modal consumers retain their loader. */
   request?: { data: FootballGameDetail | null; loading: boolean; refreshing: boolean; error: string; refresh: () => void };
@@ -873,6 +881,8 @@ export default function FootballGameCenter({
   const [selectedQuarter] = useState<number | null>(null);
   const [selectedPlayer, setSelectedPlayer] =
     useState<SelectedPlayer | null>(null);
+  const [extraTabActive, setExtraTabActive] = useState(false);
+  const extendedTabActive = extraTab?.active ?? extraTabActive;
 
   const tab = urlTab ?? localTab;
   const setTab = onTabChange ?? setLocalTab;
@@ -1178,7 +1188,7 @@ export default function FootballGameCenter({
           <div className="ml-3 flex items-center gap-3">
             <button
               type="button"
-              onClick={() => request ? request.refresh() : void loadGameDetail()}
+              onClick={() => { extraTab?.onRefresh?.(); if (request) request.refresh(); else void loadGameDetail(); }}
               disabled={refreshing}
               className="text-xl font-bold leading-none text-slate-500 disabled:opacity-40"
               aria-label="Refresh game center"
@@ -1204,7 +1214,7 @@ export default function FootballGameCenter({
           </div>
         </div>
 
-        <div className="border-b border-slate-200 px-4 py-3">
+        {matchupHeader ? matchupHeader(detail) : <div className="border-b border-slate-200 px-4 py-3">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <div className="min-w-0 text-center">
               {teamLogo(away?.team) ? (
@@ -1274,17 +1284,17 @@ export default function FootballGameCenter({
               </div>
             </div>
           </div>
-        </div>
+        </div>}
 
-        <div aria-label="Game Center tabs" className="grid grid-cols-3 border-b border-slate-200">
+        <div aria-label="Game Center tabs" className={`grid ${extraTab ? "grid-cols-4" : "grid-cols-3"} border-b border-slate-200`}>
           {(["summary", "pbp", "stats"] as const).map((value) => (
             <button
               key={value}
               type="button"
-              onClick={() => setTab(value)}
-              aria-current={tab === value ? "page" : undefined}
+              onClick={() => { setExtraTabActive(false); setTab(value); }}
+              aria-current={!extendedTabActive && tab === value ? "page" : undefined}
               className={`px-1 py-2.5 text-xs font-bold whitespace-nowrap ${
-                tab === value
+                !extendedTabActive && tab === value
                   ? "border-b-2 border-sky-500 text-sky-600"
                   : "text-slate-500"
               }`}
@@ -1292,11 +1302,12 @@ export default function FootballGameCenter({
               {value === "summary" ? "Summary" : value === "pbp" ? "Play-by-Play" : "Player Stats"}
             </button>
           ))}
+          {extraTab ? <button type="button" aria-current={extendedTabActive ? "page" : undefined} onClick={() => extraTab.onSelect ? extraTab.onSelect() : setExtraTabActive(true)} className={`px-1 py-2.5 text-xs font-bold ${extendedTabActive ? "border-b-2 border-sky-500 text-sky-600" : "text-slate-500"}`}>{extraTab.label}</button> : null}
         </div>
 
         <div data-game-center-scroll={presentation === "modal" ? true : undefined} className={presentation === "modal" ? "min-h-0 flex-1 overflow-y-auto pb-24 sm:pb-6" : "pb-4"}>
           {error && detail ? <p role="status" className="px-4 pt-3 text-xs text-rose-700">Refresh failed. Showing the last available update. {error}</p> : null}
-          {loading ? (
+          {extendedTabActive && extraTab ? extraTab.content(detail) : unavailableDetails ? <p className="p-4 text-sm text-slate-500">{unavailableDetails}</p> : loading ? (
             <div className="p-6 text-center text-sm text-slate-500">
               Loading game details…
             </div>

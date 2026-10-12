@@ -203,6 +203,17 @@ function AppNavContent({ authorizedBracketContestId = null }: { authorizedBracke
   const bracketRoutes = bracketContestId
     ? bracketChallengeRoutes(bracketContestId)
     : null;
+  if (bracketRoutes && pathname.startsWith(`/bracket-challenge/${bracketContestId}/`)) {
+    const bracketContext = new URLSearchParams();
+    for (const key of ["entryId", "entrantId", "bracket", "bracketNumber"]) {
+      const value = searchParams.get(key);
+      if (value) bracketContext.set(key, value);
+    }
+    if (bracketContext.size) {
+      bracketRoutes.bracket += `?${bracketContext}`;
+      bracketRoutes.liveScores += `?${bracketContext}`;
+    }
+  }
 
   const displayedProfileLinks =
     isNbaSkins

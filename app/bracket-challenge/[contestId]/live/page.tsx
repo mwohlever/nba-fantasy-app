@@ -1,15 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import type { ImplicationSubject } from "@/lib/bracket/gameImplications.server";
 
 import AppNav from "@/components/AppNav";
 import BracketLiveScoreCard, {
   type BracketLiveScoreCardGame,
 } from "@/components/bracket/BracketLiveScoreCard";
-import BracketGameCenterDevHarness from "@/components/bracket/BracketGameCenterDevHarness";
-import BracketGameCenterModal from "@/components/bracket/BracketGameCenterModal";
-import type { LiveScoreGame } from "@/components/live-scores/LiveScoreCard";
+import BracketGameCenterDevHarness, { developmentGame } from "@/components/bracket/BracketGameCenterDevHarness";
+import BracketGameCenter from "@/components/bracket/BracketGameCenter";
+import { bracketLiveSearch, parseBracketLiveState } from "@/lib/bracket/liveState";
 
 type LiveScoresResponse = {
   success?: boolean;
@@ -49,16 +50,26 @@ function orderedRoundGames(games: LiveScoresResponse["games"], roundKey: string)
   });
 }
 
-export default function BracketChallengeLivePage() {
+function BracketChallengeLivePage() {
   const { contestId } = useParams<{ contestId: string }>();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const state = useMemo(() => parseBracketLiveState(search), [search]);
+  const navigate = useCallback((change: Parameters<typeof bracketLiveSearch>[1], replace = false) => {
+    const next = bracketLiveSearch(window.location.search, change);
+    window.history[replace ? "replaceState" : "pushState"](null, "", `?${next}`);
+  }, []);
+  const selectSubject = useCallback((subject: ImplicationSubject | null, replace = false) => navigate({ subject }, replace), [navigate]);
+  const backToGames = () => navigate({ gameId: null, devEventId: null });
   const [data, setData] = useState<LiveScoresResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [selectedGame, setSelectedGame] = useState<{
-    game: LiveScoreGame;
-    developmentHarness: boolean;
-  } | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const tournamentGame = data?.contest.id === contestId ? data.games.find((game) => game.gameKey === state.gameId) : undefined;
+  const developmentEventId = process.env.NODE_ENV !== "production" ? process.env.NEXT_PUBLIC_BRACKET_GAME_CENTER_DEV_EVENT_ID : undefined;
+  const developmentHarness = state.devEventId !== null && state.devEventId === developmentEventId && state.gameId === null;
+  const selectedGame = developmentHarness ? developmentGame(state.devEventId!) : tournamentGame?.provider.mappingState === "valid" ? tournamentGame.provider.game ?? null : null;
+  const detailRequested = state.gameId !== null || state.devEventId !== null;
 
   const load = useCallback(async (initial = false) => {
     if (!contestId || (!initial && requestRef.current)) return;
@@ -110,7 +121,7 @@ export default function BracketChallengeLivePage() {
     [data?.rounds],
   );
 
-  if (loading && !data) {
+  if ((loading && !data) || (data && data.contest.id !== contestId)) {
     return <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6"><div className="mx-auto max-w-5xl space-y-6"><AppNav /><p className="text-sm text-slate-400">Loading live scores…</p></div></main>;
   }
 
@@ -119,7 +130,7 @@ export default function BracketChallengeLivePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6">
+    <main className="bracket-live-page min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <AppNav />
         <header>
@@ -127,10 +138,20 @@ export default function BracketChallengeLivePage() {
           <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Live Scores</h1>
           <p className="mt-1 text-sm text-slate-400">{data.competition.name} · {data.competition.season} season</p>
         </header>
-
         {data.provider.availability === "unavailable" ? <p className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-sm text-amber-100">Live game data is temporarily unavailable. The official tournament schedule is still shown below.</p> : null}
         {error ? <p className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-sm text-amber-100">Live game data could not be refreshed. Showing the latest available tournament slate.</p> : null}
-        <BracketGameCenterDevHarness onOpen={(game) => setSelectedGame({ game, developmentHarness: true })} />
+        {detailRequested ? tournamentGame || developmentHarness ? <BracketGameCenter
+          key={`${contestId}:${state.gameId ?? state.devEventId}`} contestId={contestId} game={selectedGame}
+          gameId={tournamentGame?.gameKey} developmentHarness={developmentHarness}
+          matchup={tournamentGame} onRefresh={() => { void load(); }}
+          gameLabel={tournamentGame ? `${rounds.find((round) => round.key === tournamentGame.roundKey)?.label ?? "CFP"} · Game ${tournamentGame.gameOrder}` : undefined}
+          tab={state.tab} onTabChange={(tab) => navigate({ tab })} selection={state.selection}
+          selectionRequested={state.selectionRequested} onSelectionChange={selectSubject} onBack={backToGames}
+        /> : <section className="rounded-xl bg-white p-4 text-slate-700">
+          <button type="button" aria-label="Back to games" onClick={backToGames} className="text-xs font-bold text-sky-700">← Back to games</button>
+          <p role="alert" className="mt-3 text-sm">This game is unavailable in this CFP contest. Return to games and choose a matchup.</p>
+        </section> : <>
+        <BracketGameCenterDevHarness onOpen={(game) => navigate({ devEventId: game.espnEventId, gameId: null, tab: state.tab })} />
 
         {rounds.length ? <section className="space-y-7">
           {rounds.map((round) => {
@@ -148,15 +169,20 @@ export default function BracketChallengeLivePage() {
                   previousDate = gameDate;
                   return <div key={game.bracketGameId} className="min-w-0">
                     {showDate && game.scheduledAt ? <p className="mb-1 px-1 text-[11px] font-black uppercase tracking-wide text-slate-500">{dateLabel(game.scheduledAt)}</p> : null}
-                    <BracketLiveScoreCard game={game} onOpenGameCenter={(providerGame) => setSelectedGame({ game: providerGame, developmentHarness: false })} />
+                    <BracketLiveScoreCard game={game} onOpenGameCenter={() => navigate({ gameId: game.gameKey, devEventId: null, tab: state.tab })} onOpenImplications={() => navigate({ gameId: game.gameKey, devEventId: null, tab: "implications" })} />
                   </div>;
                 })}
               </div>
             </section>;
           })}
         </section> : <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">Tournament games are not available yet.</section>}
+        </>}
       </div>
-      {selectedGame ? <BracketGameCenterModal contestId={contestId} game={selectedGame.game} developmentHarness={selectedGame.developmentHarness} onClose={() => setSelectedGame(null)} /> : null}
+
     </main>
   );
+}
+
+export default function BracketChallengeLivePageWithSuspense() {
+  return <Suspense fallback={<p className="p-4 text-slate-400">Loading live scores…</p>}><BracketChallengeLivePage /></Suspense>;
 }

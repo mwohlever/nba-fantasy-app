@@ -68,16 +68,19 @@ test("development harness is explicitly non-production, authenticated through th
   }
 });
 
-test("Bracket wrapper and valid score cards reuse shared GameCenterModal without copying Game Center UI", () => {
-  const wrapper = fs.readFileSync(path.join(root, "components/bracket/BracketGameCenterModal.tsx"), "utf8");
+test("Bracket wrapper and valid score cards reuse the shared inline football Game Center", () => {
+  const wrapper = fs.readFileSync(path.join(root, "components/bracket/BracketGameCenter.tsx"), "utf8");
   const card = fs.readFileSync(path.join(root, "components/bracket/BracketLiveScoreCard.tsx"), "utf8");
   const page = fs.readFileSync(path.join(root, "app/bracket-challenge/[contestId]/live/page.tsx"), "utf8");
-  assert.match(wrapper, /GameCenterModal/);
+  assert.match(wrapper, /FootballGameCenter/);
+  assert.match(wrapper, /presentation="inline"/);
+  assert.doesNotMatch(wrapper, /fixed inset-0|aria-modal|role="dialog"/);
   assert.match(wrapper, /detailQuery=\{developmentHarness \? "devGameCenter=1" : undefined\}/);
   assert.match(card, /game\.provider\.mappingState === "valid"/);
   assert.match(card, /onOpenGameCenter/);
   assert.match(card, /onClick=/);
-  assert.match(page, /BracketGameCenterModal/);
+  assert.match(page, /BracketGameCenter/);
+  assert.doesNotMatch(page, /<select|implications-bracket/);
   assert.match(page, /BracketGameCenterDevHarness/);
   assert.doesNotMatch(wrapper, /FootballPlayByPlay|FootballPlayField|scoringPlays|boxscore/);
 });

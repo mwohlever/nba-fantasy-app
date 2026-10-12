@@ -3,6 +3,16 @@ export type BracketLockState = {
   contestLockAt: string | null;
 };
 
+export type BracketContestLockContext = {
+  scope: "contest"; locked: boolean; status: string; effectiveLockAt: string | null; evaluatedAt: string;
+};
+
+/** Reports the existing resolver's decision; provider/display status is not an input. */
+export function bracketContestLockContext(lock: BracketLockState, now = new Date()): BracketContestLockContext {
+  return { scope: "contest", locked: shouldFreezeBracketEntry(lock, now), status: lock.contestStatus,
+    effectiveLockAt: lock.contestLockAt, evaluatedAt: now.toISOString() };
+}
+
 /** The first scheduled game is the latest possible contest lock boundary. */
 export function effectiveBracketLockAt(contestLockAt: string | null, games: Array<{ scheduledAt: string | null; status?: string }>) {
   if (games.some((game) => game.status === "in_progress" || game.status === "final"))

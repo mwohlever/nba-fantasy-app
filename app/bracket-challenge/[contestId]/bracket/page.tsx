@@ -635,6 +635,7 @@ export default function BracketChallengeDetailPage() {
         ) : competition &&
           contest ? (
           <>
+            <Link className="bracket-screen-only text-sm font-bold text-blue-300" href={`/bracket-challenge/${encodeURIComponent(contestId)}/live?${entryIdFromUrl ? new URLSearchParams({ entryId: entryIdFromUrl }) : new URLSearchParams({ entrantId: selectedEntrantId, bracket: String(loadedBracketNumber) })}`}>Live Scores · implications for this bracket →</Link>
             <section className="bracket-screen-only rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-xl sm:p-7">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>

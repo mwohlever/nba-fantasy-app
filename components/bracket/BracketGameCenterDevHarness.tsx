@@ -4,7 +4,7 @@ import type { LiveScoreGame } from "@/components/live-scores/LiveScoreCard";
 
 const eventId = process.env.NEXT_PUBLIC_BRACKET_GAME_CENTER_DEV_EVENT_ID;
 
-function developmentGame(id: string): LiveScoreGame {
+export function developmentGame(id: string): LiveScoreGame {
   return {
     espnEventId: id,
     name: "Development ESPN event",

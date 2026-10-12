@@ -67,9 +67,11 @@ function ParticipantRow({ participant }: { participant: BracketLiveParticipant }
 export default function BracketLiveScoreCard({
   game,
   onOpenGameCenter,
+  onOpenImplications,
 }: {
   game: BracketLiveScoreCardGame;
   onOpenGameCenter?: (game: LiveScoreGame) => void;
+  onOpenImplications?: () => void;
 }) {
   if (game.provider.mappingState === "valid" && game.provider.game) {
     const seeds = [game.participants.a, game.participants.b].flatMap((participant) => participant.team ? [`#${participant.team.seed} ${participant.team.abbreviation ?? participant.team.displayName}`] : []);
@@ -93,6 +95,7 @@ export default function BracketLiveScoreCard({
     <article className="rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2.5 shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-2 text-[11px]"><span className="font-black uppercase tracking-wide text-blue-200">Game {game.gameOrder}</span><span className="text-right font-semibold text-slate-400">{scheduledLabel(game.scheduledAt, game.officialStatus)}</span></div>
       <div className="divide-y divide-slate-800"><ParticipantRow participant={game.participants.a} /><ParticipantRow participant={game.participants.b} /></div>
+      {onOpenImplications ? <button type="button" className="mt-2 w-full border-t border-slate-800 pt-2 text-left text-xs font-bold text-blue-300" onClick={onOpenImplications}>View implications →</button> : null}
     </article>
   );
 }

@@ -1,10 +1,11 @@
-/* Build the real NCAA modal and shared PBP into an isolated browser fixture. */
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* Build the real NCAA/bracket modal and shared PBP into an isolated browser fixture. */
 const fs = require('node:fs');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 const ts = require('typescript');
 const root = path.resolve(__dirname, '../..');
-module.exports = function footballBrowserBundle() {
+module.exports = function footballBrowserBundle({ bracket = false } = {}) {
   const sources = {}, maps = {};
   const oldTs = require.extensions['.ts'], oldTsx = require.extensions['.tsx'];
   require.extensions['.ts'] ??= () => {};
@@ -26,6 +27,7 @@ module.exports = function footballBrowserBundle() {
   try {
     const entry = add(path.join(root, 'components/live-scores/FootballPlayByPlay.tsx'));
     const ncaa = add(path.join(root, 'components/ncaa/NcaaGameCenterModal.tsx'));
+    const bracketCenter = bracket ? add(path.join(root, 'components/bracket/BracketGameCenterModal.tsx')) : null;
     const react = add(require.resolve('react')), client = add(require.resolve('react-dom/client'));
     return `const process = { env: { NODE_ENV: 'production' } }; const global = globalThis;
       const sources = ${JSON.stringify(sources)}, maps = ${JSON.stringify(maps)}, cache = {};
@@ -37,6 +39,7 @@ module.exports = function footballBrowserBundle() {
       }
       window.FootballPbp = load(${JSON.stringify(entry)}).default;
       window.NcaaGameCenter = load(${JSON.stringify(ncaa)}).default;
+      ${bracketCenter ? `window.BracketGameCenter = load(${JSON.stringify(bracketCenter)}).default;` : ''}
       window.React = load(${JSON.stringify(react)});
       window.ReactDOMClient = load(${JSON.stringify(client)});`;
   } finally {
