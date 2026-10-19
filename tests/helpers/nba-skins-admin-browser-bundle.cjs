@@ -18,6 +18,9 @@ module.exports = function adminBrowserBundle() {
   function add(filename, supplied) {
     if (sources[filename]) return filename;
     let source = supplied ?? fs.readFileSync(filename, 'utf8');
+    if (filename.endsWith('.module.css')) {
+      source = `module.exports=${JSON.stringify(Object.fromEntries([...source.matchAll(/\.([a-zA-Z][\w-]*)/g)].map(match => [match[1], match[1]])))};`;
+    }
     if (/\.tsx?$/.test(filename)) source = ts.transpileModule(source, { fileName: filename,
       compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
     }).outputText;

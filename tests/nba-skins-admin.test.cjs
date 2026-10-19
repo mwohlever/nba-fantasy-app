@@ -3,17 +3,24 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const Module = require('node:module');
+const fs = require('node:fs');
+const path = require('node:path');
 const { createFixture, orderRows } = require('./helpers/nba-skins-admin-fixture.cjs');
 const { host, nodes, React } = require('./helpers/scores-harness.cjs');
 const { renderToStaticMarkup } = require('react-dom/server');
 const previousLoad = Module._load;
 Module._load = function (request, parent, ...rest) {
   if (request.includes('components/AppNav')) return () => null;
+  if (request.endsWith('.module.css')) {
+    const css = fs.readFileSync(path.resolve(path.dirname(parent.filename), request), 'utf8');
+    return Object.fromEntries([...css.matchAll(/\.([a-zA-Z][\w-]*)/g)].map(match => [match[1], match[1]]));
+  }
   if (request === 'next/link') return props => React.createElement('a', props);
   return previousLoad.call(this, request, parent, ...rest);
 };
 const Admin = require('../app/admin/nba-skins/page.tsx').default;
 const html = tree => renderToStaticMarkup(tree);
+const { shuffleNbaSkinsOrder, secureRandomIndex, nextLotteryPick } = require('../lib/nbaSkins/lottery.ts');
 const orderIds = (f, id) => f.tables.nba_skins_draft_order.filter(row => row.season_id === id).sort((a, b) => a.draft_position - b.draft_position).map(row => row.team_id);
 
 test('legacy initialization persists only the selected season and builds 28 frozen snake slots', async () => {
@@ -139,7 +146,8 @@ async function mount(f, fetcher) {
   const h = host(Admin);
   const render = async () => {
     for (let i = 0; i < 4; i++) { h.render({}, true); await new Promise(setImmediate); }
-    return h.render({}, true);
+    const tree = h.render({}, true);
+    return tree.type?.name === 'LotteryReveal' ? tree.type(tree.props) : tree;
   };
   await render();
   return { h, render, requests };
@@ -215,5 +223,220 @@ test('partial setup UI stays blocked and server errors remain visible with their
   await button(tree, 'Save 2027-28 Draft Order').props.onClick();
   tree = await page.render();
   assert.match(html(tree), /2027-28: Failed to save draft order/);
+  page.h.unmount();
+});
+
+test('Fisher–Yates reaches all 24 permutations without modifying its input', () => {
+  const input = [1, 2, 3, 4], permutations = new Set();
+  for (let a = 0; a < 4; a++) for (let b = 0; b < 3; b++) for (let c = 0; c < 2; c++) {
+    const draws = [a, b, c];
+    const result = shuffleNbaSkinsOrder(input, () => draws.shift());
+    assert.deepEqual([...result].sort(), input);
+    permutations.add(result.join(','));
+  }
+  assert.equal(permutations.size, 24);
+  assert.deepEqual(input, [1, 2, 3, 4]);
+});
+
+test('secure sampling rejects biased boundary values and invalid random sources', () => {
+  const draws = [2 ** 32 - 1, 4];
+  assert.equal(secureRandomIndex(3, () => draws.shift()), 1);
+  assert.equal(draws.length, 0, 'top value was rejected rather than reduced modulo three');
+  assert.equal(secureRandomIndex(4, () => 2 ** 32 - 1), 3);
+  for (const bound of [0, -1, 2 ** 32 + 1, NaN]) assert.throws(() => secureRandomIndex(bound, () => 0));
+  for (const value of [-1, 2 ** 32, NaN, .5]) assert.throws(() => secureRandomIndex(4, () => value));
+  assert.deepEqual([0, 1, 2, 3, 4].map(count => nextLotteryPick(4, count)), [4, 3, 2, 1, null]);
+});
+
+test('browser shuffle uses Web Crypto and never falls back to Math.random', t => {
+  let draws = 0;
+  t.mock.method(globalThis.crypto, 'getRandomValues', values => { draws++; values[0] = 0; return values; });
+  t.mock.method(Math, 'random', () => assert.fail('insecure random source'));
+  assert.deepEqual(shuffleNbaSkinsOrder([1, 2, 3, 4]), [2, 3, 4, 1]);
+  assert.equal(draws, 3);
+});
+
+const randomizeButton = tree => button(tree, '🎲 Randomize Order');
+const showButton = (tree, pick) => nodes(tree).find(n => n.type === 'button' && n.props['aria-label'] === `Show Pick #${pick}`);
+const participantNames = ['Andy', 'Josh', 'Jon', 'Mark'];
+const expectedAscending = [2, 3, 4, 1];
+
+test('lottery hides all names, gates #4→#3→#2→#1, then saves exactly the reveal and stays visible', async t => {
+  t.mock.method(globalThis.crypto, 'getRandomValues', values => { values[0] = 0; return values; });
+  const f = createFixture(), page = await mount(f);
+  let tree = await page.render(); seasonSelect(tree).props.onChange({ target: { value: '7' } });
+  tree = await page.render();
+  const staleSave = button(tree, 'Initialize 2026-27 Draft Order').props.onClick;
+  const draw = randomizeButton(tree).props.onClick;
+  const before = structuredClone(f.tables);
+  draw(); draw();
+  tree = await page.render();
+  assert.match(html(tree), /Order randomized! Ready for the reveal/);
+  for (const name of participantNames) assert.doesNotMatch(html(tree), new RegExp(name));
+  assert.equal(nodes(tree).filter(n => n.type === 'select' || n.type === 'input').length, 0);
+  assert.equal(nodes(tree).filter(n => n.type === 'button' && /^Show Pick/.test(n.props['aria-label'] ?? '')).length, 4);
+  assert.equal(button(tree, 'Initialize 2026-27 Draft Order').props.disabled, true);
+  page.h.strictReplayEffects(); tree = await page.render();
+  assert.match(html(tree), /Order randomized! Ready for the reveal/, 'late mount loads cannot dismiss the lottery');
+  for (const name of participantNames) assert.doesNotMatch(html(tree), new RegExp(name));
+  await staleSave();
+  for (const pick of [4, 3, 2, 1]) {
+    const wrong = pick > 1 ? 1 : 4;
+    assert.equal(showButton(tree, wrong).props.disabled, true);
+    showButton(tree, wrong).props.onClick();
+    assert.equal(showButton(await page.render(), pick).props.disabled, false);
+    const reveal = showButton(tree, pick).props.onClick;
+    reveal(); reveal();
+    tree = await page.render();
+    const revealedIds = expectedAscending.slice(pick - 1);
+    for (let id = 1; id <= 4; id++) {
+      if (revealedIds.includes(id)) assert.match(html(tree), new RegExp(participantNames[id - 1]));
+      else assert.doesNotMatch(html(tree), new RegExp(participantNames[id - 1]));
+    }
+    if (pick > 1) {
+      assert.equal(button(tree, 'Initialize 2026-27 Draft Order').props.disabled, true);
+      await button(tree, 'Initialize 2026-27 Draft Order').props.onClick();
+    }
+    assert.deepEqual(f.tables, before);
+    assert.deepEqual(f.writes, []);
+  }
+  assert.match(html(tree), /Draft order revealed!/);
+  await button(tree, 'Initialize 2026-27 Draft Order').props.onClick();
+  tree = await page.render();
+  assert.deepEqual(orderIds(f, 7), expectedAscending);
+  assert.match(html(tree), /Saved order · verified after reload/);
+  assert.match(html(tree), /Draft order revealed!/);
+  assert.equal(button(tree, 'Clear Draft Order').props.disabled, true);
+  assert.deepEqual(page.requests.filter(r => r.method === 'PATCH').map(r => r.body.order.map(e => e.teamId)), [expectedAscending]);
+  page.h.unmount();
+  const reloaded = await mount(f);
+  tree = await reloaded.render(); seasonSelect(tree).props.onChange({ target: { value: '7' } });
+  tree = await reloaded.render();
+  assert.deepEqual(orderSelects(tree).map(s => s.props.value), expectedAscending);
+  reloaded.h.unmount();
+});
+
+test('clear resets all local slots; restart and early exit require confirmation without writes', async t => {
+  let draws = 0, confirms = 0, accept = false;
+  t.mock.method(globalThis.crypto, 'getRandomValues', values => { draws++; values[0] = 0; return values; });
+  const previousWindow = global.window;
+  t.after(() => { if (previousWindow === undefined) delete global.window; else global.window = previousWindow; });
+  global.window = { confirm: () => { confirms++; return accept; } };
+  const f = createFixture(), page = await mount(f);
+  let tree = await page.render(); seasonSelect(tree).props.onChange({ target: { value: '7' } });
+  tree = await page.render();
+  button(tree, 'Clear Draft Order').props.onClick();
+  tree = await page.render();
+  assert.deepEqual(orderSelects(tree).map(s => s.props.value), ['', '', '', '']);
+  assert.equal(button(tree, 'Initialize 2026-27 Draft Order').props.disabled, true);
+  randomizeButton(tree).props.onClick(); tree = await page.render();
+  assert.equal(draws, 3);
+  showButton(tree, 4).props.onClick(); tree = await page.render();
+  button(tree, 'Restart lottery').props.onClick(); tree = await page.render();
+  assert.equal(draws, 3);
+  assert.match(html(tree), /Andy/);
+  button(tree, 'Exit reveal').props.onClick(); tree = await page.render();
+  assert.match(html(tree), /Next up: Pick #3/);
+  accept = true;
+  button(tree, 'Restart lottery').props.onClick(); tree = await page.render();
+  assert.equal(draws, 6);
+  for (const name of participantNames) assert.doesNotMatch(html(tree), new RegExp(name));
+  button(tree, 'Exit reveal').props.onClick(); tree = await page.render();
+  assert.deepEqual(orderSelects(tree).map(s => s.props.value), ['', '', '', '']);
+  randomizeButton(tree).props.onClick(); tree = await page.render();
+  button(tree, 'Clear Draft Order').props.onClick(); tree = await page.render();
+  assert.equal(confirms, 4);
+  assert.deepEqual(orderSelects(tree).map(s => s.props.value), ['', '', '', '']);
+  assert.deepEqual(f.writes, []);
+  assert.equal(page.requests.filter(r => r.method !== 'GET').length, 0);
+  page.h.unmount();
+});
+
+test('persisted clearing is unavailable, and clearing a replacement proposal leaves saved rows intact', async t => {
+  t.mock.method(globalThis.crypto, 'getRandomValues', values => { values[0] = 0; return values; });
+  const f = createFixture(), before = structuredClone(f.tables), page = await mount(f);
+  let tree = await page.render();
+  assert.equal(button(tree, 'Clear Draft Order').props.disabled, true);
+  button(tree, 'Clear Draft Order').props.onClick(); tree = await page.render();
+  assert.deepEqual(orderSelects(tree).map(s => s.props.value), [1, 2, 3, 4]);
+  randomizeButton(tree).props.onClick(); tree = await page.render();
+  for (const name of participantNames) assert.doesNotMatch(html(tree), new RegExp(name));
+  button(tree, 'Clear Draft Order').props.onClick(); tree = await page.render();
+  assert.deepEqual(orderSelects(tree).map(s => s.props.value), ['', '', '', '']);
+  assert.deepEqual(f.tables, before);
+  assert.deepEqual(f.writes, []);
+  page.h.unmount();
+});
+
+test('no saved-order clearing endpoint can bypass authorization or lifecycle protections', async () => {
+  for (const [seasonId, season, setup] of [[8, 2027, () => {}], [8, 2027, f => { f.tables.nba_skins_seasons[0].status = 'locked'; }],
+    [8, 2027, f => { f.tables.nba_skins_seasons[0].status = 'final'; }], [8, 2027, f => { f.tables.nba_skins_picks.push({ id: 800, season_id: 8 }); }],
+    [4, 2025, () => {}], [9, 2026, () => {}], [8, 2027, f => { f.context.canAdministerGroup = false; }]]) {
+    const f = createFixture(); setup(f);
+    const before = structuredClone(f.tables);
+    const response = await f.save([], { action: 'clear-order', seasonId, season });
+    assert.ok(response.status >= 400);
+    const emptySave = await f.save([], { seasonId, season, initializeParticipants: false });
+    assert.ok(emptySave.status >= 400, 'an empty save is not a supported way to clear persisted participants');
+    assert.deepEqual(f.tables, before); assert.deepEqual(f.writes, []);
+  }
+});
+
+test('read-only and inconsistent seasons cannot start or clear a lottery', async () => {
+  for (const setup of [f => { f.tables.nba_skins_seasons[0].status = 'locked'; }, f => { f.tables.nba_skins_seasons[0].status = 'final'; },
+    f => { f.tables.nba_skins_seasons[0].draft_locked_at = '2026-10-19'; }, f => { f.tables.nba_skins_seasons[0].finalized_at = '2026-10-19'; },
+    f => { f.tables.nba_skins_picks.push({ id: 800, season_id: 8 }); }, f => { f.tables.nba_skins_draft_order = f.tables.nba_skins_draft_order.filter(r => r.id !== 80); }]) {
+    const f = createFixture(); setup(f);
+    const page = await mount(f); const tree = await page.render();
+    assert.equal(randomizeButton(tree).props.disabled, true);
+    assert.equal(button(tree, 'Clear Draft Order').props.disabled, true);
+    randomizeButton(tree).props.onClick();
+    assert.doesNotMatch(html(await page.render()), /Ready for the reveal/);
+    assert.deepEqual(f.writes, []); page.h.unmount();
+  }
+  const f = createFixture(), page = await mount(f);
+  let tree = await page.render(); seasonSelect(tree).props.onChange({ target: { value: '4' } });
+  tree = await page.render();
+  assert.equal(randomizeButton(tree).props.disabled, true);
+  assert.equal(button(tree, 'Clear Draft Order').props.disabled, true);
+  page.h.unmount();
+});
+
+test('crypto failure keeps manual controls and does not change or write the proposed order', async t => {
+  t.mock.method(globalThis.crypto, 'getRandomValues', () => { throw new Error('Secure random source unavailable.'); });
+  const f = createFixture(), page = await mount(f);
+  let tree = await page.render();
+  randomizeButton(tree).props.onClick(); tree = await page.render();
+  assert.match(html(tree), /Secure random source unavailable/);
+  assert.deepEqual(orderSelects(tree).map(s => s.props.value), [1, 2, 3, 4]);
+  assert.deepEqual(f.writes, []); page.h.unmount();
+});
+
+test('an unverified save keeps the completed reveal and can retry verification without another write', async t => {
+  t.mock.method(globalThis.crypto, 'getRandomValues', values => { values[0] = 0; return values; });
+  const f = createFixture();
+  let failGet = false;
+  const page = await mount(f, async (_url, options) => {
+    if (options.method === 'PATCH') {
+      const response = await f.admin.PATCH(new Request('http://local/api/admin/nba-skins', options));
+      failGet = true; return response;
+    }
+    if (failGet) { failGet = false; return Response.json({ error: 'Verification read failed.' }, { status: 500 }); }
+    return f.admin.GET();
+  });
+  let tree = await page.render(); seasonSelect(tree).props.onChange({ target: { value: '7' } });
+  tree = await page.render(); randomizeButton(tree).props.onClick();
+  for (const pick of [4, 3, 2, 1]) { tree = await page.render(); showButton(tree, pick).props.onClick(); }
+  tree = await page.render(); await button(tree, 'Initialize 2026-27 Draft Order').props.onClick();
+  tree = await page.render();
+  assert.match(html(tree), /Verification read failed/);
+  assert.match(html(tree), /Draft order revealed/);
+  assert.doesNotMatch(html(tree), /Saved order · verified/);
+  assert.deepEqual(orderIds(f, 7), expectedAscending);
+  const writes = f.writes.length;
+  await button(tree, 'Verify saved order').props.onClick(); tree = await page.render();
+  assert.match(html(tree), /Saved order · verified after reload/);
+  assert.equal(f.writes.length, writes);
+  assert.equal(page.requests.filter(r => r.method === 'PATCH').length, 1);
   page.h.unmount();
 });
