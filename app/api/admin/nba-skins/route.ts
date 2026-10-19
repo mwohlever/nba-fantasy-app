@@ -7,8 +7,7 @@ import {
   type NbaSkinsAccess,
 } from "@/lib/nbaSkins/access";
 import { authorizeNbaSkinsSeasonResource } from "@/lib/security/resourceAuthorization";
-import { validateNbaSkinsDraftOrder } from "@/lib/nbaSkins/policy";
-import { getNbaSkinsTotalPicks } from "@/lib/nbaSkins/policy";
+import { hasCompleteNbaSkinsDraftOrder, validateNbaSkinsDraftOrder, getNbaSkinsTotalPicks } from "@/lib/nbaSkins/policy";
 import { resolveNbaSkinsRules } from "@/lib/rules/leagueRules";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -116,11 +115,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Enter a valid NBA season starting year." }, { status: 400 });
     }
     const { data: existing, error: existingError } = await supabaseAdmin
-      .from("nba_skins_seasons").select("id")
+      .from("nba_skins_seasons").select("id, season")
       .eq("league_id", auth.access.league.id).eq("season", season).maybeSingle();
     if (existingError) throw new Error(existingError.message);
     if (existing) {
-      return NextResponse.json({ error: `${seasonLabel(season)} already exists.` }, { status: 409 });
+      return NextResponse.json({ error: `${seasonLabel(season)} already exists. Open that season to configure its draft order.`, season: existing }, { status: 409 });
     }
     const rules = resolveNbaSkinsRules(auth.access.league.settings);
     if (!validateNbaSkinsDraftOrder(
@@ -214,18 +213,22 @@ export async function PATCH(request: NextRequest) {
     const authorization = await authorizeSeason(request, seasonId);
     if (!authorization.ok) return authorization.response;
     const { data: season, error: seasonError } = await supabaseAdmin
-      .from("nba_skins_seasons").select("id, season, status, participant_count, nba_teams_per_participant")
-      .eq("id", seasonId).maybeSingle();
+      .from("nba_skins_seasons").select("id, season, status, draft_locked_at, finalized_at, participant_count, nba_teams_per_participant")
+      .eq("id", seasonId).eq("league_id", authorization.target.leagueId).maybeSingle();
     if (seasonError || !season) {
       return NextResponse.json({ error: "NBA Skins season not found." }, { status: 404 });
     }
 
     if (action === "save-order") {
+      const label = seasonLabel(Number(season.season));
+      if (Number(body?.season) !== Number(season.season)) {
+        return NextResponse.json({ error: `Season selection changed. Reload ${label} before saving its draft order.` }, { status: 409 });
+      }
       if (Number(season.season) < 2026) {
         return NextResponse.json({ error: "Historical draft order before 2026 is not editable." }, { status: 409 });
       }
-      if (season.status !== "open") {
-        return NextResponse.json({ error: "Only an open season's draft order can be changed." }, { status: 409 });
+      if (season.status !== "open" || season.draft_locked_at || season.finalized_at) {
+        return NextResponse.json({ error: `${label}: Only an open, unlocked, unfinalized season's draft order can be changed.` }, { status: 409 });
       }
       const order = (Array.isArray(body?.order) ? body.order : []) as Array<{ teamId: number }>;
       const participantCount = Number(season.participant_count);
@@ -238,27 +241,58 @@ export async function PATCH(request: NextRequest) {
           { status: 400 },
         );
       }
-      const { data: existingOrder, error: existingOrderError } = await supabaseAdmin
-        .from("nba_skins_draft_order").select("team_id").eq("season_id", seasonId);
+      const [orderResult, picksResult] = await Promise.all([
+        supabaseAdmin.from("nba_skins_draft_order")
+          .select("id, season_id, team_id, draft_position, created_at").eq("season_id", seasonId),
+        supabaseAdmin.from("nba_skins_picks")
+          .select("id", { count: "exact", head: true }).eq("season_id", seasonId),
+      ]);
+      const { data: existingOrder, error: existingOrderError } = orderResult;
       if (existingOrderError) throw new Error(existingOrderError.message);
+      if (picksResult.error) throw new Error(picksResult.error.message);
+      if (picksResult.count === null) throw new Error("Failed to verify existing NBA Skins picks.");
+      if (picksResult.count !== 0) {
+        return NextResponse.json({ error: `${label}: Draft order cannot be changed after picks have been saved.` }, { status: 409 });
+      }
+      const initializing = (existingOrder ?? []).length === 0;
+      if (initializing && body?.initializeParticipants !== true) {
+        return NextResponse.json({ error: `${label}: Explicitly initialize participants before saving the first draft order.` }, { status: 409 });
+      }
+      if (!initializing && body?.initializeParticipants === true) {
+        return NextResponse.json({ error: `${label}: Participants are already initialized. Reload before reordering.` }, { status: 409 });
+      }
+      if (!initializing && !hasCompleteNbaSkinsDraftOrder(
+        (existingOrder ?? []).map((row) => ({ teamId: Number(row.team_id), draftPosition: Number(row.draft_position) })),
+        participantCount,
+      )) {
+        return NextResponse.json({ error: `${label}: Participant setup is incomplete or inconsistent. It must be reviewed before reordering.` }, { status: 409 });
+      }
       const existingTeamIds = new Set((existingOrder ?? []).map((row) => Number(row.team_id)));
       if (
-        existingTeamIds.size !== participantCount ||
-        teamIds.some((teamId) => !existingTeamIds.has(teamId))
+        !initializing && teamIds.some((teamId) => !existingTeamIds.has(teamId))
       ) {
         return NextResponse.json(
           { error: "Season participants are frozen when the season is created. Reorder the selected participants only." },
           { status: 409 },
         );
       }
-      const { error: deleteOrderError } = await supabaseAdmin
-        .from("nba_skins_draft_order").delete().eq("season_id", seasonId);
-      if (deleteOrderError) throw new Error(`Failed to clear draft order: ${deleteOrderError.message}`);
+      // Initializing is one insert: never clear another request's saved participants.
+      if (!initializing) {
+        const { error: deleteOrderError } = await supabaseAdmin
+          .from("nba_skins_draft_order").delete().eq("season_id", seasonId);
+        if (deleteOrderError) throw new Error(`Failed to clear draft order: ${deleteOrderError.message}`);
+      }
       const { error: insertOrderError } = await supabaseAdmin.from("nba_skins_draft_order").insert(
         teamIds.map((teamId, index) => ({ season_id: seasonId, team_id: teamId, draft_position: index + 1 })),
       );
-      if (insertOrderError) throw new Error(`Failed to save draft order: ${insertOrderError.message}`);
-      return NextResponse.json({ success: true, message: `${seasonLabel(Number(season.season))} draft order saved.` });
+      if (insertOrderError) {
+        if (!initializing) {
+          const { error: restoreError } = await supabaseAdmin.from("nba_skins_draft_order").insert(existingOrder ?? []);
+          if (restoreError) throw new Error(`${label}: Failed to save and restore draft order. Reload and review the season before retrying.`);
+        }
+        throw new Error(`${label}: Failed to save draft order: ${insertOrderError.message}`);
+      }
+      return NextResponse.json({ success: true, seasonId, season: Number(season.season), message: `${label} draft order saved${initializing ? " and participants initialized" : ""}.` });
     }
 
     if (action === "set-status") {

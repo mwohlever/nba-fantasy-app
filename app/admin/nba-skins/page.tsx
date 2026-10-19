@@ -3,8 +3,10 @@
 import Link from "next/link";
 
 import AppNav from "@/components/AppNav";
+import { hasCompleteNbaSkinsDraftOrder, validateNbaSkinsDraftOrder } from "@/lib/nbaSkins/policy";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -172,166 +174,65 @@ export default function NbaSkinsAdminPage() {
       ],
     );
 
+  const savedOrder = [...(selectedSeason?.draftOrder ?? [])]
+    .sort((a, b) => a.draftPosition - b.draftPosition);
+  const needsInitialization = selectedSeason?.draftOrder.length === 0;
+  const hasSavedOrder = Boolean(selectedSeason && hasCompleteNbaSkinsDraftOrder(savedOrder, selectedSeason.participantCount));
+  const canEditOrder = Boolean(selectedSeason && selectedSeason.season >= 2026 &&
+    selectedSeason.status === "open" && !selectedSeason.draft_locked_at && !selectedSeason.finalized_at &&
+    selectedSeason.pickCount === 0 && (needsInitialization || hasSavedOrder));
+  const orderOptions = needsInitialization
+    ? data?.teams ?? []
+    : savedOrder.map((entry) => ({ id: entry.teamId, name: entry.teamName }));
+  const orderIsValid = Boolean(selectedSeason && validateNbaSkinsDraftOrder(
+    order, (data?.teams ?? []).map((team) => team.id), selectedSeason.participantCount,
+  ));
+  const orderChanged = needsInitialization || order.some((teamId, index) => teamId !== savedOrder[index]?.teamId);
+  const existingNewSeason = data?.seasons.find((season) => season.season === Number(newSeason)) ?? null;
+  const validNewSeason = newSeason.trim() !== "" && Number.isInteger(Number(newSeason)) &&
+    Number(newSeason) >= 2022 && Number(newSeason) <= 2100;
 
-  async function loadAdmin(
-    preferredSeasonId?: number,
-  ) {
-    try {
-      setLoading(true);
-      setError("");
-
-      const response =
-        await fetch(
-          "/api/admin/nba-skins",
-          {
-            cache:
-              "no-store",
-          },
-        );
-
-      const result =
-        await response.json() as AdminResponse;
-
-      if (!response.ok) {
-        throw new Error(
-          result.error ??
-            "Failed to load NBA Skins admin.",
-        );
-      }
-
-      setData(
-        result,
-      );
-
-      setNewSeasonParticipantIds((current) => {
-        const validCurrent = current.filter((teamId) =>
-          result.teams.some((team) => team.id === teamId),
-        );
-        return validCurrent.length === result.rules.participantCount
-          ? validCurrent
-          : result.teams.slice(0, result.rules.participantCount).map((team) => team.id);
-      });
-
-      const nextSeason =
-        result.seasons.find(
-          (season) =>
-            season.id ===
-            preferredSeasonId,
-        ) ??
-        result.seasons[0] ??
-        null;
-
-      setSelectedSeasonId(
-        nextSeason?.id ??
-        null,
-      );
-
-      if (!nextSeason) {
-        setOrder([]);
-      } else if (
-        nextSeason.draftOrder.length === nextSeason.participantCount
-      ) {
-        setOrder(
-          nextSeason.draftOrder
-            .sort(
-              (a, b) =>
-                a.draftPosition -
-                b.draftPosition,
-            )
-            .map(
-              (entry) =>
-                entry.teamId,
-            ),
-        );
-      } else {
-        setOrder(
-          result.teams.slice(0, nextSeason.participantCount).map(
-            (team) =>
-              team.id,
-          ),
-        );
-      }
-
-      if (
-        result.seasons.length >
-        0
-      ) {
-        const nextYear =
-          Math.max(
-            ...result.seasons.map(
-              (season) =>
-                season.season,
-            ),
-          ) + 1;
-
-        setNewSeason(
-          String(
-            nextYear,
-          ),
-        );
-      }
-    } catch (
-      loadError
-    ) {
-      setError(
-        loadError instanceof
-        Error
-          ? loadError.message
-          : "Failed to load NBA Skins admin.",
-      );
-    } finally {
-      setLoading(
-        false,
-      );
+  const selectSeason = useCallback((nextSeason: Season | null, teams: Team[]) => {
+    setSelectedSeasonId(nextSeason?.id ?? null);
+    if (!nextSeason) {
+      setOrder([]);
+    } else if (hasCompleteNbaSkinsDraftOrder(nextSeason.draftOrder, nextSeason.participantCount)) {
+      setOrder([...nextSeason.draftOrder].sort((a, b) => a.draftPosition - b.draftPosition).map((entry) => entry.teamId));
+    } else if (nextSeason.draftOrder.length === 0) {
+      setOrder(teams.slice(0, nextSeason.participantCount).map((team) => team.id));
+    } else {
+      setOrder([]);
     }
-  }
-
-
-  useEffect(() => {
-    void loadAdmin();
   }, []);
 
 
+  const loadAdmin = useCallback((preferredSeasonId?: number) => {
+    return fetch("/api/admin/nba-skins", { cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json() as AdminResponse;
+        if (!response.ok) throw new Error(result.error ?? "Failed to load NBA Skins admin.");
+        return result;
+      })
+      .then((result) => {
+        setData(result);
+        setNewSeasonParticipantIds((current) => {
+          const validCurrent = current.filter((teamId) => result.teams.some((team) => team.id === teamId));
+          return validCurrent.length === result.rules.participantCount
+            ? validCurrent
+            : result.teams.slice(0, result.rules.participantCount).map((team) => team.id);
+        });
+        const nextSeason = result.seasons.find((season) => season.id === preferredSeasonId) ?? result.seasons[0] ?? null;
+        selectSeason(nextSeason, result.teams);
+      })
+      .catch((loadError: unknown) => {
+        setError(loadError instanceof Error ? loadError.message : "Failed to load NBA Skins admin.");
+      })
+      .finally(() => setLoading(false));
+  }, [selectSeason]);
+
   useEffect(() => {
-    if (
-      !data ||
-      !selectedSeason
-    ) {
-      return;
-    }
-
-    if (
-      selectedSeason
-        .draftOrder
-        .length === selectedSeason.participantCount
-    ) {
-      setOrder(
-        [...selectedSeason.draftOrder]
-          .sort(
-            (a, b) =>
-              a.draftPosition -
-              b.draftPosition,
-          )
-          .map(
-            (entry) =>
-              entry.teamId,
-          ),
-      );
-    } else {
-      setOrder(
-        data.teams.slice(0, selectedSeason.participantCount).map(
-          (team) =>
-            team.id,
-        ),
-      );
-    }
-
-    setMessage("");
-    setError("");
-  }, [
-    data,
-    selectedSeasonId,
-  ]);
+    void loadAdmin();
+  }, [loadAdmin]);
 
 
   function teamName(
@@ -342,7 +243,7 @@ export default function NbaSkinsAdminPage() {
         (team) =>
           team.id ===
           teamId,
-      )?.name ??
+      )?.name ?? selectedSeason?.draftOrder.find((entry) => entry.teamId === teamId)?.teamName ??
       "Unknown"
     );
   }
@@ -391,7 +292,7 @@ export default function NbaSkinsAdminPage() {
 
   async function saveOrder() {
     if (
-      !selectedSeason
+      !selectedSeason || !canEditOrder || !orderIsValid
     ) {
       return;
     }
@@ -417,6 +318,8 @@ export default function NbaSkinsAdminPage() {
               JSON.stringify({
                 seasonId:
                   selectedSeason.id,
+                season: selectedSeason.season,
+                initializeParticipants: needsInitialization,
 
                 action:
                   "save-order",
@@ -457,10 +360,10 @@ export default function NbaSkinsAdminPage() {
       saveError
     ) {
       setError(
-        saveError instanceof
+        `${selectedSeason.label}: ${saveError instanceof
         Error
           ? saveError.message
-          : "Failed to save draft order.",
+          : "Failed to save draft order."}`,
       );
     } finally {
       setBusy(
@@ -566,14 +469,19 @@ export default function NbaSkinsAdminPage() {
       );
 
     if (
-      !Number.isInteger(
-        season,
-      )
+      !validNewSeason
     ) {
       setError(
         "Enter a valid starting year.",
       );
 
+      return;
+    }
+
+    if (existingNewSeason) {
+      selectSeason(existingNewSeason, data?.teams ?? []);
+      setError("");
+      setMessage(`${existingNewSeason.label} already exists. Configure its draft order above.`);
       return;
     }
 
@@ -616,6 +524,12 @@ export default function NbaSkinsAdminPage() {
       const result =
         await response.json();
 
+      if (response.status === 409 && result.season?.id) {
+        await loadAdmin(Number(result.season.id));
+        setMessage(`${result.season.season}-${String(Number(result.season.season) + 1).slice(-2)} already exists. Configure its draft order above.`);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(
           result.error ??
@@ -639,7 +553,7 @@ export default function NbaSkinsAdminPage() {
         createError instanceof
         Error
           ? createError.message
-          : "Failed to create season.",
+          : `Failed to create ${season}-${String(season + 1).slice(-2)} season.`,
       );
     } finally {
       setBusy(
@@ -803,6 +717,8 @@ export default function NbaSkinsAdminPage() {
                   </span>
 
                   <select
+                    aria-label="Selected NBA Skins season"
+                    disabled={busy}
                     value={
                       selectedSeasonId ??
                       ""
@@ -810,12 +726,7 @@ export default function NbaSkinsAdminPage() {
                     onChange={(
                       event,
                     ) =>
-                      setSelectedSeasonId(
-                        Number(
-                          event.target
-                            .value,
-                        ),
-                      )
+                      selectSeason(data.seasons.find((season) => season.id === Number(event.target.value)) ?? null, data.teams)
                     }
                     className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 font-bold text-white outline-none focus:border-blue-400"
                   >
@@ -872,9 +783,7 @@ export default function NbaSkinsAdminPage() {
                     <button
                       type="button"
                       disabled={
-                        busy ||
-                        selectedSeason.status !==
-                          "open"
+                        busy || !canEditOrder
                       }
                       onClick={() => {
                         setOrder(
@@ -917,9 +826,7 @@ export default function NbaSkinsAdminPage() {
                               ""
                             }
                             disabled={
-                              busy ||
-                              selectedSeason.status !==
-                                "open"
+                              busy || !canEditOrder
                             }
                             onChange={(
                               event,
@@ -935,18 +842,19 @@ export default function NbaSkinsAdminPage() {
                             }
                             className="mt-2 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 font-black text-white outline-none focus:border-blue-400 disabled:opacity-50"
                           >
-                            {selectedSeason.draftOrder.map(
-                              (entry) => (
+                            <option value="" disabled>Select participant</option>
+                            {orderOptions.map(
+                              (team) => (
                                 <option
                                   key={
-                                    entry.teamId
+                                    team.id
                                   }
                                   value={
-                                    entry.teamId
+                                    team.id
                                   }
                                 >
                                   {
-                                    entry.teamName
+                                    team.name
                                   }
                                 </option>
                               ),
@@ -959,22 +867,17 @@ export default function NbaSkinsAdminPage() {
 
 
                   <div className="mt-4 rounded-2xl border border-blue-500/15 bg-blue-950/15 px-4 py-3 text-sm text-slate-400">
-                    Current order:{" "}
-                    <span className="font-bold text-blue-200">
-                      {order
-                        .map(
-                          (
-                            teamId,
-                            index,
-                          ) =>
-                            `${index + 1}. ${teamName(
-                              teamId,
-                            )}`,
-                        )
-                        .join(
-                          "  •  ",
-                        )}
-                    </span>
+                    <p>Saved order: <span className="font-bold text-blue-200">
+                      {hasSavedOrder
+                        ? savedOrder.map((entry, index) => `${index + 1}. ${entry.teamName}`).join("  •  ")
+                        : needsInitialization ? "Not initialized." : "Incomplete or inconsistent; review required."}
+                    </span></p>
+                    {canEditOrder && orderChanged ? (
+                      <p className="mt-2">Proposed order (not saved): <span className="font-bold text-blue-200">
+                        {order.map((teamId, index) => `${index + 1}. ${teamName(teamId)}`).join("  •  ") || "Select participants above."}
+                      </span></p>
+                    ) : null}
+                    {selectedSeason.pickCount > 0 ? <p className="mt-2">Draft order is read-only because picks have been saved.</p> : null}
                   </div>
 
 
@@ -984,15 +887,11 @@ export default function NbaSkinsAdminPage() {
                       saveOrder
                     }
                     disabled={
-                      busy ||
-                      order.length !==
-                        selectedSeason.participantCount ||
-                      selectedSeason.status !==
-                        "open"
+                      busy || !canEditOrder || !orderIsValid
                     }
                     className="mt-4 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Save Draft Order
+                    {needsInitialization ? `Initialize ${selectedSeason.label} Draft Order` : `Save ${selectedSeason.label} Draft Order`}
                   </button>
                 </section>
 
@@ -1153,6 +1052,9 @@ export default function NbaSkinsAdminPage() {
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <input
                   type="number"
+                  aria-label="Season starting year"
+                  placeholder="Enter starting year"
+                  disabled={busy}
                   min="2022"
                   max="2100"
                   value={
@@ -1172,17 +1074,23 @@ export default function NbaSkinsAdminPage() {
                 <button
                   type="button"
                   disabled={
-                    busy ||
-                    newSeasonParticipantIds.length !== data.rules.participantCount
+                    busy || !validNewSeason ||
+                    (!existingNewSeason && newSeasonParticipantIds.length !== data.rules.participantCount)
                   }
                   onClick={
                     createSeason
                   }
                   className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:opacity-40"
                 >
-                  Add New Season
+                  {existingNewSeason ? `Open ${existingNewSeason.label} Season` : validNewSeason
+                    ? `Create ${Number(newSeason)}-${String(Number(newSeason) + 1).slice(-2)} Season` : "Create Season"}
                 </button>
               </div>
+              {existingNewSeason ? (
+                <p className="mt-3 text-sm text-blue-200">
+                  {existingNewSeason.label} already exists. Open it above to configure its draft order.
+                </p>
+              ) : null}
             </section>
           </>
         ) : null}

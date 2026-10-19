@@ -25,6 +25,17 @@ export function validateNbaSkinsDraftOrder(
   return teamIds.every((teamId) => Number.isInteger(teamId) && active.has(teamId));
 }
 
+export function hasCompleteNbaSkinsDraftOrder(
+  order: readonly { teamId: number; draftPosition: number }[],
+  participantCount: number,
+) {
+  return order.length === participantCount &&
+    new Set(order.map((entry) => entry.teamId)).size === participantCount &&
+    order.every((entry) => Number.isInteger(entry.teamId) && entry.teamId > 0) &&
+    [...order].sort((a, b) => a.draftPosition - b.draftPosition)
+      .every((entry, index) => entry.draftPosition === index + 1);
+}
+
 export function getNbaSkinsTotalPicks(input: {
   participantCount: number;
   nbaTeamsPerParticipant: number;
