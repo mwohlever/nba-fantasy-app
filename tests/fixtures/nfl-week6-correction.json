@@ -1,0 +1,657 @@
+{
+  "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401873004",
+  "capturedAt": "2026-10-19T01:41:40.715Z",
+  "header": {
+    "competitions": [
+      {
+        "status": {
+          "type": {
+            "id": "3",
+            "name": "STATUS_FINAL",
+            "state": "post",
+            "completed": true,
+            "description": "Final",
+            "detail": "Final",
+            "shortDetail": "Final"
+          }
+        },
+        "competitors": [
+          {
+            "team": {
+              "id": "14",
+              "abbreviation": "LAR"
+            },
+            "score": "16"
+          },
+          {
+            "team": {
+              "id": "22",
+              "abbreviation": "ARI"
+            },
+            "score": "18"
+          }
+        ]
+      }
+    ]
+  },
+  "boxscore": {
+    "players": [
+      {
+        "team": {
+          "id": "22",
+          "displayName": "Arizona Cardinals",
+          "abbreviation": "ARI"
+        },
+        "statistics": [
+          {
+            "name": "passing",
+            "labels": [
+              "C/ATT",
+              "YDS",
+              "AVG",
+              "TD",
+              "INT",
+              "SACKS",
+              "QBR",
+              "RTG"
+            ],
+            "totals": [
+              "24/35",
+              "218",
+              "6.2",
+              "0",
+              "1",
+              "0-0",
+              "--",
+              "73.3"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "2578570",
+                  "displayName": "Jacoby Brissett"
+                },
+                "stats": [
+                  "24/35",
+                  "218",
+                  "6.2",
+                  "0",
+                  "1",
+                  "0-0",
+                  "37.8",
+                  "73.3"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "rushing",
+            "labels": [
+              "CAR",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG"
+            ],
+            "totals": [
+              "35",
+              "120",
+              "3.4",
+              "0",
+              "31"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4427728",
+                  "displayName": "Bam Knight"
+                },
+                "stats": [
+                  "15",
+                  "80",
+                  "5.3",
+                  "0",
+                  "31"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4373626",
+                  "displayName": "Tyler Allgeier"
+                },
+                "stats": [
+                  "18",
+                  "38",
+                  "2.1",
+                  "0",
+                  "7"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "2578570",
+                  "displayName": "Jacoby Brissett"
+                },
+                "stats": [
+                  "2",
+                  "2",
+                  "1.0",
+                  "0",
+                  "1"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "receiving",
+            "labels": [
+              "REC",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG",
+              "TGTS"
+            ],
+            "totals": [
+              "24",
+              "218",
+              "9.1",
+              "0",
+              "26",
+              "34"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4361307",
+                  "displayName": "Trey McBride"
+                },
+                "stats": [
+                  "7",
+                  "53",
+                  "7.6",
+                  "0",
+                  "26",
+                  "9"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "3045523",
+                  "displayName": "Kendrick Bourne"
+                },
+                "stats": [
+                  "5",
+                  "47",
+                  "9.4",
+                  "0",
+                  "15",
+                  "8"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4360761",
+                  "displayName": "Michael Wilson"
+                },
+                "stats": [
+                  "4",
+                  "32",
+                  "8.0",
+                  "0",
+                  "12",
+                  "7"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4692835",
+                  "displayName": "Jalen Brooks"
+                },
+                "stats": [
+                  "2",
+                  "30",
+                  "15.0",
+                  "0",
+                  "21",
+                  "3"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4426844",
+                  "displayName": "Elijah Higgins"
+                },
+                "stats": [
+                  "3",
+                  "28",
+                  "9.3",
+                  "0",
+                  "17",
+                  "3"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4427728",
+                  "displayName": "Bam Knight"
+                },
+                "stats": [
+                  "2",
+                  "18",
+                  "9.0",
+                  "0",
+                  "10",
+                  "2"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4373626",
+                  "displayName": "Tyler Allgeier"
+                },
+                "stats": [
+                  "1",
+                  "10",
+                  "10.0",
+                  "0",
+                  "10",
+                  "2"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "fumbles",
+            "labels": [
+              "FUM",
+              "LOST",
+              "REC"
+            ],
+            "totals": [
+              "1",
+              "0",
+              "1"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4427728",
+                  "displayName": "Bam Knight"
+                },
+                "stats": [
+                  "1",
+                  "0",
+                  "0"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4432668",
+                  "displayName": "Denzel Burke"
+                },
+                "stats": [
+                  "0",
+                  "0",
+                  "1"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "14",
+          "displayName": "Los Angeles Rams",
+          "abbreviation": "LAR"
+        },
+        "statistics": [
+          {
+            "name": "passing",
+            "labels": [
+              "C/ATT",
+              "YDS",
+              "AVG",
+              "TD",
+              "INT",
+              "SACKS",
+              "QBR",
+              "RTG"
+            ],
+            "totals": [
+              "25/33",
+              "194",
+              "6.7",
+              "2",
+              "0",
+              "3-28",
+              "--",
+              "113.4"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "12483",
+                  "displayName": "Matthew Stafford"
+                },
+                "stats": [
+                  "25/33",
+                  "222",
+                  "6.7",
+                  "2",
+                  "0",
+                  "3-28",
+                  "52.5",
+                  "113.4"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "rushing",
+            "labels": [
+              "CAR",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG"
+            ],
+            "totals": [
+              "20",
+              "92",
+              "4.6",
+              "0",
+              "14"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4430737",
+                  "displayName": "Kyren Williams"
+                },
+                "stats": [
+                  "10",
+                  "50",
+                  "5.0",
+                  "0",
+                  "14"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4429096",
+                  "displayName": "Blake Corum"
+                },
+                "stats": [
+                  "9",
+                  "42",
+                  "4.7",
+                  "0",
+                  "13"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4426553",
+                  "displayName": "Davis Allen"
+                },
+                "stats": [
+                  "1",
+                  "0",
+                  "0.0",
+                  "0",
+                  "0"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "receiving",
+            "labels": [
+              "REC",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG",
+              "TGTS"
+            ],
+            "totals": [
+              "25",
+              "222",
+              "8.9",
+              "2",
+              "43",
+              "32"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4426515",
+                  "displayName": "Puka Nacua"
+                },
+                "stats": [
+                  "6",
+                  "80",
+                  "13.3",
+                  "0",
+                  "43",
+                  "7"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "16800",
+                  "displayName": "Davante Adams"
+                },
+                "stats": [
+                  "3",
+                  "39",
+                  "13.0",
+                  "0",
+                  "16",
+                  "4"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4242557",
+                  "displayName": "Colby Parkinson"
+                },
+                "stats": [
+                  "5",
+                  "31",
+                  "6.2",
+                  "1",
+                  "14",
+                  "6"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "2573401",
+                  "displayName": "Tyler Higbee"
+                },
+                "stats": [
+                  "4",
+                  "22",
+                  "5.5",
+                  "0",
+                  "7",
+                  "4"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4429096",
+                  "displayName": "Blake Corum"
+                },
+                "stats": [
+                  "2",
+                  "18",
+                  "9.0",
+                  "1",
+                  "15",
+                  "2"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4430737",
+                  "displayName": "Kyren Williams"
+                },
+                "stats": [
+                  "3",
+                  "17",
+                  "5.7",
+                  "0",
+                  "7",
+                  "6"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4710855",
+                  "displayName": "Konata Mumpfield"
+                },
+                "stats": [
+                  "2",
+                  "15",
+                  "7.5",
+                  "0",
+                  "8",
+                  "3"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "fumbles",
+            "labels": [
+              "FUM",
+              "LOST",
+              "REC"
+            ],
+            "totals": [
+              "2",
+              "1",
+              "1"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "2573401",
+                  "displayName": "Tyler Higbee"
+                },
+                "stats": [
+                  "1",
+                  "1",
+                  "0"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "12483",
+                  "displayName": "Matthew Stafford"
+                },
+                "stats": [
+                  "1",
+                  "0",
+                  "1"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "teams": [
+      {
+        "team": {
+          "id": "22",
+          "abbreviation": "ARI"
+        },
+        "statistics": [
+          {
+            "name": "netPassingYards",
+            "label": "Passing",
+            "displayValue": "218"
+          },
+          {
+            "name": "interceptions",
+            "label": "Interceptions thrown",
+            "displayValue": "1"
+          },
+          {
+            "name": "sacksYardsLost",
+            "label": "Sacks-Yards Lost",
+            "displayValue": "0-0"
+          },
+          {
+            "name": "rushingYards",
+            "label": "Rushing",
+            "displayValue": "120"
+          },
+          {
+            "name": "rushingAttempts",
+            "label": "Rushing Attempts",
+            "displayValue": "35"
+          },
+          {
+            "name": "fumblesLost",
+            "label": "Fumbles lost",
+            "displayValue": "0"
+          },
+          {
+            "name": "interceptions",
+            "label": "Interceptions thrown",
+            "displayValue": "1"
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "14",
+          "abbreviation": "LAR"
+        },
+        "statistics": [
+          {
+            "name": "netPassingYards",
+            "label": "Passing",
+            "displayValue": "194"
+          },
+          {
+            "name": "interceptions",
+            "label": "Interceptions thrown",
+            "displayValue": "0"
+          },
+          {
+            "name": "sacksYardsLost",
+            "label": "Sacks-Yards Lost",
+            "displayValue": "3-28"
+          },
+          {
+            "name": "rushingYards",
+            "label": "Rushing",
+            "displayValue": "92"
+          },
+          {
+            "name": "rushingAttempts",
+            "label": "Rushing Attempts",
+            "displayValue": "20"
+          },
+          {
+            "name": "fumblesLost",
+            "label": "Fumbles lost",
+            "displayValue": "1"
+          },
+          {
+            "name": "interceptions",
+            "label": "Interceptions thrown",
+            "displayValue": "0"
+          }
+        ]
+      }
+    ]
+  }
+}

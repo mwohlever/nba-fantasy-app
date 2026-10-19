@@ -17,7 +17,7 @@ export async function fetchTeams(): Promise<EspnTeam[]> {
   const payload = await response.json();
   const entries = payload.sports?.[0]?.leagues?.[0]?.teams ?? [];
 
-  return entries.map((entry: any) => ({
+  return entries.map((entry: { team: EspnTeam }) => ({
     id: entry.team.id,
     abbreviation: entry.team.abbreviation,
     displayName: entry.team.displayName,
@@ -39,7 +39,7 @@ export async function fetchTeamRoster(teamId: string): Promise<EspnRosterAthlete
 
   const payload = await response.json();
   const groups = payload.athletes ?? [];
-  const offenseGroup = groups.find((group: any) => group.position === "offense");
+  const offenseGroup = groups.find((group: { position?: string; items?: EspnRosterAthlete[] }) => group.position === "offense");
 
   return offenseGroup?.items ?? [];
 }
@@ -102,6 +102,7 @@ export type EspnStatGroup = {
   name: string;
   labels: string[];
   athletes: EspnAthleteStat[];
+  totals?: string[];
 };
 
 export type EspnTeamBoxscore = {

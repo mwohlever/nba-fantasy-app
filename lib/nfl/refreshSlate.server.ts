@@ -5,7 +5,6 @@ import {
   nflProviderFailureCode,
 } from "@/lib/providers/nfl";
 import {
-  aggregateEspnBoxscore,
   aggregateEspnDstBoxscore,
 } from "@/lib/aggregateEspnBoxscore";
 import {
@@ -18,6 +17,7 @@ import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
 import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
 
 import { NflScoringProvider } from "@/lib/nfl/scoringProvider";
+import { mergeNflPlayerCategories, nflCategoryIndex, NflBoxscoreValidationError } from "@/lib/nfl/boxscoreCorrections";
 import { nflGameIsFinal, nflRelevantScheduleUnambiguous, nflScheduleResolved, nflSlateEndPassed } from "@/lib/nfl/scoringPolicy";
 
 type SlateRecord = {
@@ -117,6 +117,7 @@ export type NflRefreshMetrics = { dbReadMs: number; dbWriteMs: number; scoringMs
   playerNotifications?: NotificationCounts; completionNotifications?: NotificationCounts; locked?: boolean; failureCode?: string };
 export async function refreshNflSlate(slateId: number, provider = new NflScoringProvider(), metrics?: NflRefreshMetrics, leaseToken?: string) {
   const readStarted = performance.now();
+  let currentEventId: string | null = null;
   async function assertLease() {
     if (!leaseToken) return;
     const check = await supabaseAdmin.rpc("nfl_sync_lease_owned", { p_slate_id: slateId, p_lease_token: leaseToken });
@@ -221,7 +222,6 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
 
     const players = (playersData ?? []) as PlayerNflRecord[];
 
-    const playerByEspnId = new Map<string, PlayerNflRecord>();
     const dstPlayerByEspnTeamId = new Map<string, PlayerNflRecord>();
     const draftedTeamAbbreviations = new Set<string>();
 
@@ -230,8 +230,6 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
 
       if (dstEspnTeamId) {
         dstPlayerByEspnTeamId.set(dstEspnTeamId, player);
-      } else if (player.nfl_player_id) {
-        playerByEspnId.set(String(player.nfl_player_id), player);
       }
       if (player.team_abbreviation) {
         draftedTeamAbbreviations.add(player.team_abbreviation.toUpperCase());
@@ -290,6 +288,7 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
     const scoringStarted = performance.now();
     const summaryBefore = provider.summaryMs;
     for (const event of relevantEvents) {
+      currentEventId = String(event.id);
       const eventStatus = event.competitions?.[0]?.status?.type ?? event.status?.type;
       eventStatuses.set(String(event.id), eventStatus);
       const eventCompetitors = event.competitions?.[0]?.competitors ?? [];
@@ -321,77 +320,39 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
       }
 
       if (!summary.boxscore || !Array.isArray(summary.boxscore.players) ||
-          (summary.boxscore.players.length === 0 && !(summary.boxscore.teams?.length))) throw new Error("NFL game boxscore incomplete");
+          (summary.boxscore.players.length === 0 && !(summary.boxscore.teams?.length))) {
+        throw new NflBoxscoreValidationError({ eventId: String(event.id), playerId: null,
+          category: "boxscore", reason: "missing_player_boxscore" });
+      }
+      if (summary.boxscore.teams !== undefined && !Array.isArray(summary.boxscore.teams)) {
+        throw new NflBoxscoreValidationError({ eventId: String(event.id), playerId: null,
+          category: "team", reason: "malformed_team_totals" });
+      }
+      const categoryIndex = nflCategoryIndex(summary, String(event.id));
       for (const player of players) {
         if (player.position === "D/ST") continue;
         const competitor = eventCompetitors.find(c =>
           String(c.team?.abbreviation ?? "").toUpperCase() === String(player.team_abbreviation ?? "").toUpperCase());
         if (!competitor) continue;
         const teamBoxscore = summary.boxscore.players.find(t => String(t.team?.id ?? "") === String(competitor.team?.id ?? ""));
-        if (!teamBoxscore?.statistics?.some(group => group.athletes?.length))
-          throw new Error("NFL game boxscore incomplete");
-      }
-      const aggregated = aggregateEspnBoxscore(summary);
-      const requiredLabels: Record<string, string[]> = {
-        passing: ["YDS", "TD", "INT"], rushing: ["YDS", "TD"],
-        receiving: ["YDS", "TD", "REC"], fumbles: ["LOST"],
-      };
-      const observedGroups = new Map<string, Set<string>>();
-      for (const team of summary.boxscore.players) {
-        for (const group of team.statistics ?? []) {
-          const labels = requiredLabels[group.name];
-          if (!labels) continue;
-          for (const athlete of group.athletes ?? []) {
-            const id = String(athlete.athlete?.id ?? "");
-            const drafted = playerByEspnId.get(id);
-            if (!drafted) continue;
-            const prior = statByPlayerId.get(drafted.id)!;
-            const priorInGroup = group.name === "passing"
-              ? Boolean(Number(prior.passing_yards) || Number(prior.passing_tds) || Number(prior.passing_ints))
-              : group.name === "rushing"
-                ? Boolean(Number(prior.rushing_yards) || Number(prior.rushing_tds))
-                : group.name === "receiving"
-                  ? Boolean(Number(prior.receiving_yards) || Number(prior.receiving_tds) || Number(prior.receptions))
-                  : Boolean(Number(prior.fumbles_lost));
-            if (!Array.isArray(group.labels) || !Array.isArray(athlete.stats) ||
-                labels.some(label => {
-                  const index = group.labels.indexOf(label);
-                  return index < 0 || index >= athlete.stats.length ||
-                    (priorInGroup && !Number.isFinite(Number(athlete.stats[index])));
-                })) throw new Error("NFL player boxscore incomplete");
-            if (!observedGroups.has(id)) observedGroups.set(id, new Set());
-            observedGroups.get(id)!.add(group.name);
-          }
+        if (!teamBoxscore?.statistics?.some(group => group.athletes?.length)) {
+          throw new NflBoxscoreValidationError({ eventId: String(event.id), playerId: String(player.nfl_player_id),
+            category: "team", reason: "missing_offensive_team_boxscore" });
         }
       }
-
-      // An omitted group can be legitimate before a player records a stat. Once
-      // accepted, its disappearance is incomplete provider data, not a zero.
       for (const player of players) {
-        if (!player.nfl_player_id || !eventCompetitors.some(c =>
-          String(c.team?.abbreviation ?? "").toUpperCase() === String(player.team_abbreviation ?? "").toUpperCase())) continue;
-        const prior = statByPlayerId.get(player.id)!;
-        const observed = observedGroups.get(String(player.nfl_player_id));
-        if ((Number(prior.passing_yards) || Number(prior.passing_tds) || Number(prior.passing_ints)) && !observed?.has("passing") ||
-            (Number(prior.rushing_yards) || Number(prior.rushing_tds)) && !observed?.has("rushing") ||
-            (Number(prior.receiving_yards) || Number(prior.receiving_tds) || Number(prior.receptions)) && !observed?.has("receiving") ||
-            Number(prior.fumbles_lost) && !observed?.has("fumbles")) throw new Error("NFL player boxscore incomplete");
-      }
-
-      for (const [espnPlayerId, stat] of aggregated.entries()) {
-        const player = playerByEspnId.get(espnPlayerId);
-        if (!player) continue;
-
+        if (player.position === "D/ST" || !player.nfl_player_id) continue;
+        const competitor = eventCompetitors.find(c =>
+          String(c.team?.abbreviation ?? "").toUpperCase() === String(player.team_abbreviation ?? "").toUpperCase());
+        if (!competitor) continue;
+        const teamId = String(competitor.team?.id ?? "");
+        const matchingTeamTotals = summary.boxscore.teams?.filter(team => String(team.team?.id ?? "") === teamId) ?? [];
+        const teamTotals = matchingTeamTotals.length === 1 ? matchingTeamTotals[0] : undefined;
         const row = statByPlayerId.get(player.id) ?? blankRow();
-        const observed = observedGroups.get(espnPlayerId);
-        if (observed?.has("passing")) {
-          row.passing_yards = stat.passing_yards; row.passing_tds = stat.passing_tds; row.passing_ints = stat.passing_ints;
-        }
-        if (observed?.has("rushing")) { row.rushing_yards = stat.rushing_yards; row.rushing_tds = stat.rushing_tds; }
-        if (observed?.has("receiving")) {
-          row.receiving_yards = stat.receiving_yards; row.receiving_tds = stat.receiving_tds; row.receptions = stat.receptions;
-        }
-        if (observed?.has("fumbles")) row.fumbles_lost = stat.fumbles_lost;
+        Object.assign(row, mergeNflPlayerCategories({
+          groups: categoryIndex.get(teamId)!, team: teamTotals,
+          playerId: String(player.nfl_player_id), eventId: String(event.id), prior: row,
+        }));
         row.fantasy_points =
           Math.round(
             calculateNflFantasyPoints(
@@ -415,16 +376,20 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
 
         const row = statByPlayerId.get(dstPlayer.id) ?? blankRow();
         const dstStats = aggregateEspnDstBoxscore(summary, espnTeamId);
-        if (!dstStats || summaryCompetitors.some(c => c.score === undefined || c.score === null))
-          throw new Error("NFL D/ST boxscore incomplete");
+        if (!dstStats || summaryCompetitors.some(c => c.score === undefined || c.score === null)) {
+          throw new NflBoxscoreValidationError({ eventId: String(event.id), playerId: String(dstPlayer.nfl_player_id),
+            category: "dst", reason: "missing_dst_boxscore_or_score" });
+        }
         const nextPoints = Math.round(calculateNflDstFantasyPoints(dstStats, nflScoringRules) * 10) / 10;
         const defense = summary.boxscore.teams?.find(t => String(t.team?.id ?? "") === espnTeamId);
         const opponent = summary.boxscore.teams?.find(t => String(t.team?.id ?? "") !== espnTeamId);
         const missingComponent = !defense || !opponent ||
           !["sacksYardsLost", "interceptions", "fumblesLost"].every(name => opponent.statistics?.some(s => s.name === name)) ||
           !defense.statistics?.some(s => s.name === "defensiveTouchdowns");
-        if (missingComponent && Number(row.fantasy_points) > nextPoints)
-          throw new Error("NFL D/ST boxscore incomplete");
+        if (missingComponent && Number(row.fantasy_points) > nextPoints) {
+          throw new NflBoxscoreValidationError({ eventId: String(event.id), playerId: String(dstPlayer.nfl_player_id),
+            category: "dst", reason: "missing_dst_component" });
+        }
         row.fantasy_points = nextPoints;
 
         applyGameStatus(row, statusInfo ?? eventStatus);
@@ -639,7 +604,14 @@ export async function refreshNflSlate(slateId: number, provider = new NflScoring
     if (metrics) metrics.failureCode = nflProviderFailureCode(error) ??
       (error instanceof Error && /boxscore incomplete/.test(error.message)
         ? "provider_response_malformed:summary:boxscore" : "scoring_database_failed:unexpected");
-    console.error("nfl_refresh_failed");
+    console.error("nfl_refresh_failed", {
+      slateId,
+      eventId: currentEventId,
+      playerId: null,
+      category: null,
+      reason: nflProviderFailureCode(error) ?? "unexpected_refresh_failure",
+      ...(error instanceof NflBoxscoreValidationError ? error.context : {}),
+    });
     return NextResponse.json(
       { error: "Unexpected server error while refreshing NFL stats." },
       { status: 500 }
