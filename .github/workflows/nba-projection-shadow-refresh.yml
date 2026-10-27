@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '23 10 * * *'
 permissions: { contents: read }
+concurrency:
+  group: nba-factual-observation-refresh
+  cancel-in-progress: false
 jobs:
   refresh:
     runs-on: ubuntu-latest

@@ -54,6 +54,9 @@ export function observationRecordFromNbaObservation(row: NbaObservation, localPl
     opponent_abbreviation: row.opponent.abbreviation, home_away: row.homeAway, minutes: row.minutes!, ...stats,
     source_url: row.provenance.source, provider_fetched_at: row.provenance.fetchedAt, provider_known_at: row.provenance.knownAt,
     normalization_version: NBA_PROJECTION_NORMALIZATION_VERSION as typeof NBA_PROJECTION_NORMALIZATION_VERSION };
+  // Identifies the acquired revision, including provenance. Semantic deduplication
+  // happens in append_nba_projection_observations; a facts-only UNIQUE hash would
+  // incorrectly discard a later correction that restores an earlier stat line.
   return { ...body, observation_hash: createHash("sha256").update(JSON.stringify(body)).digest("hex") };
 }
 
