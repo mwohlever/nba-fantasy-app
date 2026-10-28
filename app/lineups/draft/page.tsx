@@ -2,6 +2,7 @@ import { slateViewingOptions } from "@/lib/viewing-context/context";
 export const dynamic = "force-dynamic";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { loadNflPlayers } from "@/lib/nfl/playerCatalog.server";
 import AppNav from "@/components/AppNav";
 import SlateViewingBoundary from "@/components/lineups/SlateViewingBoundary";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
@@ -141,11 +142,13 @@ export default async function DraftLineupsPage({
     { data: slateTeams, error: slateTeamsError },
     allPlayerStatsResult,
   ] = await Promise.all([
-    supabaseAdmin
-      .from(playersTable)
-      .select(playersSelect)
-      .eq("is_active", true)
-      .order(playerOrderColumn, { ascending: true }),
+    sport === "nfl"
+      ? loadNflPlayers(playersSelect, { activeOnly: true })
+      : supabaseAdmin
+          .from(playersTable)
+          .select(playersSelect)
+          .eq("is_active", true)
+          .order(playerOrderColumn, { ascending: true }),
 
     supabaseAdmin
       .from("teams")
