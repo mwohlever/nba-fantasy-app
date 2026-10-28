@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { parseDraftSlateId } from "@/lib/lineups/draftContext";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { loadNflPlayers } from "@/lib/nfl/playerCatalog.server";
 import AppNav from "@/components/AppNav";
 import SlateViewingBoundary from "@/components/lineups/SlateViewingBoundary";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
@@ -127,10 +128,12 @@ export default async function ScoresLineupsPage({
     { data: slateTeams, error: slateTeamsError },
     { data: allPlayerStats, error: allPlayerStatsError },
   ] = await Promise.all([
-    supabaseAdmin
-      .from(playersTable)
-      .select(playersSelect)
-      .order(sport === "golf" ? "display_name" : "name", { ascending: true }),
+    sport === "nfl"
+      ? loadNflPlayers(playersSelect)
+      : supabaseAdmin
+          .from(playersTable)
+          .select(playersSelect)
+          .order(sport === "golf" ? "display_name" : "name", { ascending: true }),
     supabaseAdmin
       .from("teams")
       .select("id, name, user_id")

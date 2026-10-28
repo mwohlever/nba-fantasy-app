@@ -65,6 +65,7 @@ function setup(sport, {group = 'a', role = 'member', signedIn = true, enabled = 
     players: [{id:10,team_abbreviation:'BOS',is_active:true},{id:20,team_abbreviation:'LAL',is_active:true}],
   });
   const mocks = {'next/server':next, '@/lib/supabaseAdmin':{supabaseAdmin:db},
+    '@/lib/nfl/slateAvailability.server': {loadNflSlateAvailability:async slate=>({start:slate.start_date,end:slate.end_date,teamAbbreviations:empty?[]:['BAL'],availablePlayerIds:empty?[]:[slate.id*10]})},
     '@/lib/auth':{getCurrentUser:async()=>signedIn ? {id:'viewer',systemRole:role} : null},
     '@/lib/groups/context':{getGroupContextForUser:async()=>group ? {
       group:{id:group}, canAdministerGroup:role === 'commissioner', leagues:[{id:`l${group}`,isEnabled:enabled}],

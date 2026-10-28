@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { loadNflPlayers } from "@/lib/nfl/playerCatalog.server";
 import { requireSuperAdminApi } from "@/lib/requireAdminApi";
 import { cacheSportsHeadshots } from "@/scripts/lib/sportsHeadshotCache";
 import {
@@ -203,16 +204,14 @@ export async function POST() {
 
     stepStart = Date.now();
     const { data: existingPlayers, error: existingPlayersError } =
-      await supabaseAdmin
-        .from("players_nfl")
-        .select(
-          "id, name, nfl_player_id, position, team_abbreviation, is_active, is_playing_this_week"
-        );
+      await loadNflPlayers<ExistingPlayerNfl>(
+        "id, name, nfl_player_id, position, team_abbreviation, is_active, is_playing_this_week",
+      );
     timings.loadExistingPlayersMs = Date.now() - stepStart;
 
     if (existingPlayersError || !existingPlayers) {
       return NextResponse.json(
-        { error: "Failed to load existing players_nfl from Supabase." },
+        { error: existingPlayersError?.message ?? "Failed to load existing players_nfl from Supabase." },
         { status: 500 }
       );
     }

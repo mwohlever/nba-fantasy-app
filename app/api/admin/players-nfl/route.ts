@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { loadNflPlayers } from "@/lib/nfl/playerCatalog.server";
 import { requireSuperAdminApi } from "@/lib/requireAdminApi";
 
 const VALID_POSITIONS = new Set([
@@ -16,10 +17,9 @@ export async function GET() {
   if (authError) return authError;
 
   try {
-    const { data, error } = await supabaseAdmin
-      .from("players_nfl")
-      .select("id, name, position, is_active, team_abbreviation")
-      .order("name", { ascending: true });
+    const { data, error } = await loadNflPlayers(
+      "id, name, position, is_active, team_abbreviation",
+    );
 
     if (error) {
       return NextResponse.json(
