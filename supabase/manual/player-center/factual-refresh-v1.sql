@@ -11,7 +11,7 @@ do $guard$ begin
   if to_regprocedure('public.append_nba_projection_observations(jsonb)') is null then
     raise exception 'Existing semantic append RPC must be installed first';
   end if;
-  if (select md5(prosrc) from pg_proc where oid='public.append_nba_projection_observations(jsonb)'::regprocedure) is distinct from '9308a04b52fecc6993b7730490cf686a' then raise exception 'Reviewed semantic append RPC changed'; end if;
+  if (select md5(replace(prosrc,chr(13)||chr(10),chr(10))) from pg_proc where oid='public.append_nba_projection_observations(jsonb)'::regprocedure) is distinct from '9308a04b52fecc6993b7730490cf686a' then raise exception 'Reviewed semantic append RPC changed'; end if;
   if to_regclass('public.player_center_season_cache') is not null and
      obj_description(to_regclass('public.player_center_season_cache'),'pg_class') is distinct from '111 Sports Player Center raw season cache v1' then
     raise exception 'Unreviewed season cache exists';
@@ -84,12 +84,12 @@ grant select on public.player_center_nba_refresh_status to service_role;
 create or replace function public.player_center_nba_refresh_health(full_check boolean default false)
 returns jsonb language sql security definer set search_path=pg_catalog,public as $fn$
   select jsonb_build_object(
-    'append_source_hash',(select md5(prosrc) from pg_proc where oid='public.append_nba_projection_observations(jsonb)'::regprocedure),
+    'append_source_hash',(select md5(replace(prosrc,chr(13)||chr(10),chr(10))) from pg_proc where oid='public.append_nba_projection_observations(jsonb)'::regprocedure),
     'database_bytes',pg_database_size(current_database()),
     'cache_bytes',pg_total_relation_size('public.player_center_season_cache')+pg_total_relation_size('public.player_center_nba_refresh_status'),
     'history_bytes',pg_total_relation_size('public.nba_player_game_observation_versions'),
     'wal_bytes',(select coalesce(sum(size),0) from pg_ls_waldir()),
-    'schema_ok',(select md5(prosrc)='9308a04b52fecc6993b7730490cf686a' and prosecdef from pg_proc where oid='public.append_nba_projection_observations(jsonb)'::regprocedure) and (select count(*)=2 and bool_and(tgenabled='O' and ((tgname='nba_observation_versions_immutable' and tgfoid='public.reject_nba_projection_observation_version_mutation()'::regprocedure) or (tgname='nba_observation_versions_sync_current' and tgfoid='public.sync_nba_current_observation()'::regprocedure))) from pg_trigger where tgrelid='public.nba_player_game_observation_versions'::regclass and not tgisinternal)
+    'schema_ok',(select md5(replace(prosrc,chr(13)||chr(10),chr(10)))='9308a04b52fecc6993b7730490cf686a' and prosecdef from pg_proc where oid='public.append_nba_projection_observations(jsonb)'::regprocedure) and (select count(*)=2 and bool_and(tgenabled='O' and ((tgname='nba_observation_versions_immutable' and tgfoid='public.reject_nba_projection_observation_version_mutation()'::regprocedure) or (tgname='nba_observation_versions_sync_current' and tgfoid='public.sync_nba_current_observation()'::regprocedure))) from pg_trigger where tgrelid='public.nba_player_game_observation_versions'::regclass and not tgisinternal)
       and (select count(*)=4 and bool_and(indisvalid and indisready) from pg_index where indrelid='public.nba_player_game_observation_versions'::regclass)
       and (select count(*)=2 and bool_and(relrowsecurity) from pg_class where oid in ('public.nba_player_game_observation_versions'::regclass,'public.nba_player_game_current_observations'::regclass))
       and not exists(select 1 from pg_index where indrelid in ('public.nba_player_game_observation_versions'::regclass,'public.nba_player_game_current_observations'::regclass) and not(indisvalid and indisready))

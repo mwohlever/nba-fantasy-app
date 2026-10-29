@@ -45,6 +45,61 @@ pgtest('manual installation is guarded/idempotent; public roles cannot publish o
   assert.equal(sql("select has_table_privilege('service_role','player_center_season_cache','insert')"), 'f');
   assert.equal(sql("select has_table_privilege('service_role','player_center_nba_refresh_status','update')"), 'f');
 });
+
+const appendMetadata = () => JSON.parse(sql("select json_build_object('source',prosrc,'acl',proacl,'owner',proowner,'definer',prosecdef,'settings',proconfig) from pg_proc where oid='public.append_nba_projection_observations(jsonb)'::regprocedure"));
+const appendDefinition = source => `create or replace function public.append_nba_projection_observations(observations jsonb) returns integer language plpgsql security definer set search_path=pg_catalog,public as $append_source$${source}$append_source$;`;
+for (const ending of ['LF', 'CRLF']) {
+  pgtest(`${ending} approved RPC passes installation and health without changing source, permissions or correction history`, () => {
+    const original = appendMetadata();
+    try {
+      const source = original.source.replace(/\r\n/g, '\n').replace(/\n/g, ending === 'CRLF' ? '\r\n' : '\n');
+      sql(appendDefinition(source));
+      const before = appendMetadata();
+      assert.deepEqual(before, { ...original, source });
+      assert.equal(sql("select md5(prosrc) from pg_proc where oid='public.append_nba_projection_observations(jsonb)'::regprocedure"),
+        ending === 'CRLF' ? '94ebfcc90da6cea8a06735eff4f7de08' : '9308a04b52fecc6993b7730490cf686a');
+      sql(installation);
+      const health = JSON.parse(sql('select public.player_center_nba_refresh_health(false)'));
+      assert.equal(health.append_source_hash, '9308a04b52fecc6993b7730490cf686a');
+      assert.equal(health.schema_ok, true);
+      assert.deepEqual(appendMetadata(), before, 'Fingerprint normalization must not rewrite the append RPC or its privileges');
+      const value = input(1), expected = build(value).observations.map(row => row.observation_hash);
+      assert.equal(JSON.parse(sql(publish(value))).appended, 2);
+      const hashes = () => JSON.parse(sql('select json_agg(observation_hash order by id) from nba_player_game_observation_versions'));
+      assert.deepEqual(hashes(), expected, 'Input observation hashes remain unchanged');
+      const checksum = current();
+      assert.equal(JSON.parse(sql(publish(input(2)))).appended, 0);
+      assert.equal(current(), checksum);
+      assert.deepEqual(hashes(), expected);
+      assert.equal(JSON.parse(sql(publish(pointsChange(input(3))))).appended, 1);
+      assert.equal(JSON.parse(sql(publish(input(4)))).appended, 1);
+      assert.equal(count(), 4);
+      assert.deepEqual(hashes().slice(0, 2), expected, 'Corrections and A-B-A reversals preserve original history');
+      assert.deepEqual(appendMetadata(), before);
+    } finally { sql(appendDefinition(original.source)); }
+  });
+  pgtest(`${ending} modified RPC fails installation, health and publication; other whitespace is not ignored`, () => {
+    const original = appendMetadata(), source = original.source.replace(/\r\n/g, '\n');
+    const changed = source.replace('incoming.provider_fetched_at >= current_row.provider_fetched_at', 'incoming.provider_fetched_at > current_row.provider_fetched_at');
+    assert.notEqual(changed, source);
+    try {
+      for (const body of [changed, source + ' ']) {
+        sql(appendDefinition(body.replace(/\n/g, ending === 'CRLF' ? '\r\n' : '\n')));
+        const before = appendMetadata();
+        assert.throws(() => sql(installation), /Reviewed semantic append RPC changed/);
+        const health = JSON.parse(sql('select public.player_center_nba_refresh_health(false)'));
+        assert.notEqual(health.append_source_hash, '9308a04b52fecc6993b7730490cf686a');
+        assert.equal(health.schema_ok, false);
+        assert.throws(() => sql(publish(input(1))), /integrity gate failed/);
+        assert.equal(count(), 0);
+        assert.equal(sql('select count(*) from player_center_season_cache'), '0');
+        assert.equal(sql('select count(*) from player_center_nba_refresh_status'), '0');
+        assert.deepEqual(appendMetadata(), before);
+      }
+    } finally { sql(appendDefinition(original.source)); }
+  });
+}
+
 pgtest('repeat checks advance cache/status but append zero versions and preserve current rows', () => {
   assert.equal(JSON.parse(sql(publish(input(1)))).appended, 2); const checksum = current();
   const before = sql('select checked_at from player_center_season_cache'), gamesBefore=sql('select games from player_center_season_cache');
