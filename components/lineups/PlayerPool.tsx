@@ -4,6 +4,7 @@ import { compareNflStats, nflPositionStats, nflStatFields, nflStatValue, type Nf
 import { useEffect, useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+import DraftPlayerCenter from "@/components/player-center/DraftPlayerCenter";
 import GolfCompareModal from "@/components/lineups/GolfCompareModal";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import { compareDraftProjections, type DraftProjection, withHistoricalFantasyAverage } from "@/lib/lineups/draftProjectionTypes";
@@ -15,7 +16,7 @@ import type {
   TargetDraftSlot,
 } from "@/components/lineups/types";
 
-type PlayerPoolProps = {
+export type PlayerPoolProps = {
   players: Player[];
   filteredPlayers: Player[];
   searchTerm: string;
@@ -47,6 +48,8 @@ type PlayerPoolProps = {
   inactivePill: string;
   rosterSlots?: RosterSlotConfig[];
   selectedSeason: string;
+  centerSeason?: number;
+  slateId?: number | null;
   nflSeason?: string;
   // Only Draft Order supplies this fixed-target interaction.
   speedEntry?: { onSelect: (player: Player) => Promise<boolean>; onResearch: (player: Player) => void };
@@ -313,7 +316,7 @@ function resolveDraftProjection(
   return withHistoricalFantasyAverage(playerProjections[playerId], playerAverageMap.get(playerId));
 }
 
-export default function PlayerPool({
+function LegacyPlayerPool({
   players,
   filteredPlayers,
   searchTerm,
@@ -4089,4 +4092,11 @@ export default function PlayerPool({
       </div>
     </section>
   );
+}
+
+export default function PlayerPool(props: PlayerPoolProps) {
+  const { selectedSport } = useSelectedSport();
+  return selectedSport === "nba" || selectedSport === "nfl"
+    ? <DraftPlayerCenter {...props} sport={selectedSport} />
+    : <LegacyPlayerPool {...props} />;
 }

@@ -10,7 +10,6 @@ import {
   teamBelongsToGroup,
 } from "@/lib/groups/context";
 import { notifyNextDrafter } from "@/lib/draftNotifications";
-import { getPlayerProjectionsForSeason } from "@/lib/playerProjections";
 import {
   assignPlayersToRosterSlots,
   canPlayerFillRosterSlot,
@@ -74,11 +73,6 @@ function normalizeSport(value: string | null | undefined): Sport {
   if (value === "nfl") return "nfl";
   if (value === "golf") return "golf";
   return "nba";
-}
-
-function getSlateSeason(date: string | null | undefined) {
-  const year = date?.slice(0, 4);
-  return year && /^\d{4}$/.test(year) ? year : "2026";
 }
 
 function getDefaultRosterSlots(
@@ -308,7 +302,7 @@ export async function GET(request: NextRequest) {
       await supabaseAdmin
         .from("lineup_players")
         .select(
-          "lineup_id, player_id, projected_fantasy_points, roster_slot_position, roster_slot_index",
+          slateAccess.slate.sport === "golf" ? "lineup_id, player_id, projected_fantasy_points, roster_slot_position, roster_slot_index" : "lineup_id, player_id, roster_slot_position, roster_slot_index",
         )
         .in("lineup_id", lineupIds);
 
@@ -324,7 +318,7 @@ export async function GET(request: NextRequest) {
     }
 
     const safeLineupPlayers =
-      (lineupPlayers ?? []) as LineupPlayerRow[];
+      (lineupPlayers ?? []) as unknown as LineupPlayerRow[];
 
     const grouped = safeLineups.map((lineup) => {
       const lineupPlayerRows = safeLineupPlayers.filter(
@@ -332,20 +326,10 @@ export async function GET(request: NextRequest) {
           lineupPlayer.lineup_id === lineup.id,
       );
 
-      const hasCompleteProjectionSnapshot =
-        lineupPlayerRows.length > 0 &&
-        lineupPlayerRows.every(
-          (lineupPlayer) =>
-            lineupPlayer.projected_fantasy_points !== null &&
-            Number.isFinite(
-              Number(
-                lineupPlayer.projected_fantasy_points,
-              ),
-            ),
-        );
-
       return {
         team_id: lineup.team_id,
+        ...(slateAccess.slate.sport === "golf" ? { pregame_projected_points: lineupPlayerRows.length > 0 && lineupPlayerRows.every(row => row.projected_fantasy_points != null && Number.isFinite(Number(row.projected_fantasy_points)))
+          ? Number(lineupPlayerRows.reduce((sum,row) => sum + Number(row.projected_fantasy_points),0).toFixed(1)) : null } : {}),
         player_ids:
           lineupPlayerRows.map(
             (lineupPlayer) =>
@@ -368,22 +352,6 @@ export async function GET(request: NextRequest) {
             }),
           ),
 
-        pregame_projected_points:
-          hasCompleteProjectionSnapshot
-            ? Number(
-                lineupPlayerRows
-                  .reduce(
-                    (sum, lineupPlayer) =>
-                      sum +
-                      Number(
-                        lineupPlayer.projected_fantasy_points ??
-                          0,
-                      ),
-                    0,
-                  )
-                  .toFixed(1),
-              )
-            : null,
       };
     });
 
@@ -888,9 +856,6 @@ export async function POST(request: Request) {
       if (!Array.isArray(body.expectedPlayerIds) || body.expectedPlayerIds.some(id => !Number.isSafeInteger(id) || id <= 0)) {
         return NextResponse.json({ error: "Refresh the app before drafting; the current roster version is required." }, { status: 409 });
       }
-      const projectionResult = sport === "nba" && isSingleNewDraftPick
-        ? await getPlayerProjectionsForSeason(getSlateSeason(slate.start_date ?? slate.date)) : null;
-      const projection = projectionResult?.projections[addedPlayerIds[0]];
       let mutation;
       try {
         let correction = false;
@@ -921,8 +886,6 @@ export async function POST(request: Request) {
           teamId, actorId: currentUser.id, desiredIds: uniquePlayerIds, expectedIds: body.expectedPlayerIds,
           correction,
           requestedSlot: requestedRosterSlot,
-          projection: projection ? { projected_fantasy_points: projection.projection, projection_confidence: projection.confidence,
-            projection_source: projection.source, projected_at: projection.projection == null ? null : new Date().toISOString() } : null,
         });
       } catch (error) {
         return NextResponse.json({ error: error instanceof Error ? error.message : "Draft could not be saved." }, { status: 409 });

@@ -1,7 +1,7 @@
 /**
  * ESPN labels NBA seasons by their ending year. Keep the completed season
- * through the offseason, then roll forward on October 1 UTC. The worker keeps
- * fetching this season and its predecessor for new games and stat corrections.
+ * through the offseason, then roll forward on October 1 UTC. The factual worker
+ * acquires this season by default; previous-season corrections are an explicit mode.
  * An explicit override remains available for reviewed historical acquisitions.
  */
 function resolveNbaObservationSeason({ now = new Date(), override } = {}) {

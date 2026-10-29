@@ -8409,3 +8409,162 @@ html
   .bracket-topology-preview .text-slate-500 { color: #475569 !important; }
   .bracket-topology-preview .bg-slate-950\/40 { background: #f8fafc !important; }
 }
+
+/* Shared NBA/NFL Player Center. Scoped so existing games and draft boards retain their styles. */
+.pc { --pc-bg:#fff; --pc-subtle:#f3f5f9; --pc-line:#e2e7ef; --pc-text:#142139; --pc-muted:#59677c; --pc-accent:#b64a12; color:var(--pc-text); font-size:14px; line-height:1.45; min-width:0; }
+.pc[data-sport="nfl"] { --pc-accent:#1466b8; }
+.dark .pc { --pc-bg:#111b2b; --pc-subtle:#182438; --pc-line:#2b3a50; --pc-text:#f0f4fa; --pc-muted:#a9b7cb; --pc-accent:#ffab68; }
+.dark .pc[data-sport="nfl"] { --pc-accent:#79baff; }
+.pc button,.pc input,.pc select { font:inherit; }
+.pc button { cursor:pointer; }
+.pc button:disabled { cursor:wait; opacity:.5; }
+.pc button:focus-visible,.pc input:focus-visible,.pc select:focus-visible,.pc [tabindex]:focus-visible { outline:2px solid var(--pc-accent); outline-offset:3px; }
+.pc input,.pc select { color:var(--pc-text); background:var(--pc-bg); border:1px solid var(--pc-line); border-radius:7px; padding:9px 10px; min-height:40px; max-width:100%; }
+.pc label { display:flex; flex-direction:column; gap:5px; color:var(--pc-muted); font-size:11px; font-weight:650; letter-spacing:.02em; }
+.pc small { display:block; font-size:10px; font-weight:400; color:var(--pc-muted); }
+.pc-profile { background:var(--pc-bg); border:1px solid var(--pc-line); border-radius:14px; overflow:hidden; }
+.pc-header { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; padding:24px 22px 18px; }
+.pc-identity { display:flex; align-items:center; gap:16px; min-width:0; }
+.pc-name { min-width:0; }
+.pc h2 { font-size:25px; line-height:1.15; font-weight:800; margin:5px 0 8px; letter-spacing:-.03em; }
+.pc-name p { margin:3px 0; color:var(--pc-muted); font-size:12px; }
+.pc .pc-recent { color:var(--pc-text); font-size:11px; margin-top:9px; }
+.pc-eyebrow { color:var(--pc-accent); font-size:10px; font-weight:800; letter-spacing:.12em; }
+.pc-headshot { flex-shrink:0; background:var(--pc-subtle); border-radius:50%; }
+.pc-season-control { min-width:95px; flex-shrink:0; }
+.pc-season-control > span { display:block; color:var(--pc-muted); font-size:10px; text-align:right; margin-top:5px; }
+.pc-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-block:1px solid var(--pc-line); background:var(--pc-subtle); padding:14px 8px; }
+.pc-summary > div { padding:0 14px; border-right:1px solid var(--pc-line); }
+.pc-summary > div:last-child { border:0; }
+.pc-summary span { display:block; font-size:10px; font-weight:700; color:var(--pc-muted); }
+.pc-summary strong { display:block; font-size:26px; letter-spacing:-.04em; font-variant-numeric:tabular-nums; margin:3px 0; }
+.pc-summary em { font-style:normal; font-size:15px; color:var(--pc-muted); }
+.pc-tabs { display:flex; gap:8px; padding:0 18px; border-bottom:1px solid var(--pc-line); }
+.pc-tabs button { flex:1; background:transparent; border-bottom:3px solid transparent; padding:15px 6px 12px; font-size:13px; font-weight:750; color:var(--pc-muted); }
+.pc-tabs button[aria-selected="true"] { border-color:var(--pc-accent); color:var(--pc-accent); }
+.pc-panel { padding:17px 20px 20px; }
+.pc-source { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--pc-muted); margin-bottom:12px; }
+.pc-dot { width:6px; height:6px; flex-shrink:0; border-radius:50%; background:#8993a5; }
+.pc-dot-fresh { background:#16a476; }.pc-dot-stale { background:#dd9c30; }
+.pc-notice { border-left:3px solid var(--pc-accent); background:var(--pc-subtle); color:var(--pc-muted); font-size:11px; padding:9px 11px; margin:12px 0; }
+.pc-window,.pc-availability { display:flex; flex-wrap:wrap; gap:3px; }
+.pc-window button,.pc-availability button { padding:7px 12px; min-height:34px; border-radius:6px; color:var(--pc-muted); font-size:11px; font-weight:700; }
+.pc-window button[aria-pressed="true"],.pc-availability button[aria-pressed="true"] { background:var(--pc-subtle); color:var(--pc-accent); }
+.pc-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(86px,1fr)); gap:12px; padding:17px 0; border-bottom:1px solid var(--pc-line); }
+.pc-metrics span { color:var(--pc-muted); font-size:10px; font-weight:700; }
+.pc-metrics strong { display:block; font-size:23px; font-weight:750; letter-spacing:-.035em; font-variant-numeric:tabular-nums; }
+.pc-section-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:19px 0 11px; }
+.pc-section-title h3 { font-size:14px; font-weight:750; margin:0; }.pc-section-title > span { font-size:10px; color:var(--pc-muted); }
+.pc-section-title select { font-size:11px; }
+.pc-table-scroll { overflow-x:auto; overscroll-behavior-x:contain; max-width:100%; border-block:1px solid var(--pc-line); scrollbar-width:thin; }
+.pc-table { width:100%; border-collapse:separate; border-spacing:0; text-align:right; font-size:12px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.pc-table th,.pc-table td { padding:11px 13px; border-bottom:1px solid var(--pc-line); }
+.pc-table thead th { font-size:10px; font-weight:700; background:var(--pc-subtle); color:var(--pc-muted); }
+.pc-table tbody th { text-align:left; font-weight:650; }
+.pc-table tbody tr:last-child > * { border-bottom:0; }
+.pc-table .pc-sticky { position:sticky; left:0; z-index:1; background:var(--pc-bg); border-right:1px solid var(--pc-line); text-align:left; min-width:112px; }
+.pc-table thead .pc-sticky { background:var(--pc-subtle); z-index:2; }
+.pc-table tbody tr[data-selected="true"] > * { background:var(--pc-subtle); }
+.pc-fp { font-weight:750; color:var(--pc-accent); }
+.pc-status { font-size:10px; color:var(--pc-muted); }.pc-status-live { color:#e14948; font-weight:750; }
+.pc-footnote { color:var(--pc-muted); font-size:10px; margin:12px 0 0; line-height:1.65; }
+.pc-empty { text-align:center; padding:35px 20px; color:var(--pc-muted); }
+.pc-empty strong { color:var(--pc-text); display:block; font-size:15px; }.pc-empty p { max-width:430px; margin:8px auto; font-size:12px; line-height:1.6; }
+.pc-empty button,.pc-text-button { color:var(--pc-accent); font-size:12px; padding:10px 0; font-weight:700; }
+.pc-season-section h4 { font-size:12px; font-weight:750; text-transform:capitalize; margin:20px 0 10px; color:var(--pc-accent); }
+.pc-scoring-basis { color:var(--pc-muted); font-size:11px; }
+.pc-breakdown > div { display:grid; grid-template-columns:1.3fr 1fr 55px; gap:8px; align-items:center; border-bottom:1px solid var(--pc-line); padding:10px 0; font-size:12px; }.pc-breakdown > div > :nth-child(2) { color:var(--pc-muted); font-size:11px; }.pc-breakdown strong { text-align:right; font-variant-numeric:tabular-nums; }
+.pc-diagnostics { margin-top:20px; color:var(--pc-muted); font-size:10px; }.pc-diagnostics summary { cursor:pointer; }.pc-diagnostics ul { padding-left:15px; margin-top:8px; }
+.pc-fixture { background:#e8efff; color:#224b8d; font-size:10px; line-height:1.5; font-weight:750; letter-spacing:.025em; padding:9px 15px; }
+.dark .pc-fixture { background:#172f53; color:#b2d0ff; }
+.pc-loading { padding:40px 0; text-align:center; font-size:12px; color:var(--pc-muted); }.pc-loading > span { display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--pc-accent); margin-right:5px; }
+.pc-sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+.pc-browser { background:var(--pc-bg); border:1px solid var(--pc-line); border-radius:12px; padding:15px; overflow:hidden; }
+.pc-browser .pc-fixture { margin:-15px -15px 15px; }
+.pc-browser-controls { display:grid; grid-template-columns:minmax(150px,1.4fr) minmax(80px,.6fr) minmax(120px,1fr) auto; gap:10px; align-items:end; }
+.pc-browser-controls input,.pc-browser-controls select { width:100%; }
+.pc-direction { border:1px solid var(--pc-line); border-radius:7px; min-height:40px; padding:8px; font-size:11px !important; }
+.pc-browser-subcontrols { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.pc-sort-state { display:flex; justify-content:space-between; gap:10px; font-size:10px; color:var(--pc-muted); padding:9px 0; }.pc-sort-state strong { color:var(--pc-text); }
+.pc .pc-player-button.draft-player-card { display:flex; flex-direction:row; align-items:center; gap:9px; background:transparent; border:0; border-radius:0; padding:0; margin:0; box-shadow:none; min-height:36px; width:auto; text-align:left; color:var(--pc-text); font-size:12px; font-weight:700; transform:none; }
+.pc-player-button > span { display:block; }.pc-player-button small { margin-top:2px; }.pc-pool-table .pc-sticky { min-width:190px; max-width:230px; }.pc-pool-table th,.pc-pool-table td { padding:10px; }.pc-info { padding:7px; color:var(--pc-accent); font-size:11px !important; font-weight:700; }
+.pc-modal-overlay { position:fixed; inset:0; z-index:12000; background:rgba(4,10,24,.76); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; padding:20px; }
+.pc-modal-shell { display:flex; flex-direction:column; width:100%; max-width:900px; max-height:94dvh; min-height:0; background:var(--pc-bg); border:1px solid var(--pc-line); border-radius:16px; overflow:hidden; box-shadow:0 25px 100px #0007; }
+.pc-modal-top { display:flex; justify-content:space-between; align-items:center; padding:7px 15px 7px 22px; border-bottom:1px solid var(--pc-line); flex-shrink:0; color:var(--pc-muted); font-size:9px; letter-spacing:.12em; font-weight:750; }.pc-modal-top button { font-size:27px; line-height:1; width:36px; height:36px; border-radius:50%; background:var(--pc-subtle); }
+.pc-modal-body { overflow-y:auto; min-height:0; overscroll-behavior:contain; }.pc-modal-body .pc-profile { border:0; border-radius:0; }.pc-modal-footer { padding:12px 20px; flex-shrink:0; max-height:32dvh; overflow:auto; border-top:1px solid var(--pc-line); background:var(--pc-bg); }
+.pc-primary-action { background:var(--pc-accent); color:var(--pc-bg); border-radius:8px; padding:11px 18px; width:100%; font-size:13px !important; font-weight:750; }.pc-team-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }.pc-team-actions button { display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--pc-line); border-radius:8px; text-align:left; }.pc-team-actions strong { font-size:12px; }
+.pc-history-page { max-width:1500px; padding:15px 22px 50px; margin:auto; }.pc-page-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:25px 0; background:transparent; }.pc-page-heading h1 { font-size:29px; font-weight:800; letter-spacing:-.04em; }.pc-page-heading p { color:var(--pc-muted); font-size:12px; margin-top:5px; }.pc-history-layout { display:grid; grid-template-columns:minmax(320px,.85fr) minmax(0,1.4fr); gap:22px; align-items:start; }.pc-history-list,.pc-history-detail { min-width:0; }.pc-history-list .pc-browser-controls { grid-template-columns:1fr 1fr; }.pc-history-list .pc-search { grid-column:1 / -1; }.pc-history-season { padding:0 0 12px; background:transparent; }.pc-history-season label { flex-direction:row; align-items:center; justify-content:space-between; }.pc-history-welcome { margin-top:50px; background:transparent; }.pc-history-return { padding:12px 20px 0; }
+.pc-preview { max-width:1250px; margin:0 auto; padding:22px; }.pc-preview-layout { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:20px; align-items:start; }.pc-preview-controls { display:flex; flex-wrap:wrap; gap:10px; margin:12px 0 20px; }.pc-preview-controls button { border:1px solid var(--pc-line); border-radius:7px; padding:10px 16px; }.pc-preview-controls button[aria-pressed="true"] { color:var(--pc-accent); border-color:var(--pc-accent); }.pc-preview .pc-browser-controls { grid-template-columns:1fr 1fr; }
+@media(max-width:1000px) { .pc-history-layout,.pc-preview-layout { grid-template-columns:minmax(0,1fr); }.pc-history-welcome { margin-top:0; } }
+@media(max-width:600px) {
+ .pc-header { padding:18px 14px 15px; gap:8px; flex-wrap:wrap; }.pc-identity { gap:12px; }.pc h2 { font-size:23px; }.pc .pc-headshot { width:64px; height:64px; }.pc-season-control { display:flex; align-items:center; justify-content:space-between; width:100%; }.pc-season-control label { flex-direction:row; align-items:center; gap:10px; }.pc-season-control select { font-size:11px; min-height:34px; padding:5px 8px; }.pc-season-control > span { margin:0; }.pc-name { flex:1; }.pc-recent { max-width:225px; }.pc-panel { padding:14px 12px; }.pc-summary { padding:12px 0; }.pc-summary > div { padding:0 10px; }.pc-summary strong { font-size:23px; }.pc-summary span { font-size:9px; }.pc-summary small { font-size:9px; }.pc-tabs { padding:0 8px; }.pc-tabs button { font-size:12px; }.pc-metrics { gap:10px; grid-template-columns:repeat(2,minmax(0,1fr)); }.pc-table th,.pc-table td { padding:10px; }.pc-section-title { flex-wrap:wrap; }.pc-source { font-size:9px; flex-wrap:wrap; }.pc-breakdown > div { font-size:11px; grid-template-columns:1.1fr 1fr 45px; }.pc-browser { padding:12px; }.pc-browser .pc-fixture { margin:-12px -12px 12px; }.pc-browser-controls { grid-template-columns:1fr 1fr; gap:8px; }.pc-search { grid-column:1 / -1; }.pc-direction { grid-column:2; }.pc-browser-subcontrols { gap:10px; }.pc-pool-table .pc-sticky { min-width:165px; max-width:190px; }.pc-player-button > span { max-width:120px; white-space:normal; }.pc-sort-state { align-items:flex-start; }.pc-sort-state strong { max-width:80%; }.pc-modal-overlay { padding:0; align-items:flex-end; }.pc-modal-shell { max-height:100dvh; border-radius:14px 14px 0 0; }.pc-modal-footer { padding:10px 12px; }.pc-team-actions { grid-template-columns:1fr; }.pc-history-page { padding:10px 12px 30px; }.pc-page-heading { flex-wrap:wrap; padding:18px 0; }.pc-page-heading h1 { font-size:26px; }.pc-history-list .pc-browser-controls { grid-template-columns:1fr 1fr; }.pc-preview { padding:14px 10px 40px; }
+}
+.pc-history-list .pc-table-scroll { max-height:65dvh; overflow:auto; }
+.pc-history-list .pc-table thead th { position:sticky; top:0; z-index:2; }
+.pc-history-list .pc-table thead .pc-sticky { z-index:3; }
+@media(max-width:1000px) { .pc-history-layout[data-profile-open="true"] > .pc-history-list { display:none; } }
+.pc-preview,.pc-history-page { width:100%; box-sizing:border-box; }
+.pc-name h2,.pc-player-button > span { overflow-wrap:anywhere; }
+@media(max-width:600px) { .pc-history-page { padding-bottom:calc(110px + env(safe-area-inset-bottom)); } }
+
+/* Compact secondary Player Center views; header, modal shell and game-log tables stay shared. */
+.pc-expand { margin:12px 0; font-size:11px; color:var(--pc-muted); }
+.pc-expand > summary { cursor:pointer; padding:10px 0; font-weight:650; color:var(--pc-text); }
+.pc-expand > summary:focus-visible { outline:2px solid var(--pc-accent); outline-offset:3px; border-radius:3px; }
+.pc-coverage { margin:8px 0 12px; border-block:1px solid var(--pc-line); }
+.pc-coverage > summary { display:list-item; font-size:10px; color:var(--pc-muted); padding:8px 0; }
+.pc-coverage-action { color:var(--pc-accent); margin-left:10px; font-weight:700; white-space:nowrap; }
+.pc-coverage-content { padding:0 0 10px; font-size:11px; line-height:1.6; }
+.pc-coverage-content p + p { margin-top:6px; }
+.pc-coverage-content ul { padding-left:17px; margin:8px 0 0; }
+.pc-season-section { margin:16px 0; }
+.pc-season-section h4 { margin:0 0 8px; }
+.pc-season-table th,.pc-season-table td { padding:10px 12px; }
+.pc-season-table .pc-sticky { min-width:96px; }
+.pc-season-table thead small { margin-top:2px; font-size:9px; }
+.pc-season-details { border-top:1px solid var(--pc-line); margin-top:18px; }
+.pc-season-details > summary { color:var(--pc-accent); }
+.pc-season-details > div { padding-top:2px; }
+/* Actual fantasy trends: responsive SVG with HTML keyboard and touch targets. */
+.pc-trend-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin:14px 0; }
+.pc-trend-heading h3 { font-size:14px; font-weight:750; }
+.pc-trend-metrics { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:12px; }
+.pc-trend-metrics dt { color:var(--pc-muted); font-size:10px; min-height:28px; }
+.pc-trend-metrics dd { font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.2; }
+.pc-trend-metrics > div:first-child dd { color:var(--pc-accent); }
+.pc-trend-sample { color:var(--pc-muted); font-size:10px; margin:9px 0 16px; }
+.pc-trend-legend { display:flex; flex-wrap:wrap; gap:14px; font-size:10px; color:var(--pc-muted); margin-bottom:7px; }
+.pc-trend-legend span { display:flex; align-items:center; gap:5px; }
+.pc-trend-legend i { width:14px; height:0; border-top:2px solid var(--pc-accent); }
+.pc-trend-legend .pc-trend-dash { border-top-style:dashed; border-color:var(--pc-muted); }
+.pc-trend-chart { position:relative; padding-left:35px; min-width:0; }
+.pc-trend-axis { position:absolute; top:0; left:0; width:28px; height:200px; color:var(--pc-muted); font-size:10px; text-align:right; font-variant-numeric:tabular-nums; }
+.pc-trend-axis span { position:absolute; right:0; transform:translateY(-50%); }
+.pc-trend-plot { height:200px; position:relative; touch-action:pan-y; }
+.pc-trend-plot svg { display:block; overflow:visible; }
+.pc-trend-grid { stroke:var(--pc-line); stroke-width:1; vector-effect:non-scaling-stroke; }
+.pc-trend-line { fill:none; stroke:var(--pc-accent); stroke-width:2; vector-effect:non-scaling-stroke; stroke-linejoin:round; }
+.pc-trend-average { stroke:var(--pc-muted); stroke-width:1.5; stroke-dasharray:5 5; vector-effect:non-scaling-stroke; }
+.pc .pc-trend-point { position:absolute; transform:translate(-50%,-50%); height:34px; padding:0; border:0; border-radius:5px; background:transparent; display:grid; place-items:center; }
+.pc-trend-point span { width:7px; height:7px; border-radius:50%; background:var(--pc-accent); box-shadow:0 0 0 2px var(--pc-bg); pointer-events:none; }
+.pc-trend-point[aria-pressed="true"] span { box-shadow:0 0 0 3px var(--pc-bg),0 0 0 5px var(--pc-accent); }
+.pc-trend-missing span { background:var(--pc-bg); color:var(--pc-muted); width:16px; height:18px; border-radius:3px; font-size:17px; line-height:16px; }
+.pc-trend-labels { display:flex; justify-content:space-between; gap:8px; padding-top:32px; font-size:9px; color:var(--pc-muted); min-height:48px; }
+.pc-trend-labels span { min-width:0; max-width:45%; }
+.pc-trend-labels span:last-child:not(:first-child) { text-align:right; }
+.pc-trend-labels span:nth-child(2):not(:last-child) { text-align:center; }
+.pc-trend-detail { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:7px; background:var(--pc-subtle); border-radius:7px; padding:11px 12px; margin:15px 0 8px; font-size:11px; }
+.pc-trend-detail strong { color:var(--pc-accent); font-size:16px; font-weight:750; font-variant-numeric:tabular-nums; }
+.pc-trend-detail small { flex-basis:100%; }
+.pc-trend .pc-scoring-basis { margin-top:13px; font-size:10px; line-height:1.5; }
+@media(max-width:600px) {
+ .pc-season-table th,.pc-season-table td { padding:9px 10px; }
+ .pc-trend-heading { gap:6px; }.pc-trend-heading .pc-window button { padding:7px 9px; }
+ .pc-trend-metrics { gap:8px; }.pc-trend-metrics dd { font-size:23px; }
+}
+
+/* Keep every game identifier visible while fitting more real box scores into the log. */
+.pc-game-log th,.pc-game-log td { padding:7px 10px; }
+.pc-game-log .pc-sticky { min-width:0; width:1%; }
+.pc-game-identifier { white-space:nowrap; }
+.pc-game-log .pc-fp small { display:inline; margin-left:6px; }

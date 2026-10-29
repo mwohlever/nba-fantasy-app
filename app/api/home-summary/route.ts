@@ -1,7 +1,6 @@
 import { parseViewingValue, slateViewingOptions } from "@/lib/viewing-context/context";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { getPlayerProjectionMapForSeason } from "@/lib/playerProjections";
 import { getGolfHomeSummary } from "@/lib/home/golfHomeSummary";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveLeagueForSport } from "@/lib/groups/context";
@@ -60,7 +59,6 @@ type Lineup = {
 type LineupPlayer = {
   lineup_id: number;
   player_id: number;
-  projected_fantasy_points: number | null;
 };
 
 type Player = {
@@ -81,12 +79,6 @@ type PlayerSlateStat = {
   game_clock: string | null;
 };
 
-type NbaSeasonAverage = {
-  season: string;
-  nba_player_id: number;
-  fantasy_points: number | null;
-};
-
 function formatSlateLabel(startDate: string, endDate: string) {
   return startDate === endDate ? startDate : `${startDate} - ${endDate}`;
 }
@@ -97,66 +89,6 @@ function roundTo(value: number, digits = 2) {
 
 function getSeasonFromDate(dateString: string) {
   return new Date(`${dateString}T00:00:00`).getFullYear();
-}
-
-function round1(value: number) {
-  return Math.round(value * 10) / 10;
-}
-
-function getNbaSeason(appSeason: string) {
-  const year = Number(appSeason);
-  if (!Number.isFinite(year)) return "2025-26";
-  return `${year - 1}-${String(year).slice(-2)}`;
-}
-
-function parseNbaIsoClockMinutes(gameClock?: string | null) {
-  if (!gameClock) return null;
-
-  const match = gameClock.match(/^PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/);
-  if (!match) return null;
-
-  const minutes = Number(match[1] ?? 0);
-  const seconds = Number(match[2] ?? 0);
-
-  return minutes + seconds / 60;
-}
-
-function parseStatusTextMinutesRemaining(statusText?: string | null) {
-  if (!statusText) return null;
-
-  const trimmed = statusText.trim();
-  if (/final/i.test(trimmed)) return 0;
-
-  const match = trimmed.match(/^Q(\d+)\s+(?:(\d*)?:)?(\d+(?:\.\d+)?)$/i);
-  if (!match) return null;
-
-  const period = Number(match[1]);
-  const minutes = Number(match[2] || 0);
-  const seconds = Number(match[3] ?? 0);
-
-  const clockMinutes = minutes + seconds / 60;
-  const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
-
-  return periodsRemainingAfterCurrent * 12 + clockMinutes;
-}
-
-function getMinutesRemainingForStat(stat?: PlayerSlateStat | null) {
-  const gameStatus = stat?.game_status ?? null;
-
-  if (gameStatus === 3) return 0;
-
-  const period = stat?.period ?? null;
-  const clockMinutes = parseNbaIsoClockMinutes(stat?.game_clock);
-
-  if (gameStatus === 2 && period && clockMinutes !== null) {
-    const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
-    return periodsRemainingAfterCurrent * 12 + clockMinutes;
-  }
-
-  const statusTextMinutes = parseStatusTextMinutesRemaining(stat?.game_status_text);
-  if (statusTextMinutes !== null) return statusTextMinutes;
-
-  return 48;
 }
 
 export async function GET(request: Request) {
@@ -236,7 +168,6 @@ export async function GET(request: Request) {
       { data: playerSlateStats, error: playerSlateStatsError },
       { data: seasonTeamSummary, error: seasonTeamSummaryError },
       { data: slateTeams, error: slateTeamsError },
-      { data: nbaSeasonAverages, error: nbaSeasonAveragesError },
     ] = await Promise.all([
       supabaseAdmin
         .from("teams")
@@ -298,7 +229,7 @@ export async function GET(request: Request) {
         .range(0, 20000),
       supabaseAdmin
         .from("lineup_players")
-        .select("lineup_id, player_id, projected_fantasy_points")
+        .select("lineup_id, player_id")
         .range(0, 20000),
       sport === "nfl"
         ? supabaseAdmin
@@ -319,12 +250,6 @@ export async function GET(request: Request) {
         .from("slate_teams")
         .select("slate_id, team_id, draft_order, is_participating")
         .range(0, 20000),
-      sport === "nba"
-        ? supabaseAdmin
-            .from("player_nba_season_averages")
-            .select("season, nba_player_id, fantasy_points")
-            .range(0, 5000)
-        : Promise.resolve({ data: [], error: null }),
     ]);
 
     if (
@@ -337,8 +262,7 @@ export async function GET(request: Request) {
       playersError ||
       playerSlateStatsError ||
       seasonTeamSummaryError ||
-      slateTeamsError ||
-      nbaSeasonAveragesError
+      slateTeamsError
     ) {
       return NextResponse.json(
         {
@@ -353,7 +277,6 @@ export async function GET(request: Request) {
             playerSlateStatsError?.message ||
             seasonTeamSummaryError?.message ||
             slateTeamsError?.message ||
-            nbaSeasonAveragesError?.message ||
             "Failed to load home summary data.",
         },
         { status: 500 }
@@ -539,7 +462,6 @@ export async function GET(request: Request) {
             ),
           ),
       ) as SlateTeam[];
-    const safeNbaSeasonAverages = (nbaSeasonAverages ?? []) as NbaSeasonAverage[];
 
     const normalizedSlates = safeSlates
       .map((slate) => ({
@@ -647,151 +569,8 @@ export async function GET(request: Request) {
       normalizedSlates[0] ??
       null;
 
-    const latestProjectionSeason = latestSlate
-      ? getSeasonFromDate(latestSlate.start_date)
-      : new Date().getFullYear();
-
-    const latestNbaSeason = getNbaSeason(String(latestProjectionSeason));
-
-    const projectionByPlayerId = await getPlayerProjectionMapForSeason(String(latestProjectionSeason));
-
-    const nbaAverageByNbaId = new Map<number, number>();
-    safeNbaSeasonAverages
-      .filter((row) => row.season === latestNbaSeason)
-      .forEach((row) => {
-        const average = Number(row.fantasy_points ?? 0);
-        if (Number.isFinite(average) && average > 0) {
-          nbaAverageByNbaId.set(Number(row.nba_player_id), average);
-        }
-      });
-
-    const normalizedSlateById = new Map<number, (typeof normalizedSlates)[number]>();
-    normalizedSlates.forEach((slate) => {
-      normalizedSlateById.set(slate.id, slate);
-    });
-
-    const projectionSlateIds = new Set(
-      normalizedSlates
-        .filter((slate) => getSeasonFromDate(slate.start_date) === latestProjectionSeason)
-        .map((slate) => slate.id)
-    );
-
-    const lineupByIdForProjection = new Map<number, Lineup>();
-    safeLineups.forEach((lineup) => {
-      lineupByIdForProjection.set(lineup.id, lineup);
-    });
-
-    const statBySlateAndPlayer = new Map<string, PlayerSlateStat>();
-    safePlayerSlateStats.forEach((stat) => {
-      statBySlateAndPlayer.set(`${stat.slate_id}:${stat.player_id}`, stat);
-    });
-
-    const finishBySlateAndTeam = new Map<string, number>();
-    safeResults.forEach((result) => {
-      const finish = Number(result.finish_position);
-      if (Number.isFinite(finish) && finish > 0) {
-        finishBySlateAndTeam.set(`${result.slate_id}:${result.team_id}`, finish);
-      }
-    });
-
-    const scoresByPlayer = new Map<number, Array<{ score: number; slateDate: string }>>();
-    const finishesByPlayer = new Map<number, number[]>();
-
-    safeLineupPlayers.forEach((lineupPlayer) => {
-      const lineup = lineupByIdForProjection.get(lineupPlayer.lineup_id);
-      if (!lineup || !projectionSlateIds.has(lineup.slate_id)) return;
-
-      const slate = normalizedSlateById.get(lineup.slate_id);
-      const stat = statBySlateAndPlayer.get(`${lineup.slate_id}:${lineupPlayer.player_id}`);
-      const score = Number(stat?.fantasy_points ?? 0);
-
-      if (Number.isFinite(score) && score > 0) {
-        const existingScores = scoresByPlayer.get(lineupPlayer.player_id) ?? [];
-        existingScores.push({
-          score,
-          slateDate: slate?.start_date ?? "",
-        });
-        scoresByPlayer.set(lineupPlayer.player_id, existingScores);
-      }
-
-      const finish = finishBySlateAndTeam.get(`${lineup.slate_id}:${lineup.team_id}`);
-      if (typeof finish === "number") {
-        const existingFinishes = finishesByPlayer.get(lineupPlayer.player_id) ?? [];
-        existingFinishes.push(finish);
-        finishesByPlayer.set(lineupPlayer.player_id, existingFinishes);
-      }
-    });
-
-    const fallbackProjectionByPlayerId = new Map<number, number>();
-
-    if (sport === "nba") {
-    safePlayers.forEach((player) => {
-      const scoreRows = (scoresByPlayer.get(player.id) ?? []).sort((a, b) =>
-        a.slateDate.localeCompare(b.slateDate)
-      );
-
-      const scores = scoreRows.map((row) => row.score);
-      const finishes = finishesByPlayer.get(player.id) ?? [];
-      const draftedCount = scores.length;
-
-      const seasonAvg =
-        scores.length > 0
-          ? scores.reduce((sum, score) => sum + score, 0) / scores.length
-          : null;
-
-      const recentScores = scores.slice(-3);
-      const recentAvg =
-        recentScores.length > 0
-          ? recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length
-          : null;
-
-      const avgFinish =
-        finishes.length > 0
-          ? finishes.reduce((sum, finish) => sum + finish, 0) / finishes.length
-          : null;
-
-      const nbaSeasonAverage = player.external_id
-        ? nbaAverageByNbaId.get(Number(player.external_id)) ?? null
-        : null;
-
-      let projection: number | null = null;
-
-      if (draftedCount >= 2 && seasonAvg !== null && recentAvg !== null) {
-        const finishBoost =
-          avgFinish !== null
-            ? Math.max(-3, Math.min(3, (2.5 - avgFinish) * 1.25))
-            : 0;
-
-        const nbaAnchor = nbaSeasonAverage ?? seasonAvg;
-
-        projection = round1(
-          nbaAnchor * 0.5 +
-            seasonAvg * 0.3 +
-            recentAvg * 0.2 +
-            finishBoost
-        );
-
-        const badgeBaseline = nbaSeasonAverage ?? seasonAvg;
-
-        if (badgeBaseline !== null && recentAvg >= badgeBaseline + 2.5) {
-          projection = round1(projection + 1.5);
-        }
-
-        if (badgeBaseline !== null && recentAvg <= badgeBaseline - 2.5) {
-          projection = round1(projection - 1.5);
-        }
-      } else if (nbaSeasonAverage !== null) {
-        projection = round1(nbaSeasonAverage);
-      }
-
-      if (projection !== null) {
-        fallbackProjectionByPlayerId.set(player.id, projection);
-        if (!projectionByPlayerId.has(player.id)) {
-          projectionByPlayerId.set(player.id, projection);
-        }
-      }
-    });
-    }
+    const normalizedSlateById = new Map(normalizedSlates.map(slate => [slate.id, slate]));
+    const statBySlateAndPlayer = new Map(safePlayerSlateStats.map(stat => [`${stat.slate_id}:${stat.player_id}`, stat]));
 
     const latestLineupsByTeamId = new Map<number, Lineup>();
     const latestLineupPlayersByLineupId = new Map<number, LineupPlayer[]>();
@@ -822,7 +601,7 @@ export async function GET(request: Request) {
         const { data: latestLineupPlayersData, error: latestLineupPlayersError } =
           await supabaseAdmin
             .from("lineup_players")
-            .select("lineup_id, player_id, projected_fantasy_points")
+            .select("lineup_id, player_id")
             .in("lineup_id", latestLineupIds);
 
         if (latestLineupPlayersError) {
@@ -839,84 +618,12 @@ export async function GET(request: Request) {
           existing.push({
             lineup_id: lineupId,
             player_id: Number(lineupPlayer.player_id),
-            projected_fantasy_points:
-              lineupPlayer.projected_fantasy_points === null ||
-              lineupPlayer.projected_fantasy_points === undefined
-                ? null
-                : Number(lineupPlayer.projected_fantasy_points),
+
           });
 
           latestLineupPlayersByLineupId.set(lineupId, existing);
         });
       }
-    }
-
-    function getProjectedTeamTotal(teamId: number) {
-      if (!latestSlate) return 0;
-
-      const result = safeResults.find(
-        (row) => row.slate_id === latestSlate.id && row.team_id === teamId
-      );
-
-      if (sport !== "nba" || latestSlate.is_locked) {
-        return Number(result?.fantasy_points ?? 0);
-      }
-
-      const lineup = latestLineupsByTeamId.get(teamId);
-      if (!lineup) return Number(result?.fantasy_points ?? 0);
-
-      const lineupPlayers =
-        latestLineupPlayersByLineupId.get(lineup.id) ?? [];
-
-      let hasRemainingUpside = false;
-
-      const projectedTotal = lineupPlayers.reduce((sum, lineupPlayer) => {
-        const playerId = lineupPlayer.player_id;
-        const stat = statBySlateAndPlayer.get(`${latestSlate.id}:${playerId}`);
-        const current = Number(stat?.fantasy_points ?? 0);
-        const projection = projectionByPlayerId.get(playerId) ?? 0;
-        const minutesRemaining = getMinutesRemainingForStat(stat);
-
-        if (minutesRemaining <= 0) {
-          return sum + current;
-        }
-
-        hasRemainingUpside = true;
-
-        return sum + current + projection * (minutesRemaining / 48);
-      }, 0);
-
-      if (!hasRemainingUpside) {
-        return Number(result?.fantasy_points ?? 0);
-      }
-
-      return projectedTotal;
-    }
-
-    function getPregameTeamTotal(teamId: number): number | null {
-      const lineup = latestLineupsByTeamId.get(teamId);
-      if (!lineup) return null;
-
-      const lineupPlayers =
-        latestLineupPlayersByLineupId.get(lineup.id) ?? [];
-
-      if (lineupPlayers.length === 0) return null;
-
-      const hasMissingProjection = lineupPlayers.some(
-        (lineupPlayer) =>
-          lineupPlayer.projected_fantasy_points === null ||
-          !Number.isFinite(lineupPlayer.projected_fantasy_points)
-      );
-
-      if (hasMissingProjection) return null;
-
-      return round1(
-        lineupPlayers.reduce(
-          (sum, lineupPlayer) =>
-            sum + Number(lineupPlayer.projected_fantasy_points ?? 0),
-          0
-        )
-      );
     }
 
     const playerById = new Map<number, Player>();
@@ -1049,9 +756,6 @@ export async function GET(request: Request) {
                 safeTeams.find((team) => team.id === row.team_id)?.name ??
                 "Unknown Team",
               avatarUrl: avatarUrlByTeamId.get(row.team_id) ?? null,
-              projected_points: round1(getProjectedTeamTotal(row.team_id)),
-              pregame_projected_points: getPregameTeamTotal(row.team_id),
-              win_probability: 0,
             };
           })
           .sort((a, b) => {
@@ -1062,130 +766,7 @@ export async function GET(request: Request) {
           })
       : [];
 
-    const latestSlateRows = (() => {
-      if (!latestSlateRowsBase.length) return latestSlateRowsBase;
-
-      if (latestSlate?.is_locked) {
-        const winningTeamId = [...latestSlateRowsBase].sort(
-          (a, b) => Number(b.fantasy_points ?? 0) - Number(a.fantasy_points ?? 0)
-        )[0]?.team_id;
-
-        return latestSlateRowsBase.map((row) => ({
-          ...row,
-          projected_points: round1(Number(row.fantasy_points ?? 0)),
-          win_probability: row.team_id === winningTeamId ? 100 : 0,
-        }));
-      }
-
-      const bestCurrentScore = Math.max(
-        ...latestSlateRowsBase.map((row) => Number(row.fantasy_points ?? 0))
-      );
-
-      const slateEndDate = latestSlate?.end_date
-        ? new Date(`${latestSlate.end_date}T23:59:59`)
-        : null;
-      const slateHasEndedByDate = slateEndDate
-        ? Date.now() > slateEndDate.getTime()
-        : false;
-
-      const teamsWithUpside = latestSlateRowsBase.filter((row) => {
-        const currentScore = Number(row.fantasy_points ?? 0);
-        const projectedScore = Number(row.projected_points ?? currentScore);
-        const gamesInProgress = Number(row.games_in_progress ?? 0);
-        const gamesRemaining = Number(row.games_remaining ?? 0);
-        const isDone = gamesInProgress === 0 && gamesRemaining === 0;
-
-        if (slateHasEndedByDate && isDone && currentScore < bestCurrentScore) {
-          return false;
-        }
-
-        return true;
-      });
-
-      if (teamsWithUpside.length === 1) {
-        const lockedWinnerId = teamsWithUpside[0].team_id;
-
-        return latestSlateRowsBase.map((row) => ({
-          ...row,
-          win_probability: row.team_id === lockedWinnerId ? 100 : 0,
-        }));
-      }
-
-      const k = 20;
-      const minProbability = 3;
-      const maxProbability = 97;
-
-      const weights = teamsWithUpside.map((row) => ({
-        teamId: row.team_id,
-        weight: Math.exp(Number(row.projected_points ?? 0) / k),
-      }));
-
-      const totalWeight = weights.reduce((sum, row) => sum + row.weight, 0);
-
-      const rawProbabilities = weights.map((row) => ({
-        teamId: row.teamId,
-        probability: totalWeight > 0 ? (row.weight / totalWeight) * 100 : 0,
-      }));
-
-      const clampedProbabilities = rawProbabilities.map((row) => ({
-        teamId: row.teamId,
-        probability: Math.max(
-          minProbability,
-          Math.min(maxProbability, row.probability)
-        ),
-      }));
-
-      const clampedTotal = clampedProbabilities.reduce(
-        (sum, row) => sum + row.probability,
-        0
-      );
-
-      const normalizedProbabilities = clampedProbabilities.map((row) => ({
-        teamId: row.teamId,
-        probability:
-          clampedTotal > 0
-            ? (row.probability / clampedTotal) * 100
-            : 100 / Math.max(clampedProbabilities.length, 1),
-      }));
-
-      // Round to whole numbers for display, then correct rounding drift so total = 100.
-      const roundedProbabilities = normalizedProbabilities.map((row) => ({
-        teamId: row.teamId,
-        probability: Math.round(row.probability),
-      }));
-
-      const roundedTotal = roundedProbabilities.reduce(
-        (sum, row) => sum + row.probability,
-        0
-      );
-
-      const drift = 100 - roundedTotal;
-
-      if (roundedProbabilities.length > 0 && drift !== 0) {
-        const bestTeam = [...normalizedProbabilities].sort(
-          (a, b) => b.probability - a.probability
-        )[0];
-
-        const target = roundedProbabilities.find(
-          (row) => row.teamId === bestTeam.teamId
-        );
-
-        if (target) {
-          target.probability += drift;
-        }
-      }
-
-      const probabilityByTeamId = new Map<number, number>();
-
-      roundedProbabilities.forEach((row) => {
-        probabilityByTeamId.set(row.teamId, row.probability);
-      });
-
-      return latestSlateRowsBase.map((row) => ({
-        ...row,
-        win_probability: probabilityByTeamId.get(row.team_id) ?? 0,
-      }));
-    })();
+    const latestSlateRows = latestSlateRowsBase; // Actual standings and game status only.
 
     const latestSeason = latestSlate
       ? getSeasonFromDate(latestSlate.start_date)

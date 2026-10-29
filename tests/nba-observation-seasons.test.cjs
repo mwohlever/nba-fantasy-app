@@ -1,9 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const test = require('node:test');
-const vm = require('node:vm');
 const { resolveNbaObservationSeason } = require('../scripts/lib/nbaObservationSeason.cjs');
 
 test('NBA end-year selection stays stable through January, playoffs, and the offseason', () => {
@@ -45,71 +42,17 @@ test('invalid dates or season overrides fail before acquisition', () => {
   }
 });
 
-async function exerciseWorker({ now, override, source } = {}) {
-  const acquisitions = [], posts = [], errors = [];
-  const requireStub = name => {
-    if (name === 'fs') return fs;
-    if (name === 'path') return path;
-    if (name === 'typescript') return {};
-    if (name === './lib/nbaObservationSeason.cjs') return { resolveNbaObservationSeason };
-    if (name.endsWith('/lib/analytics/providers/espnNbaGameLog.ts')) {
-      return { fetchEspnNbaGameLog: async request => {
-        acquisitions.push(request);
-        return { observations: [{ providerPlayerId: request.espnPlayerId, season: request.season }] };
-      } };
-    }
-    throw new Error(`Unexpected worker dependency: ${name}`);
-  };
-  requireStub.extensions = {};
-  const RealDate = Date;
-  class FixedDate extends RealDate {
-    constructor(...args) { super(...(args.length ? args : [now])); }
-  }
-  const processStub = { env: {
-    NBA_PROJECTION_INGEST_BASE_URL: 'https://isolated.invalid',
-    NBA_PROJECTION_INGEST_SECRET: 'fixture-only',
-    ...(override === undefined ? {} : { NBA_PROJECTION_SEASON: override }),
-  } };
-  const completion = vm.runInNewContext(source ?? fs.readFileSync('scripts/run-nba-projection-shadow-refresh.cjs', 'utf8'), {
-    require: requireStub, __dirname: path.resolve('scripts'), process: processStub,
-    Date: FixedDate, URL, AbortSignal,
-    console: { log() {}, error(message) { errors.push(message); } },
-    fetch: async (url, options) => {
-      assert.equal(new URL(url).origin, 'https://isolated.invalid');
-      assert.equal(options.method, 'POST');
-      const body = JSON.parse(options.body); posts.push(body);
-      return { ok: true, json: async () => body.action === 'eligible'
-        ? { providerPlayerIds: ['1966'] } : { accepted: body.observations?.length ?? 0 } };
-    },
-  });
-  await completion;
-  assert.deepEqual(errors, []);
-  assert.equal(processStub.exitCode, undefined);
-  return { acquisitions, posts };
-}
-
-test('worker preserves its current/prior acquisition window and deferred-generation payload', async () => {
-  for (const [now, override, expected] of [
-    ['2026-09-30T23:59:59.999Z', undefined, 2026],
-    ['2026-10-01T00:00:00Z', undefined, 2027],
-    ['2026-10-28T12:00:00Z', undefined, 2027],
-    ['2027-01-01T00:00:00Z', undefined, 2027],
-    ['2027-08-01T00:00:00Z', undefined, 2027],
-    ['2027-10-01T00:00:00Z', undefined, 2028],
-    ['2034-10-01T00:00:00Z', undefined, 2035],
-    ['2026-10-28T12:00:00Z', '2025', 2025],
-  ]) {
-    const { acquisitions, posts } = await exerciseWorker({ now, override });
-    assert.deepEqual(acquisitions.map(r => [r.espnPlayerId, r.season]), [['1966', expected - 1], ['1966', expected]]);
-    const writes = posts.filter(body => body.action === 'observations');
-    assert.equal(writes.length, 1);
-    assert.equal(writes[0].season, expected);
-    assert.equal(writes[0].generate, false);
-    assert.deepEqual(writes[0].observations.map(row => row.season), [expected - 1, expected]);
+test('factual worker defaults to one current season and preserves explicit prior/historical modes',()=>{
+  const {selectRefreshSeason}=require('../scripts/run-nba-player-center-refresh.cjs');
+  for(const [date,current] of [['2026-09-30T23:59:59Z',2026],['2026-10-01T00:00:00Z',2027],['2027-01-01T00:00:00Z',2027],['2027-10-01T00:00:00Z',2028]]) {
+    const now=new Date(date);assert.equal(selectRefreshSeason({now}),current);assert.equal(selectRefreshSeason({now,mode:'prior'}),current-1);
+    assert.equal(selectRefreshSeason({now,override:'2025'}),2025);
   }
 });
-
-test('worker rejects an invalid override before making any provider or application request', async () => {
-  // A synchronous season error must occur before the worker starts its async acquisition.
-  await assert.rejects(exerciseWorker({ now: '2026-10-28T12:00:00Z', override: '2026.5' }), /NBA_PROJECTION_SEASON/);
+test('factual worker rejects invalid/future seasons before acquisition',()=>{
+  const {selectRefreshSeason}=require('../scripts/run-nba-player-center-refresh.cjs');
+  const now=new Date('2026-10-29T00:00:00Z');
+  assert.throws(()=>selectRefreshSeason({now,override:'2026.5'}),/NBA_PROJECTION_SEASON/);
+  assert.throws(()=>selectRefreshSeason({now,override:'2028'}),/future/);
+  assert.throws(()=>selectRefreshSeason({now,mode:'arbitrary'}),/Mode/);
 });

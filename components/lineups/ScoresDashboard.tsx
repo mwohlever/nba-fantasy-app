@@ -62,10 +62,6 @@ type Props = {
   getTeamStats: (teamId: number) => TeamStats;
   getPlayerStat: (playerId: number) => PlayerBoxScore;
   getRawPlayerStat: (playerId: number) => PlayerStat | null;
-  getLiveProjectedTeamTotal: (teamId: number) => number;
-  getPregameProjectedTeamTotal: (teamId: number) => number | null;
-  liveWinPctMap: Map<number, number>;
-  playerProjections: Record<number, any>;
   controls?: ReactNode;
   setProfilePlayer: (player: Player | null) => void;
   openGolfHole?: (player: Player, focus: { roundNumber: number; holeNumber: number }) => void;
@@ -139,7 +135,6 @@ function medalForPosition(position: number) {
 function TraditionalScoresDashboard({
   teams, selectedSlate, rosterSlots, currentTeamId = null, scopeKey = "",
   getPlayersForTeam, getTeamStats, getPlayerStat, getRawPlayerStat,
-  getLiveProjectedTeamTotal, getPregameProjectedTeamTotal, liveWinPctMap,
   controls, setProfilePlayer,
 }: Props) {
   const sport = selectedSlate?.sport ?? "nba";
@@ -154,10 +149,9 @@ function TraditionalScoresDashboard({
       const stats = sport === "nfl" ? { ...storedStats,
         ...nflRosterStatusCounts(getPlayersForTeam(team.id), nflGames?.slateId === selectedSlate?.id ? nflGames?.gamesByTeam ?? {} : {}, getRawPlayerStat),
       } : storedStats;
-      return { team, stats, score: Number(stats.total ?? 0),
-        projected: getLiveProjectedTeamTotal(team.id), winPct: liveWinPctMap.get(team.id) ?? 0 };
+      return { team, stats, score: Number(stats.total ?? 0) };
     }).sort((a, b) => b.score - a.score),
-    [teams, getTeamStats, getLiveProjectedTeamTotal, liveWinPctMap, sport, nflGames, selectedSlate?.id, getPlayersForTeam, getRawPlayerStat]);
+    [teams, getTeamStats, sport, nflGames, selectedSlate?.id, getPlayersForTeam, getRawPlayerStat]);
 
   const expansionScope = JSON.stringify([scopeKey, sport, selectedSlate?.id]);
   const [expansion, setExpansion] = useState<{ scope: string; teamId: number | null }>(
@@ -186,10 +180,6 @@ function TraditionalScoresDashboard({
           playerPositions: teamPlayers.map(player => player.position_group),
           rosterSlots: effectiveRosterSlots,
         }) : null;
-        const pregame = expanded ? getPregameProjectedTeamTotal(row.team.id) : null;
-        const isFinal = selectedSlate?.is_locked || (row.stats.games_completed > 0 &&
-          row.stats.games_in_progress === 0 && row.stats.games_remaining === 0);
-        const difference = pregame === null ? null : row.score - pregame;
         return <article key={row.team.id}
           className={`scores-standing${index === 0 ? " scores-standing--leader" : ""}${expanded ? " scores-standing--expanded" : ""}`}>
           <button type="button" id={headingId} className="scores-standing-toggle"
@@ -236,13 +226,7 @@ function TraditionalScoresDashboard({
                 </div>;
               })}
               <details className="scores-roster-totals" data-pull-refresh-exclude>
-                <summary>{sport === "nba" ? "Team totals / Pregame comparison" : "Team totals"}</summary>
-                {sport === "nba" && <>
-                {!isFinal && <p>Projected final: {formatScore(row.projected)} FP · {row.winPct.toFixed(0)}% win probability</p>}
-                <p>{pregame === null ? "No saved pregame projection for this lineup." :
-                  `Pregame projection: ${formatScore(pregame)} FP${isFinal && difference !== null
-                    ? ` · ${difference > 0 ? "+" : ""}${difference.toFixed(1)} FP vs projection` : ""}`}</p>
-                </>}
+                <summary>Team totals</summary>
                 <dl>{statColumns.map(column => <div key={column.key}><dt>{column.label}</dt>
                   <dd>{row.stats.statTotals?.[column.key] ?? 0}</dd></div>)}</dl>
               </details>

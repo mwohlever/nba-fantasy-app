@@ -550,7 +550,7 @@ return async function GET(request: NextRequest) {
         ? summary.leaders
         : [],
       gameInfo: summary?.gameInfo ?? null,
-      predictor: summary?.predictor ?? null,
+      ...(league === "college-football" ? { predictor: summary?.predictor ?? null } : {}),
       lastFiveGames: Array.isArray(summary?.lastFiveGames)
         ? summary.lastFiveGames
         : [],

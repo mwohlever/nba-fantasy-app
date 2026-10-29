@@ -1,4 +1,5 @@
 "use client";
+import { playerCenterReadOnlyLocal } from "@/lib/player-center/feature";
 
 import {
   useEffect,
@@ -21,6 +22,8 @@ export default function AppHeartbeat() {
     async function runHeartbeat(
       force = false,
     ) {
+      // The isolated development preview must never trigger production maintenance.
+      if (playerCenterReadOnlyLocal() || process.env.NODE_ENV === "development" && window.location.pathname === "/player-center-preview") return;
       const now =
         Date.now();
 

@@ -250,6 +250,10 @@ export default function GroupProvider({
   const fetchGroupContext =
     useCallback(
       async () => {
+        // Even authenticated context reads can update session activity. The local fixture route is isolated.
+        if (process.env.NODE_ENV === "development" && window.location.pathname === "/player-center-preview") {
+          return { context: null, groups: [] } satisfies GroupContextPayload;
+        }
         const response =
           await fetch(
             "/api/groups/context",

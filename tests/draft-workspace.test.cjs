@@ -657,43 +657,37 @@ test('Draft always sends expected sport and atomically rejects successful respon
   }
 });
 
-test('projections reject wrong sport/Group/slate and late responses after a context switch', async () => {
-  for (const field of ['groupId', 'sport', 'slateId', 'late']) {
-    const { h, props, respond } = await setup('nfl');
-    let resolveProjection;
-    global.fetch = async url => url.startsWith('/api/draft-projections')
-      ? new Promise(resolve => { resolveProjection = () => {
-        const body = { ...respond(url), projections: { 10: { projection: 999 } } };
-        if (field !== 'late') body[field] = field === 'sport' ? 'nba' : field === 'slateId' ? 999 : 'other';
-        resolve(reply(body));
-      }; }) : reply(respond(url));
-    context.group = 'b'; h.render(props, true);
-    if (field === 'late') { context.group = 'a'; h.render(props); }
-    resolveProjection(); await tick();
-    assert.deepEqual(find(h.render(props), Pool).props.playerProjections, {});
-    h.unmount();
-  }
+test('draft context switches never request retired projections or substitute historical averages as predictions', async () => {
+  const {h,props,respond}=await setup('nfl');const requests=[];
+  global.fetch=async url=>{requests.push(url);if(url.includes('projections'))throw Error('Retired forecast request');return reply(respond(url));};
+  context.group='b';h.render(props,true);await tick();
+  assert.ok(!requests.some(url=>url.includes('projections')));assert.deepEqual(find(h.render(props),Pool).props.playerProjections,{});h.unmount();
 });
 
-test('NBA/NFL Projection cards select fixed targets; Info researches; normal pool opens the Draft flow',async()=>{
+test('NBA/NFL Player Center preserves fixed-target selection, Info research and normal Draft callbacks',async(t)=>{
+  const prior=process.env.NEXT_PUBLIC_PLAYER_CENTER_ENABLED;process.env.NEXT_PUBLIC_PLAYER_CENTER_ENABLED='true';t.after(()=>{if(prior===undefined)delete process.env.NEXT_PUBLIC_PLAYER_CENTER_ENABLED;else process.env.NEXT_PUBLIC_PLAYER_CENTER_ENABLED=prior;});
+  const Center=require('../components/player-center/DraftPlayerCenter.tsx').default;
+  const Browser=require('../components/player-center/ResearchBrowser.tsx').default;
+  const CenterModal=require('../components/player-center/PlayerCenterModal.tsx').default;
   for(const sport of ['nba','nfl']) {
     const {h,props,tree}=await setup(sport,{role:'admin'});
     const poolProps=find(tree,Pool).props;
+    assert.equal(host(Pool).render(poolProps).type,Center,'sport routes to shared research');
     let selected=null,researched=null;
-    const p=host(Pool);
-    const speedProps={...poolProps,speedEntry:{onSelect:async player=>{selected=player;return true;},onResearch:player=>{researched=player;}}};
-    let pool=p.render(speedProps);
-    const card=nodes(pool).find(n=>n.type==='button' && n.props.className?.startsWith('draft-player-card '));
-    assert.ok(card); card.props.onClick();
-    assert.equal(selected.id,10);
-    assert.equal(find(p.render(speedProps),Research).props.player,null);
-    nodes(pool).find(n=>n.props?.['aria-label']==='Info about Player Ten').props.onClick();
-    assert.equal(researched.id,10);
-    pool=p.render(poolProps);
-    assert.ok(!nodes(pool).some(n=>n.props?.['aria-label']==='Info about Player Ten'));
-    nodes(pool).find(n=>n.type==='button' && n.props.className?.startsWith('draft-player-card ')).props.onClick();
-    assert.equal(find(p.render(poolProps),Research).props.player,null);
-    assert.equal(find(h.render(props),Modal).props.draftingPlayer.id,10);
+    const p=host(Center);
+    const speedProps={...poolProps,sport,speedEntry:{onSelect:async player=>{selected=player;return true;},onResearch:player=>{researched=player;}}};
+    let pool=p.render(speedProps),browser=find(pool,Browser),identity=browser.props.entries[0].identity;
+    browser.props.onSelect(identity);assert.equal(selected.id,10);
+    browser.props.onInspect(identity);assert.equal(researched.id,10);
+    assert.equal(find(p.render(speedProps),CenterModal),undefined,'fixed-target research stays in existing parent workflow');
+    pool=p.render({...poolProps,sport});browser=find(pool,Browser);browser.props.onSelect(identity);
+    assert.equal(find(h.render(props),Modal).props.draftingPlayer.id,10,'normal selection immediately opens the existing Draft flow');
+    assert.equal(find(p.render({...poolProps,sport}),CenterModal),undefined);
+    browser.props.onInspect(identity);
+    const modal=find(p.render({...poolProps,sport}),CenterModal);assert.equal(modal.props.identity.id,10);
+    await modal.props.children.props.onClick();
+    assert.equal(find(h.render(props),Modal).props.draftingPlayer.id,10,'existing Draft assignment flow opens');
+    assert.equal(find(p.render({...poolProps,sport}),CenterModal),undefined);
     p.unmount();h.unmount();
   }
 });

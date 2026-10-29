@@ -1,0 +1,205 @@
+{
+  "_fixture": {
+    "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3055899/gamelog?season=2026",
+    "fetchedAt": "2026-10-23T15:16:59.886Z"
+  },
+  "filters": [
+    {
+      "name": "league",
+      "value": "nfl"
+    },
+    {
+      "name": "season",
+      "value": "2026"
+    }
+  ],
+  "names": [
+    "fieldGoalsMade1_19-fieldGoalAttempts1_19",
+    "fieldGoalsMade20_29-fieldGoalAttempts20_29",
+    "fieldGoalsMade30_39-fieldGoalAttempts30_39",
+    "fieldGoalsMade40_49-fieldGoalAttempts40_49",
+    "fieldGoalsMade50-fieldGoalAttempts50",
+    "longFieldGoalMade",
+    "fieldGoalPct",
+    "fieldGoalsMade-fieldGoalAttempts",
+    "fieldGoalsMadeYardsAverage",
+    "extraPointsMade-extraPointAttempts",
+    "totalKickingPoints"
+  ],
+  "seasonTypes": [
+    {
+      "displayName": "2026 Regular Season",
+      "categories": [
+        {
+          "displayName": "Regular Season Stats",
+          "type": "event",
+          "splitType": "2",
+          "events": [
+            {
+              "eventId": "401873006",
+              "stats": [
+                "0-0",
+                "0-0",
+                "1-1",
+                "1-1",
+                "1-2",
+                "50",
+                "75.0",
+                "3-4",
+                "41",
+                "1-2",
+                "10"
+              ]
+            },
+            {
+              "eventId": "401872976",
+              "stats": [
+                "0-0",
+                "1-1",
+                "0-0",
+                "0-0",
+                "0-0",
+                "28",
+                "100.0",
+                "1-1",
+                "28",
+                "3-3",
+                "6"
+              ]
+            },
+            {
+              "eventId": "401872952",
+              "stats": [
+                "0-0",
+                "0-0",
+                "1-1",
+                "0-0",
+                "0-1",
+                "34",
+                "50.0",
+                "1-2",
+                "34",
+                "3-3",
+                "6"
+              ]
+            },
+            {
+              "eventId": "401872945",
+              "stats": [
+                "0-0",
+                "1-1",
+                "1-1",
+                "2-2",
+                "0-1",
+                "46",
+                "80.0",
+                "4-5",
+                "36",
+                "3-3",
+                "15"
+              ]
+            },
+            {
+              "eventId": "401872931",
+              "stats": [
+                "0-0",
+                "1-1",
+                "0-0",
+                "0-0",
+                "0-0",
+                "28",
+                "100.0",
+                "1-1",
+                "28",
+                "4-4",
+                "7"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "events": {
+    "401872931": {
+      "id": "401872931",
+      "gameDate": "2026-09-15T00:15:00.000+00:00",
+      "week": 1,
+      "gameResult": "W",
+      "homeTeamId": "12",
+      "awayTeamId": "7",
+      "team": {
+        "id": "12",
+        "abbreviation": "KC"
+      },
+      "opponent": {
+        "id": "7",
+        "abbreviation": "DEN"
+      }
+    },
+    "401872945": {
+      "id": "401872945",
+      "gameDate": "2026-09-21T00:20:00.000+00:00",
+      "week": 2,
+      "gameResult": "W",
+      "homeTeamId": "12",
+      "awayTeamId": "11",
+      "team": {
+        "id": "12",
+        "abbreviation": "KC"
+      },
+      "opponent": {
+        "id": "11",
+        "abbreviation": "IND"
+      }
+    },
+    "401872952": {
+      "id": "401872952",
+      "gameDate": "2026-09-27T17:00:00.000+00:00",
+      "week": 3,
+      "gameResult": "W",
+      "homeTeamId": "15",
+      "awayTeamId": "12",
+      "team": {
+        "id": "12",
+        "abbreviation": "KC"
+      },
+      "opponent": {
+        "id": "15",
+        "abbreviation": "MIA"
+      }
+    },
+    "401872976": {
+      "id": "401872976",
+      "gameDate": "2026-10-04T20:25:00.000+00:00",
+      "week": 4,
+      "gameResult": "W",
+      "homeTeamId": "13",
+      "awayTeamId": "12",
+      "team": {
+        "id": "12",
+        "abbreviation": "KC"
+      },
+      "opponent": {
+        "id": "13",
+        "abbreviation": "LV"
+      }
+    },
+    "401873006": {
+      "id": "401873006",
+      "gameDate": "2026-10-18T20:25:00.000+00:00",
+      "week": 6,
+      "gameResult": "W",
+      "homeTeamId": "12",
+      "awayTeamId": "24",
+      "team": {
+        "id": "12",
+        "abbreviation": "KC"
+      },
+      "opponent": {
+        "id": "24",
+        "abbreviation": "LAC"
+      }
+    }
+  }
+}

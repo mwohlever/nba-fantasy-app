@@ -1,22 +1,68 @@
-name: NBA projection shadow refresh
+name: NBA Player Center factual refresh
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '23 10 * * *'
-permissions: { contents: read }
+    inputs:
+      execute:
+        description: 'Write facts and coverage (requires separate production-run approval)'
+        type: boolean
+        default: false
+      mode:
+        description: 'Current season or explicit previous-season correction refresh'
+        type: choice
+        options: [current, prior]
+        default: current
+      season:
+        description: 'Optional explicit ESPN ending year; otherwise use NBA season logic'
+        type: string
+        default: ''
+      resume_run:
+        description: 'Optional prior Actions run ID containing the original checkpoint'
+        type: string
+        default: ''
+# Manual-only launch configuration. No daily/weekly schedule until separately approved.
+permissions: { contents: read, actions: read }
 concurrency:
   group: nba-factual-observation-refresh
   cancel-in-progress: false
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     env:
       NBA_PROJECTION_INGEST_BASE_URL: https://www.111sports.app
       NBA_PROJECTION_INGEST_SECRET: ${{ secrets.NBA_PROJECTION_INGEST_SECRET }}
+      REFRESH_EXECUTE: ${{ inputs.execute }}
+      REFRESH_MODE: ${{ inputs.mode }}
+      REFRESH_SEASON: ${{ inputs.season }}
+      REFRESH_RESUME_RUN: ${{ inputs.resume_run }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - run: npm ci --ignore-scripts --omit=optional
-      - run: node scripts/run-nba-projection-shadow-refresh.cjs
+      - name: Download original checkpoint for an explicit resume
+        if: inputs.resume_run != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: nba-factual-refresh-${{ inputs.resume_run }}
+          path: ${{ runner.temp }}/nba-refresh-resume
+          run-id: ${{ inputs.resume_run }}
+          github-token: ${{ github.token }}
+      - name: Acquire and verify Player Center facts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/nba-refresh"
+          args=(--mode "$REFRESH_MODE" --report "$RUNNER_TEMP/nba-refresh/report.json")
+          if [[ -n "$REFRESH_SEASON" ]]; then args+=(--season "$REFRESH_SEASON"); fi
+          if [[ "$REFRESH_EXECUTE" == "true" ]]; then args+=(--execute); fi
+          if [[ -n "$REFRESH_RESUME_RUN" ]]; then args+=(--resume "$RUNNER_TEMP/nba-refresh-resume/report.json"); fi
+          node scripts/run-nba-player-center-refresh.cjs "${args[@]}"
+      - name: Preserve outcome arrays and restart checkpoint
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nba-factual-refresh-${{ github.run_id }}
+          path: ${{ runner.temp }}/nba-refresh/report.json
+          retention-days: 14
+          if-no-files-found: warn

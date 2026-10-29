@@ -1,11 +1,13 @@
 "use client";
 
+import { playerCenterEnabled } from "@/lib/player-center/feature";
 import {
   useEffect,
   useMemo,
   useState,
 } from "react";
 
+import PlayerHistoryCenter from "@/components/player-center/PlayerHistoryCenter";
 import AppNav from "@/components/AppNav";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
 import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
@@ -2393,7 +2395,7 @@ function PlayerCompareModal({
   );
 }
 
-export default function PlayerHistoryPage() {
+function LegacyPlayerHistoryPage({ initialMode = "season" }: { initialMode?: HistoryMode }) {
   const {
     selectedSport,
     isHydrated,
@@ -2403,17 +2405,6 @@ export default function PlayerHistoryPage() {
   const isGolf =
     selectedSport ===
     "golf";
-
-  const [
-    playerProjections,
-    setPlayerProjections,
-  ] =
-    useState<
-      Record<
-        number,
-        any
-      >
-    >({});
 
   const [
     rows,
@@ -2436,7 +2427,7 @@ export default function PlayerHistoryPage() {
     setHistoryMode,
   ] =
     useState<HistoryMode>(
-      "season",
+      initialMode,
     );
 
   const [golfGameType, setGolfGameType] =
@@ -2655,63 +2646,6 @@ export default function PlayerHistoryPage() {
   }, [
     selectedSport,
     historyMode,
-  ]);
-
-  useEffect(() => {
-    if (
-      !isHydrated
-    ) {
-      return;
-    }
-
-    if (
-      selectedSport !==
-      "nba"
-    ) {
-      setPlayerProjections(
-        {},
-      );
-
-      return;
-    }
-
-    async function loadPlayerProjections() {
-      try {
-        const response =
-          await fetch(
-            `/api/player-projections?season=${
-              season ===
-              "all"
-                ? 2026
-                : season
-            }`,
-            {
-              cache:
-                "no-store",
-            },
-          );
-
-        const result =
-          await response.json();
-
-        setPlayerProjections(
-          result.projections ??
-            {},
-        );
-      } catch (
-        error
-      ) {
-        console.error(
-          error,
-        );
-      }
-    }
-
-    void loadPlayerProjections();
-  }, [
-    isHydrated,
-    selectedSport,
-    season,
   ]);
 
   async function loadPlayerHistory() {
@@ -4434,6 +4368,7 @@ export default function PlayerHistoryPage() {
                 League History
               </button>
 
+              {isGolf && (
               <button
                 type="button"
                 onClick={() => {
@@ -4482,6 +4417,7 @@ export default function PlayerHistoryPage() {
               >
                 Season Stats
               </button>
+              )}
             </div>
 
             <div>
@@ -8125,4 +8061,14 @@ export default function PlayerHistoryPage() {
       ) : null}
     </main>
   );
+}
+
+export default function PlayerHistoryPage() {
+  const { selectedSport, isHydrated } = useSelectedSport();
+  const [leagueHistory, setLeagueHistory] = useState(false);
+  if (!isHydrated) return null;
+  if (selectedSport !== "nba" && selectedSport !== "nfl") return <LegacyPlayerHistoryPage />;
+  if (!playerCenterEnabled()) return <LegacyPlayerHistoryPage key={selectedSport} initialMode="league" />;
+  if (leagueHistory) return <><div className="pc pc-history-return"><button className="pc-text-button" onClick={() => setLeagueHistory(false)}>← Player Center</button></div><LegacyPlayerHistoryPage initialMode="league" /></>;
+  return <PlayerHistoryCenter key={selectedSport} sport={selectedSport} onLeagueHistory={() => setLeagueHistory(true)} />;
 }

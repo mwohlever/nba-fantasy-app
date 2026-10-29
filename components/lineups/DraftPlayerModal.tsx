@@ -20,6 +20,8 @@ type AssignmentStatus = {
 };
 
 type Props = {
+  slateId?: number | null;
+  centerSeason?: number;
   draftingPlayer: Player | null;
   setDraftingPlayer: React.Dispatch<
     React.SetStateAction<Player | null>
@@ -55,6 +57,8 @@ type Props = {
 };
 
 export default function DraftPlayerModal({
+  slateId,
+  centerSeason,
   draftingPlayer,
   setDraftingPlayer,
   playerAverageMap,
@@ -79,6 +83,8 @@ export default function DraftPlayerModal({
   return (
     <PlayerModal
       mode="draft"
+      slateId={slateId}
+      centerSeason={centerSeason}
       player={draftingPlayer}
       onClose={() => setDraftingPlayer(null)}
       playerAverageMap={playerAverageMap}

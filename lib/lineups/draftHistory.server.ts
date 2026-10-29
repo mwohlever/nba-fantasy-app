@@ -63,7 +63,6 @@ export async function mutateFantasyDraft(input: {
   slateId: number; groupId: string; leagueId: string; sport: "nba" | "nfl"; teamId: number; actorId: string;
   desiredIds: number[]; expectedIds: number[]; correction?: boolean;
   requestedSlot?: { playerId: number; position: string; slotIndex: number } | null;
-  projection?: Record<string, unknown> | null;
 }) {
   const [slate, lineup, players] = await Promise.all([
     supabaseAdmin.from("slates").select("rules_snapshot").eq("id", input.slateId).eq("league_id", input.leagueId).eq("sport", input.sport).single(),
@@ -79,6 +78,6 @@ export async function mutateFantasyDraft(input: {
     p_team_id: input.teamId, p_actor_id: input.actorId,
     p_intent: { desired_ids: input.desiredIds, expected_ids: input.expectedIds, correction: input.correction === true,
       roster_slots: rosterSlots.map(s => ({ position: s.position, slot_count: s.slot_count })),
-      rules_snapshot: slate.data.rules_snapshot, assignments, projection: input.projection ?? null },
+      rules_snapshot: slate.data.rules_snapshot, assignments, projection: null },
   });
 }

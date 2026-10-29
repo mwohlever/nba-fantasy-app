@@ -62,18 +62,6 @@ test('Draft Projection ordering keeps V2 ahead of fallback and unavailable value
   assert.deepEqual(withHistoricalFantasyAverage(undefined, undefined), unavailable);
 });
 
-test('Draft integration explicitly reads only current frozen V2 cache versions and leaves K/DST on fallback behavior', () => {
-  const server = fs.readFileSync('lib/lineups/draftProjections.server.ts', 'utf8');
-  const route = fs.readFileSync('app/api/draft-projections/route.ts', 'utf8');
-  const pool = fs.readFileSync('components/lineups/PlayerPool.tsx', 'utf8');
-  const fallback = fs.readFileSync('lib/lineups/draftProjectionTypes.ts', 'utf8');
-  assert.match(server, /\.eq\("model_version", NBA_PROJECTION_V2\)/);
-  assert.match(server, /\.eq\("model_version", NFL_PROJECTION_V2\)/);
-  assert.match(server, /scoreNbaDraftProjection\([\s\S]*slate\.rules_snapshot/);
-  assert.match(server, /scoreNflDraftProjection\([\s\S]*slate\.rules_snapshot/);
-  assert.match(route, /authorizeSlateResource\(request, slateId, \{/);
-  assert.match(fallback, /source: "historical_fantasy_average"/);
-  assert.match(pool, /setResearchMode\("projection"\)/);
-  assert.match(pool, /<option value="projection">Projection<\/option>/);
-  assert.doesNotMatch(server, /\.insert\(|\.upsert\(|\.update\(/);
+test('Draft forecast integration is retired with no cache lookup or historical-average fallback',()=>{
+ const server=fs.readFileSync('lib/lineups/draftProjections.server.ts','utf8'),route=fs.readFileSync('app/api/draft-projections/route.ts','utf8');assert.match(server,/have been retired/);assert.doesNotMatch(server,/supabaseAdmin|scoreNbaDraftProjection|scoreNflDraftProjection/);assert.match(route,/status: 410/);
 });

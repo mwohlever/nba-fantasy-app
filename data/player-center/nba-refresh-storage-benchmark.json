@@ -1,0 +1,68 @@
+{
+  "scope": "Isolated PostgreSQL; actual captured game shapes duplicated into a synthetic cohort. Not a measurement of 530 real player histories.",
+  "captured_games_per_player": 60,
+  "cohort_players": 530,
+  "first": {
+    "rows": 530,
+    "logical_bytes": 24445720,
+    "allocated_bytes": 3678208,
+    "heap_toast_bytes": 3629056,
+    "index_bytes": 49152
+  },
+  "after_three_metadata_checks": [
+    {
+      "rows": 530,
+      "logical_bytes": 24448787,
+      "allocated_bytes": 4325376,
+      "heap_toast_bytes": 4251648,
+      "index_bytes": 73728
+    },
+    {
+      "rows": 530,
+      "logical_bytes": 24448785,
+      "allocated_bytes": 4939776,
+      "heap_toast_bytes": 4866048,
+      "index_bytes": 73728
+    },
+    {
+      "rows": 530,
+      "logical_bytes": 24448748,
+      "allocated_bytes": 5554176,
+      "heap_toast_bytes": 5480448,
+      "index_bytes": 73728
+    }
+  ],
+  "after_three_full_rewrites": [
+    {
+      "rows": 530,
+      "logical_bytes": 24604120,
+      "allocated_bytes": 9093120,
+      "heap_toast_bytes": 9019392,
+      "index_bytes": 73728
+    },
+    {
+      "rows": 530,
+      "logical_bytes": 24604101,
+      "allocated_bytes": 12632064,
+      "heap_toast_bytes": 12558336,
+      "index_bytes": 73728
+    },
+    {
+      "rows": 530,
+      "logical_bytes": 24604069,
+      "allocated_bytes": 16187392,
+      "heap_toast_bytes": 16113664,
+      "index_bytes": 73728
+    }
+  ],
+  "estimated_82_game_logical_bytes": 33409151,
+  "wal_generated_bytes": 14845264,
+  "cache_allocation_limit_bytes": 67108864,
+  "source_capture_sha256": "dcd7d9b220ce3accbaf7187747e6c20460246c57d581377bafe51a73f67eb93d",
+  "database_engine": "PostgreSQL 17 isolated Unix socket",
+  "measured_at": "2026-10-29",
+  "warning_database_bytes": 400000000,
+  "stop_database_bytes": 450000000,
+  "physical_reserve_bytes": 268435456,
+  "additional_wal_allowance_bytes": 67108864
+}

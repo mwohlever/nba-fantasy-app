@@ -59,15 +59,8 @@ test('repository history selection retains only current/prior seasons before asO
   assert.deepEqual(selected.map(row => row.provider_event_id), ['prior', 'current']);
 });
 
-test('batch generation feeds normalized history into V1, caches model version/freshness, and returns no-history cleanly', async () => {
-  const rows = [...Array.from({ length: 8 }, (_, i) => record({ id: `p${i}`, season: 2025, day: i + 1, minutes: 20 })),
-    ...Array.from({ length: 8 }, (_, i) => record({ id: `c${i}`, season: 2026, day: i + 10, minutes: 20 }))];
-  const writes = [];
-  const result = await generateNbaProjectionStatCache({ playerIds: [7, 8], targetSeason: 2026, asOf: '2026-01-20T00:00:00Z', generatedAt: '2026-01-20T01:00:00Z',
-    repository: { loadHistories: async () => new Map([[7, { observations: rows, latestGameAt: '2026-01-17T18:00:00Z', latestUpdatedAt: '2026-01-20T00:30:00Z' }], [8, { observations: [], latestGameAt: null, latestUpdatedAt: null }]]),
-      upsertStatCache: async cache => writes.push(...cache) } });
-  assert.equal(result.generated.length, 1); assert.deepEqual(result.unavailable, [8]); assert.equal(writes[0].model_version, 'nba-v2-robust50i25-recent15-v1');
-  assert.equal(writes[0].generated_at, '2026-01-20T01:00:00Z'); assert.equal(writes[0].source_latest_game_at, '2026-01-17T18:00:00Z');
+test('retired NBA generator never loads histories or writes caches',async()=>{
+ let reads=0,writes=0;await assert.rejects(generateNbaProjectionStatCache({repository:{loadHistories:async()=>{reads++;return new Map();},upsertStatCache:async()=>{writes++;}},playerIds:[7],targetSeason:2026,asOf:'2026-01-20T00:00:00Z'}),/retired/);assert.equal(reads,0);assert.equal(writes,0);
 });
 
 test('one cached stat line scores differently under separate frozen NBA snapshots without cache leakage', () => {
