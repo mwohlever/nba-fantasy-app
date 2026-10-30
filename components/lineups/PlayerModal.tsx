@@ -6,6 +6,7 @@ import TeamAvatar from "@/components/ui/TeamAvatar";
 import type { OrderedTeam, Player } from "@/components/lineups/types";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import { getStatColumns } from "@/lib/statColumns";
+import PlayerModalAdapter from "@/components/player-center/PlayerModalAdapter";
 
 type TeamStats = {
   totalPlayers: number;
@@ -63,6 +64,8 @@ type Profile = {
 };
 
 type SharedProps = {
+  slateId?: number | null;
+  centerSeason?: number;
   player: Player | null;
   onClose: () => void;
   playerAverageMap: Map<number, number>;
@@ -95,6 +98,7 @@ type DraftProps = SharedProps & {
 };
 
 type Props = ViewProps | DraftProps;
+export type PlayerModalProps = Props;
 
 function fmt(value: number | null | undefined, digits = 1) {
   if (value === null || value === undefined) {
@@ -213,7 +217,7 @@ function projectionSourceLabel(source: string | null | undefined) {
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-export default function PlayerModal(props: Props) {
+function LegacyPlayerModal(props: Props) {
   const { player, onClose, playerAverageMap, playerProjections } = props;
   const { selectedSport } = useSelectedSport();
 
@@ -990,4 +994,11 @@ export default function PlayerModal(props: Props) {
       </section>
     </div>
   );
+}
+
+export default function PlayerModal(props: Props) {
+  const { selectedSport } = useSelectedSport();
+  return selectedSport === "nba" || selectedSport === "nfl"
+    ? <PlayerModalAdapter {...props} sport={selectedSport} />
+    : <LegacyPlayerModal {...props} />;
 }

@@ -10,6 +10,8 @@ import type {
 } from "@/components/lineups/types";
 
 type Props = {
+  slateId?: number | null;
+  centerSeason?: number;
   player: Player | null;
   setPlayer: (player: Player | null) => void;
   playerAverageMap: Map<number, number>;
@@ -22,6 +24,8 @@ type Props = {
 };
 
 export default function ReadOnlyPlayerModal({
+  slateId,
+  centerSeason,
   player,
   setPlayer,
   playerAverageMap,
@@ -51,6 +55,8 @@ export default function ReadOnlyPlayerModal({
   return (
     <PlayerModal
       mode="view"
+      slateId={slateId}
+      centerSeason={centerSeason}
       player={player}
       onClose={() => setPlayer(null)}
       playerAverageMap={playerAverageMap}

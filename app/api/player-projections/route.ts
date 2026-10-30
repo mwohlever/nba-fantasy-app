@@ -1,22 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getPlayerProjectionsForSeason } from "@/lib/playerProjections";
+import { NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
-  try {
-    const season = req.nextUrl.searchParams.get("season") || "2026";
-    const result = await getPlayerProjectionsForSeason(season);
+export const dynamic = "force-dynamic";
 
-    return NextResponse.json({
-      season: result.season,
-      nbaSeason: result.nbaSeason,
-      count: Object.keys(result.projections).length,
-      projections: result.projections,
-    });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to load player projections." },
-      { status: 500 }
-    );
-  }
+/** Retired October 27, 2026. Historical database records are retained. */
+export async function GET() {
+  return NextResponse.json({ error: "NBA/NFL player projections have been retired.", retired: true }, { status: 410, headers: { "Cache-Control": "no-store" } });
 }

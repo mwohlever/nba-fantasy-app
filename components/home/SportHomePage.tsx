@@ -55,9 +55,6 @@ type LatestSlateRow = {
   games_completed: number | null;
   games_in_progress: number | null;
   games_remaining: number | null;
-  projected_points?: number | null;
-  pregame_projected_points?: number | null;
-  win_probability?: number | null;
   golf_status_label?: string | null;
 };
 

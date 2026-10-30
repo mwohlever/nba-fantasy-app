@@ -87,15 +87,15 @@ test('late owner identity never opens a roster or overrides explicit choice', ()
   tree = h.render({ ...props, currentTeamId: 2 }, true);
   assert.equal(byClass(tree, 'scores-standing-toggle')[0].props['aria-expanded'], true);
 });
-test('saved-pregame comparison and missing snapshot remain in expanded roster totals', () => {
+test('expanded roster totals preserve actual scores and ignore retained historical forecast props', () => {
   const props = dashboardProps({ selectedSlate: { id: 1, sport: 'nba', is_locked: true } });
   const h = dashboardHost(props);
   byClass(h.render(props), 'scores-standing-toggle')[0].props.onClick();
   const tree = h.render(props);
   const details = byClass(tree, 'scores-roster-totals')[0];
-  assert.match(renderToStaticMarkup(details), /Pregame projection: 22.0 FP/);
-  assert.match(renderToStaticMarkup(details), /vs projection/);
-  assert.match(renderToStaticMarkup(h.render({ ...props, getPregameProjectedTeamTotal: () => null })), /No saved pregame projection/);
+  assert.match(renderToStaticMarkup(details), /Team totals.*PTS.*10/);
+  assert.doesNotMatch(renderToStaticMarkup(details), /projection|probability|pregame/i);
+  assert.doesNotMatch(renderToStaticMarkup(h.render({ ...props, getPregameProjectedTeamTotal: () => { throw Error("Retired snapshot reader"); } })), /pregame|projection/i);
 });
 test('controls retain settings and use a real keyboard refresh button with shared disabled state', () => {
   const h = host(LineupControls);
@@ -326,7 +326,7 @@ test('builder passes active Group team ownership and scope to the shared scorebo
   } finally { delete context.team; context.group = 'group-a'; }
 });
 
-test('NFL has no projection analysis even when expanded; NBA analysis stays in secondary totals', () => {
+test('neither NBA nor NFL renders forecast analysis even when expanded', () => {
   for (const sport of ['nba', 'nfl']) {
     const props = dashboardProps({ selectedSlate: { id: 1, sport } });
     const h = dashboardHost(props);
@@ -334,8 +334,7 @@ test('NFL has no projection analysis even when expanded; NBA analysis stays in s
     assert.doesNotMatch(renderToStaticMarkup(tree), /Proj|% win/);
     byClass(tree, 'scores-standing-toggle')[0].props.onClick();
     tree = h.render(props);
-    if (sport === 'nfl') assert.doesNotMatch(renderToStaticMarkup(tree), /projection|pregame|% win/i);
-    else assert.match(renderToStaticMarkup(byClass(tree, 'scores-roster-totals')[0]), /Projected final.*win probability.*Pregame projection/);
+    assert.doesNotMatch(renderToStaticMarkup(tree), /projection|pregame|probability|% win/i);
   }
 });
 

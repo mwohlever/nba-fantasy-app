@@ -1,0 +1,5481 @@
+{
+  "capturedAt": "2026-10-23T17:03:48.642Z",
+  "databaseWrites": 0,
+  "providerRequests": 26,
+  "identitySource": "Existing reviewed catalog rows, exact local/native/provider IDs; no candidate mappings applied",
+  "histories": [
+    {
+      "player": {
+        "sport": "nba",
+        "playerId": 6,
+        "name": "LeBron James",
+        "position": "F/C",
+        "active": true,
+        "nativePlayerId": "2544",
+        "providerPlayerId": "1966",
+        "identity": "resolved"
+      },
+      "season": 2027,
+      "phase": "regular",
+      "source": "provider",
+      "games": [
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401909089",
+          "season": 2027,
+          "phase": "regular",
+          "gameAt": "2026-10-20T23:00:00.000Z",
+          "week": null,
+          "teamId": "20",
+          "team": "PHI",
+          "opponentId": "18",
+          "opponent": "NY",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 14,
+            "rebounds": 9,
+            "assists": 7,
+            "steals": 1,
+            "blocks": 1,
+            "turnovers": 1,
+            "minutes": 34,
+            "fieldGoalsMade": 5,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 4,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 0,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2027"
+          ],
+          "fetchedAt": "2026-10-23T17:03:52.493Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401909093",
+          "season": 2027,
+          "phase": "regular",
+          "gameAt": "2026-10-22T23:00:00.000Z",
+          "week": null,
+          "teamId": "20",
+          "team": "PHI",
+          "opponentId": "5",
+          "opponent": "CLE",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 17,
+            "rebounds": 10,
+            "assists": 5,
+            "steals": 3,
+            "blocks": 1,
+            "turnovers": 5,
+            "minutes": 33,
+            "fieldGoalsMade": 5,
+            "fieldGoalsAttempted": 14,
+            "freeThrowsMade": 6,
+            "freeThrowsAttempted": 7,
+            "threePointersMade": 1,
+            "threePointersAttempted": 4
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2027"
+          ],
+          "fetchedAt": "2026-10-23T17:03:52.493Z",
+          "issues": []
+        }
+      ],
+      "seasonStats": {
+        "season": 2027,
+        "phase": "regular",
+        "categories": [
+          {
+            "name": "averages",
+            "teamId": "20",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "2"
+              },
+              {
+                "label": "GS",
+                "value": "2"
+              },
+              {
+                "label": "MIN",
+                "value": "33.5"
+              },
+              {
+                "label": "FG",
+                "value": "5.0-13.5"
+              },
+              {
+                "label": "FG%",
+                "value": "37.0"
+              },
+              {
+                "label": "3PT",
+                "value": "0.5-3.5"
+              },
+              {
+                "label": "3P%",
+                "value": "14.3"
+              },
+              {
+                "label": "FT",
+                "value": "5.0-6.5"
+              },
+              {
+                "label": "FT%",
+                "value": "76.9"
+              },
+              {
+                "label": "OR",
+                "value": "1.0"
+              },
+              {
+                "label": "DR",
+                "value": "8.5"
+              },
+              {
+                "label": "REB",
+                "value": "9.5"
+              },
+              {
+                "label": "AST",
+                "value": "6.0"
+              },
+              {
+                "label": "BLK",
+                "value": "1.0"
+              },
+              {
+                "label": "STL",
+                "value": "2.0"
+              },
+              {
+                "label": "PF",
+                "value": "3.5"
+              },
+              {
+                "label": "TO",
+                "value": "3.0"
+              },
+              {
+                "label": "PTS",
+                "value": "15.5"
+              }
+            ]
+          },
+          {
+            "name": "totals",
+            "teamId": "20",
+            "fields": [
+              {
+                "label": "FG",
+                "value": "10-27"
+              },
+              {
+                "label": "FG%",
+                "value": "37.0"
+              },
+              {
+                "label": "3PT",
+                "value": "1-7"
+              },
+              {
+                "label": "3P%",
+                "value": "14.3"
+              },
+              {
+                "label": "FT",
+                "value": "10-13"
+              },
+              {
+                "label": "FT%",
+                "value": "76.9"
+              },
+              {
+                "label": "OR",
+                "value": "2"
+              },
+              {
+                "label": "DR",
+                "value": "17"
+              },
+              {
+                "label": "REB",
+                "value": "19"
+              },
+              {
+                "label": "AST",
+                "value": "12"
+              },
+              {
+                "label": "BLK",
+                "value": "2"
+              },
+              {
+                "label": "STL",
+                "value": "4"
+              },
+              {
+                "label": "PF",
+                "value": "7"
+              },
+              {
+                "label": "TO",
+                "value": "6"
+              },
+              {
+                "label": "PTS",
+                "value": "31"
+              }
+            ]
+          },
+          {
+            "name": "miscellaneous",
+            "teamId": "20",
+            "fields": [
+              {
+                "label": "DD2",
+                "value": "1"
+              },
+              {
+                "label": "TD3",
+                "value": "0"
+              },
+              {
+                "label": "DQ",
+                "value": "0"
+              },
+              {
+                "label": "EJECT",
+                "value": "0"
+              },
+              {
+                "label": "TECH",
+                "value": "0"
+              },
+              {
+                "label": "FLAG",
+                "value": "0"
+              },
+              {
+                "label": "AST/TO",
+                "value": "2.0"
+              },
+              {
+                "label": "STL/TO",
+                "value": "0.7"
+              },
+              {
+                "label": "SC-EFF",
+                "value": "1.148"
+              },
+              {
+                "label": "SH-EFF",
+                "value": "0.39"
+              }
+            ]
+          }
+        ],
+        "expectedGames": 2,
+        "issues": []
+      },
+      "byeWeeks": null,
+      "providerRequests": 2,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 2,
+        "fetchedAt": "2026-10-23T17:03:52.935Z",
+        "freshness": "fresh",
+        "issues": []
+      }
+    },
+    {
+      "player": {
+        "sport": "nba",
+        "playerId": 6,
+        "name": "LeBron James",
+        "position": "F/C",
+        "active": true,
+        "nativePlayerId": "2544",
+        "providerPlayerId": "1966",
+        "identity": "resolved"
+      },
+      "season": 2026,
+      "phase": "regular",
+      "source": "provider",
+      "games": [
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810108",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-11-19T03:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "26",
+          "opponent": "UTAH",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 11,
+            "rebounds": 3,
+            "assists": 12,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 1,
+            "minutes": 30,
+            "fieldGoalsMade": 4,
+            "fieldGoalsAttempted": 7,
+            "freeThrowsMade": 1,
+            "freeThrowsAttempted": 4,
+            "threePointersMade": 2,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810137",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-11-24T01:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "26",
+          "opponent": "UTAH",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 17,
+            "rebounds": 6,
+            "assists": 8,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 2,
+            "minutes": 34,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 18,
+            "freeThrowsMade": 1,
+            "freeThrowsAttempted": 2,
+            "threePointersMade": 0,
+            "threePointersAttempted": 4
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401809801",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-11-26T04:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "12",
+          "opponent": "LAC",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 25,
+            "rebounds": 6,
+            "assists": 6,
+            "steals": 1,
+            "blocks": 1,
+            "turnovers": 3,
+            "minutes": 32,
+            "fieldGoalsMade": 9,
+            "fieldGoalsAttempted": 15,
+            "freeThrowsMade": 5,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 2,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401809820",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-11-29T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "6",
+          "opponent": "DAL",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 13,
+            "rebounds": 5,
+            "assists": 7,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 2,
+            "minutes": 34,
+            "fieldGoalsMade": 5,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 1,
+            "freeThrowsAttempted": 4,
+            "threePointersMade": 2,
+            "threePointersAttempted": 6
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810172",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-02T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "21",
+          "opponent": "PHX",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 10,
+            "rebounds": 0,
+            "assists": 3,
+            "steals": 0,
+            "blocks": 0,
+            "turnovers": 3,
+            "minutes": 31,
+            "fieldGoalsMade": 3,
+            "fieldGoalsAttempted": 10,
+            "freeThrowsMade": 3,
+            "freeThrowsAttempted": 4,
+            "threePointersMade": 1,
+            "threePointersAttempted": 4
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810191",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-05T00:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "28",
+          "opponent": "TOR",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 8,
+            "rebounds": 6,
+            "assists": 11,
+            "steals": 0,
+            "blocks": 0,
+            "turnovers": 0,
+            "minutes": 36,
+            "fieldGoalsMade": 4,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 0,
+            "freeThrowsAttempted": 0,
+            "threePointersMade": 0,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810217",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-08T00:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "20",
+          "opponent": "PHI",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 29,
+            "rebounds": 7,
+            "assists": 6,
+            "steals": 1,
+            "blocks": 1,
+            "turnovers": 2,
+            "minutes": 34,
+            "fieldGoalsMade": 12,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 1,
+            "freeThrowsAttempted": 2,
+            "threePointersMade": 4,
+            "threePointersAttempted": 6
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401809836",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-11T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "24",
+          "opponent": "SA",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 19,
+            "rebounds": 15,
+            "assists": 8,
+            "steals": 0,
+            "blocks": 3,
+            "turnovers": 3,
+            "minutes": 36,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 14,
+            "freeThrowsMade": 5,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 0,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401839699",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-15T01:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "21",
+          "opponent": "PHX",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 26,
+            "rebounds": 3,
+            "assists": 4,
+            "steals": 2,
+            "blocks": 2,
+            "turnovers": 8,
+            "minutes": 36,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 9,
+            "freeThrowsAttempted": 14,
+            "threePointersMade": 1,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810234",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-19T02:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "26",
+          "opponent": "UTAH",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 28,
+            "rebounds": 7,
+            "assists": 10,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 2,
+            "minutes": 33,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 12,
+            "freeThrowsAttempted": 13,
+            "threePointersMade": 0,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810250",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-21T03:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "12",
+          "opponent": "LAC",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 36,
+            "rebounds": 4,
+            "assists": 3,
+            "steals": 2,
+            "blocks": 1,
+            "turnovers": 3,
+            "minutes": 38,
+            "fieldGoalsMade": 15,
+            "fieldGoalsAttempted": 28,
+            "freeThrowsMade": 3,
+            "freeThrowsAttempted": 5,
+            "threePointersMade": 3,
+            "threePointersAttempted": 7
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810273",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-24T02:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "21",
+          "opponent": "PHX",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 23,
+            "rebounds": 2,
+            "assists": 6,
+            "steals": 0,
+            "blocks": 0,
+            "turnovers": 0,
+            "minutes": 26,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 14,
+            "freeThrowsMade": 6,
+            "freeThrowsAttempted": 11,
+            "threePointersMade": 3,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401809241",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-26T01:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "10",
+          "opponent": "HOU",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 18,
+            "rebounds": 2,
+            "assists": 5,
+            "steals": 2,
+            "blocks": 1,
+            "turnovers": 3,
+            "minutes": 32,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 3,
+            "freeThrowsAttempted": 4,
+            "threePointersMade": 1,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810301",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-29T02:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "23",
+          "opponent": "SAC",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 24,
+            "rebounds": 3,
+            "assists": 5,
+            "steals": 2,
+            "blocks": 0,
+            "turnovers": 2,
+            "minutes": 29,
+            "fieldGoalsMade": 11,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 1,
+            "freeThrowsAttempted": 1,
+            "threePointersMade": 1,
+            "threePointersAttempted": 2
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810315",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2025-12-31T03:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "8",
+          "opponent": "DET",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 17,
+            "rebounds": 4,
+            "assists": 4,
+            "steals": 1,
+            "blocks": 1,
+            "turnovers": 5,
+            "minutes": 32,
+            "fieldGoalsMade": 6,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 2,
+            "freeThrowsAttempted": 5,
+            "threePointersMade": 3,
+            "threePointersAttempted": 10
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810340",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-03T03:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "29",
+          "opponent": "MEM",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 31,
+            "rebounds": 9,
+            "assists": 6,
+            "steals": 0,
+            "blocks": 0,
+            "turnovers": 4,
+            "minutes": 36,
+            "fieldGoalsMade": 12,
+            "fieldGoalsAttempted": 18,
+            "freeThrowsMade": 6,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 1,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810356",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-05T02:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "29",
+          "opponent": "MEM",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 26,
+            "rebounds": 7,
+            "assists": 10,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 1,
+            "minutes": 37,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 14,
+            "freeThrowsMade": 8,
+            "freeThrowsAttempted": 10,
+            "threePointersMade": 2,
+            "threePointersAttempted": 7
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810369",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-07T01:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "3",
+          "opponent": "NO",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 30,
+            "rebounds": 8,
+            "assists": 8,
+            "steals": 2,
+            "blocks": 1,
+            "turnovers": 1,
+            "minutes": 33,
+            "fieldGoalsMade": 10,
+            "fieldGoalsAttempted": 19,
+            "freeThrowsMade": 7,
+            "freeThrowsAttempted": 7,
+            "threePointersMade": 3,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810396",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-10T03:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "15",
+          "opponent": "MIL",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 26,
+            "rebounds": 9,
+            "assists": 10,
+            "steals": 3,
+            "blocks": 0,
+            "turnovers": 3,
+            "minutes": 33,
+            "fieldGoalsMade": 10,
+            "fieldGoalsAttempted": 21,
+            "freeThrowsMade": 4,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 2,
+            "threePointersAttempted": 7
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810417",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-13T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "23",
+          "opponent": "SAC",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 22,
+            "rebounds": 4,
+            "assists": 3,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 3,
+            "minutes": 33,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 6,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 0,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810424",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-14T03:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "1",
+          "opponent": "ATL",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 31,
+            "rebounds": 9,
+            "assists": 10,
+            "steals": 1,
+            "blocks": 1,
+            "turnovers": 4,
+            "minutes": 33,
+            "fieldGoalsMade": 12,
+            "fieldGoalsAttempted": 20,
+            "freeThrowsMade": 5,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 2,
+            "threePointersAttempted": 4
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810441",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-16T03:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "30",
+          "opponent": "CHA",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 29,
+            "rebounds": 9,
+            "assists": 6,
+            "steals": 2,
+            "blocks": 1,
+            "turnovers": 3,
+            "minutes": 33,
+            "fieldGoalsMade": 10,
+            "fieldGoalsAttempted": 19,
+            "freeThrowsMade": 6,
+            "freeThrowsAttempted": 7,
+            "threePointersMade": 3,
+            "threePointersAttempted": 6
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810456",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-18T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "22",
+          "opponent": "POR",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 20,
+            "rebounds": 9,
+            "assists": 8,
+            "steals": 1,
+            "blocks": 2,
+            "turnovers": 4,
+            "minutes": 32,
+            "fieldGoalsMade": 6,
+            "fieldGoalsAttempted": 16,
+            "freeThrowsMade": 7,
+            "freeThrowsAttempted": 7,
+            "threePointersMade": 1,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810462",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-19T02:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "28",
+          "opponent": "TOR",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 24,
+            "rebounds": 4,
+            "assists": 7,
+            "steals": 0,
+            "blocks": 2,
+            "turnovers": 3,
+            "minutes": 32,
+            "fieldGoalsMade": 9,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 4,
+            "freeThrowsAttempted": 4,
+            "threePointersMade": 2,
+            "threePointersAttempted": 4
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810472",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-21T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "7",
+          "opponent": "DEN",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 19,
+            "rebounds": 9,
+            "assists": 8,
+            "steals": 0,
+            "blocks": 0,
+            "turnovers": 6,
+            "minutes": 34,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 15,
+            "freeThrowsMade": 2,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 1,
+            "threePointersAttempted": 1
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810488",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-23T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "12",
+          "opponent": "LAC",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 23,
+            "rebounds": 5,
+            "assists": 6,
+            "steals": 2,
+            "blocks": 0,
+            "turnovers": 4,
+            "minutes": 36,
+            "fieldGoalsMade": 9,
+            "fieldGoalsAttempted": 19,
+            "freeThrowsMade": 4,
+            "freeThrowsAttempted": 5,
+            "threePointersMade": 1,
+            "threePointersAttempted": 4
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810503",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-25T01:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "6",
+          "opponent": "DAL",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 17,
+            "rebounds": 8,
+            "assists": 5,
+            "steals": 1,
+            "blocks": 1,
+            "turnovers": 1,
+            "minutes": 37,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 16,
+            "freeThrowsMade": 0,
+            "freeThrowsAttempted": 0,
+            "threePointersMade": 1,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810516",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-27T01:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "4",
+          "opponent": "CHI",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 24,
+            "rebounds": 5,
+            "assists": 3,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 2,
+            "minutes": 33,
+            "fieldGoalsMade": 9,
+            "fieldGoalsAttempted": 19,
+            "freeThrowsMade": 5,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 1,
+            "threePointersAttempted": 4
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810526",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-29T00:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "5",
+          "opponent": "CLE",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 11,
+            "rebounds": 3,
+            "assists": 5,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 6,
+            "minutes": 27,
+            "fieldGoalsMade": 3,
+            "fieldGoalsAttempted": 10,
+            "freeThrowsMade": 5,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 0,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810543",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-01-31T00:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "27",
+          "opponent": "WSH",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 20,
+            "rebounds": 3,
+            "assists": 6,
+            "steals": 2,
+            "blocks": 0,
+            "turnovers": 3,
+            "minutes": 30,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 16,
+            "freeThrowsMade": 2,
+            "freeThrowsAttempted": 2,
+            "threePointersMade": 2,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810563",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-02-02T00:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "18",
+          "opponent": "NY",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 22,
+            "rebounds": 5,
+            "assists": 6,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 1,
+            "minutes": 35,
+            "fieldGoalsMade": 9,
+            "fieldGoalsAttempted": 15,
+            "freeThrowsMade": 2,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 2,
+            "threePointersAttempted": 6
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810574",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-02-04T00:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "17",
+          "opponent": "BKN",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 25,
+            "rebounds": 3,
+            "assists": 7,
+            "steals": 3,
+            "blocks": 0,
+            "turnovers": 1,
+            "minutes": 30,
+            "fieldGoalsMade": 10,
+            "fieldGoalsAttempted": 16,
+            "freeThrowsMade": 5,
+            "freeThrowsAttempted": 7,
+            "threePointersMade": 0,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810595",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-02-06T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "20",
+          "opponent": "PHI",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 17,
+            "rebounds": 4,
+            "assists": 10,
+            "steals": 0,
+            "blocks": 1,
+            "turnovers": 8,
+            "minutes": 37,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 3,
+            "freeThrowsAttempted": 3,
+            "threePointersMade": 0,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810608",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-02-08T01:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "9",
+          "opponent": "GS",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 20,
+            "rebounds": 7,
+            "assists": 10,
+            "steals": 1,
+            "blocks": 1,
+            "turnovers": 7,
+            "minutes": 35,
+            "fieldGoalsMade": 6,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 6,
+            "freeThrowsAttempted": 7,
+            "threePointersMade": 2,
+            "threePointersAttempted": 7
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810624",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-02-10T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "25",
+          "opponent": "OKC",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 22,
+            "rebounds": 6,
+            "assists": 10,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 3,
+            "minutes": 36,
+            "fieldGoalsMade": 9,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 4,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 0,
+            "threePointersAttempted": 4
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810646",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-02-13T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "6",
+          "opponent": "DAL",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 28,
+            "rebounds": 10,
+            "assists": 12,
+            "steals": 0,
+            "blocks": 1,
+            "turnovers": 4,
+            "minutes": 35,
+            "fieldGoalsMade": 10,
+            "fieldGoalsAttempted": 20,
+            "freeThrowsMade": 6,
+            "freeThrowsAttempted": 7,
+            "threePointersMade": 2,
+            "threePointersAttempted": 7
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810664",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-02-21T03:15:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "12",
+          "opponent": "LAC",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 13,
+            "rebounds": 3,
+            "assists": 11,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 3,
+            "minutes": 33,
+            "fieldGoalsMade": 5,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 2,
+            "freeThrowsAttempted": 2,
+            "threePointersMade": 1,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810678",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-02-22T23:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "2",
+          "opponent": "BOS",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 20,
+            "rebounds": 4,
+            "assists": 5,
+            "steals": 2,
+            "blocks": 1,
+            "turnovers": 1,
+            "minutes": 34,
+            "fieldGoalsMade": 9,
+            "fieldGoalsAttempted": 21,
+            "freeThrowsMade": 1,
+            "freeThrowsAttempted": 1,
+            "threePointersMade": 1,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810695",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-02-25T03:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "19",
+          "opponent": "ORL",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 21,
+            "rebounds": 6,
+            "assists": 4,
+            "steals": 0,
+            "blocks": 2,
+            "turnovers": 5,
+            "minutes": 32,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 3,
+            "freeThrowsAttempted": 4,
+            "threePointersMade": 2,
+            "threePointersAttempted": 6
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810710",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-02-27T02:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "21",
+          "opponent": "PHX",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 15,
+            "rebounds": 6,
+            "assists": 5,
+            "steals": 0,
+            "blocks": 0,
+            "turnovers": 1,
+            "minutes": 35,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 16,
+            "freeThrowsMade": 1,
+            "freeThrowsAttempted": 2,
+            "threePointersMade": 0,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810721",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-01T01:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "9",
+          "opponent": "GS",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 22,
+            "rebounds": 7,
+            "assists": 9,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 4,
+            "minutes": 28,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 4,
+            "freeThrowsAttempted": 5,
+            "threePointersMade": 4,
+            "threePointersAttempted": 6
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810733",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-02T02:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "23",
+          "opponent": "SAC",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 24,
+            "rebounds": 1,
+            "assists": 5,
+            "steals": 2,
+            "blocks": 1,
+            "turnovers": 3,
+            "minutes": 27,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 15,
+            "freeThrowsMade": 5,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 3,
+            "threePointersAttempted": 4
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810746",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-04T03:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "3",
+          "opponent": "NO",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 21,
+            "rebounds": 7,
+            "assists": 7,
+            "steals": 0,
+            "blocks": 2,
+            "turnovers": 5,
+            "minutes": 33,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 12,
+            "freeThrowsMade": 4,
+            "freeThrowsAttempted": 8,
+            "threePointersMade": 1,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810761",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-06T03:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "7",
+          "opponent": "DEN",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 16,
+            "rebounds": 5,
+            "assists": 8,
+            "steals": 3,
+            "blocks": 1,
+            "turnovers": 1,
+            "minutes": 34,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 11,
+            "freeThrowsMade": 2,
+            "freeThrowsAttempted": 2,
+            "threePointersMade": 0,
+            "threePointersAttempted": 2
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810815",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-13T02:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "4",
+          "opponent": "CHI",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 18,
+            "rebounds": 7,
+            "assists": 7,
+            "steals": 2,
+            "blocks": 1,
+            "turnovers": 4,
+            "minutes": 33,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 4,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 0,
+            "threePointersAttempted": 2
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810829",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-15T00:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "7",
+          "opponent": "DEN",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 17,
+            "rebounds": 6,
+            "assists": 5,
+            "steals": 2,
+            "blocks": 0,
+            "turnovers": 5,
+            "minutes": 40,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 2,
+            "freeThrowsAttempted": 3,
+            "threePointersMade": 1,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810844",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-17T01:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "10",
+          "opponent": "HOU",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 18,
+            "rebounds": 5,
+            "assists": 5,
+            "steals": 2,
+            "blocks": 0,
+            "turnovers": 1,
+            "minutes": 33,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 3,
+            "freeThrowsAttempted": 4,
+            "threePointersMade": 1,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810862",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-19T01:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "10",
+          "opponent": "HOU",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 30,
+            "rebounds": 5,
+            "assists": 2,
+            "steals": 1,
+            "blocks": 1,
+            "turnovers": 2,
+            "minutes": 34,
+            "fieldGoalsMade": 13,
+            "fieldGoalsAttempted": 14,
+            "freeThrowsMade": 2,
+            "freeThrowsAttempted": 3,
+            "threePointersMade": 2,
+            "threePointersAttempted": 2
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810865",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-20T00:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "14",
+          "opponent": "MIA",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 19,
+            "rebounds": 15,
+            "assists": 10,
+            "steals": 0,
+            "blocks": 0,
+            "turnovers": 3,
+            "minutes": 38,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 12,
+            "freeThrowsMade": 3,
+            "freeThrowsAttempted": 5,
+            "threePointersMade": 0,
+            "threePointersAttempted": 0
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810879",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-21T23:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "19",
+          "opponent": "ORL",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 12,
+            "rebounds": 6,
+            "assists": 4,
+            "steals": 3,
+            "blocks": 0,
+            "turnovers": 1,
+            "minutes": 34,
+            "fieldGoalsMade": 5,
+            "fieldGoalsAttempted": 13,
+            "freeThrowsMade": 2,
+            "freeThrowsAttempted": 2,
+            "threePointersMade": 0,
+            "threePointersAttempted": 2
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810893",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-23T23:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "8",
+          "opponent": "DET",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 12,
+            "rebounds": 9,
+            "assists": 10,
+            "steals": 0,
+            "blocks": 1,
+            "turnovers": 4,
+            "minutes": 39,
+            "fieldGoalsMade": 4,
+            "fieldGoalsAttempted": 10,
+            "freeThrowsMade": 3,
+            "freeThrowsAttempted": 3,
+            "threePointersMade": 1,
+            "threePointersAttempted": 2
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810907",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-25T23:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "11",
+          "opponent": "IND",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 23,
+            "rebounds": 9,
+            "assists": 9,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 1,
+            "minutes": 34,
+            "fieldGoalsMade": 9,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 5,
+            "freeThrowsAttempted": 5,
+            "threePointersMade": 0,
+            "threePointersAttempted": 1
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810930",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-28T02:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "17",
+          "opponent": "BKN",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 14,
+            "rebounds": 6,
+            "assists": 8,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 1,
+            "minutes": 37,
+            "fieldGoalsMade": 5,
+            "fieldGoalsAttempted": 11,
+            "freeThrowsMade": 4,
+            "freeThrowsAttempted": 7,
+            "threePointersMade": 0,
+            "threePointersAttempted": 1
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810953",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-03-31T02:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "27",
+          "opponent": "WSH",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 21,
+            "rebounds": 10,
+            "assists": 12,
+            "steals": 0,
+            "blocks": 1,
+            "turnovers": 4,
+            "minutes": 33,
+            "fieldGoalsMade": 8,
+            "fieldGoalsAttempted": 16,
+            "freeThrowsMade": 4,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 1,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810958",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-04-01T02:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "5",
+          "opponent": "CLE",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 14,
+            "rebounds": 5,
+            "assists": 6,
+            "steals": 1,
+            "blocks": 1,
+            "turnovers": 3,
+            "minutes": 31,
+            "fieldGoalsMade": 4,
+            "fieldGoalsAttempted": 8,
+            "freeThrowsMade": 5,
+            "freeThrowsAttempted": 6,
+            "threePointersMade": 1,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810971",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-04-03T01:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "25",
+          "opponent": "OKC",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 13,
+            "rebounds": 6,
+            "assists": 2,
+            "steals": 1,
+            "blocks": 1,
+            "turnovers": 2,
+            "minutes": 26,
+            "fieldGoalsMade": 3,
+            "fieldGoalsAttempted": 7,
+            "freeThrowsMade": 6,
+            "freeThrowsAttempted": 8,
+            "threePointersMade": 1,
+            "threePointersAttempted": 4
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401810995",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-04-05T23:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "6",
+          "opponent": "DAL",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 30,
+            "rebounds": 9,
+            "assists": 15,
+            "steals": 1,
+            "blocks": 0,
+            "turnovers": 4,
+            "minutes": 39,
+            "fieldGoalsMade": 12,
+            "fieldGoalsAttempted": 22,
+            "freeThrowsMade": 5,
+            "freeThrowsAttempted": 9,
+            "threePointersMade": 1,
+            "threePointersAttempted": 6
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401811025",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-04-10T02:00:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "9",
+          "opponent": "GS",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 26,
+            "rebounds": 8,
+            "assists": 11,
+            "steals": 2,
+            "blocks": 1,
+            "turnovers": 4,
+            "minutes": 32,
+            "fieldGoalsMade": 11,
+            "fieldGoalsAttempted": 17,
+            "freeThrowsMade": 1,
+            "freeThrowsAttempted": 2,
+            "threePointersMade": 3,
+            "threePointersAttempted": 5
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401811040",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-04-11T02:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "21",
+          "opponent": "PHX",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 28,
+            "rebounds": 6,
+            "assists": 12,
+            "steals": 4,
+            "blocks": 0,
+            "turnovers": 2,
+            "minutes": 32,
+            "fieldGoalsMade": 10,
+            "fieldGoalsAttempted": 16,
+            "freeThrowsMade": 6,
+            "freeThrowsAttempted": 9,
+            "threePointersMade": 2,
+            "threePointersAttempted": 2
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "1966",
+          "eventId": "401811053",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-04-13T00:30:00.000Z",
+          "week": null,
+          "teamId": "13",
+          "team": "LAL",
+          "opponentId": "26",
+          "opponent": "UTAH",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 18,
+            "rebounds": 4,
+            "assists": 6,
+            "steals": 3,
+            "blocks": 0,
+            "turnovers": 4,
+            "minutes": 17,
+            "fieldGoalsMade": 6,
+            "fieldGoalsAttempted": 15,
+            "freeThrowsMade": 6,
+            "freeThrowsAttempted": 7,
+            "threePointersMade": 0,
+            "threePointersAttempted": 3
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/1966/gamelog?season=2026"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.239Z",
+          "issues": []
+        }
+      ],
+      "seasonStats": {
+        "season": 2026,
+        "phase": "regular",
+        "categories": [
+          {
+            "name": "averages",
+            "teamId": "13",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "60"
+              },
+              {
+                "label": "GS",
+                "value": "60"
+              },
+              {
+                "label": "MIN",
+                "value": "33.2"
+              },
+              {
+                "label": "FG",
+                "value": "7.9-15.3"
+              },
+              {
+                "label": "FG%",
+                "value": "51.5"
+              },
+              {
+                "label": "3PT",
+                "value": "1.3-4.1"
+              },
+              {
+                "label": "3P%",
+                "value": "31.7"
+              },
+              {
+                "label": "FT",
+                "value": "3.9-5.3"
+              },
+              {
+                "label": "FT%",
+                "value": "73.7"
+              },
+              {
+                "label": "OR",
+                "value": "0.7"
+              },
+              {
+                "label": "DR",
+                "value": "5.4"
+              },
+              {
+                "label": "REB",
+                "value": "6.1"
+              },
+              {
+                "label": "AST",
+                "value": "7.2"
+              },
+              {
+                "label": "BLK",
+                "value": "0.6"
+              },
+              {
+                "label": "STL",
+                "value": "1.2"
+              },
+              {
+                "label": "PF",
+                "value": "1.4"
+              },
+              {
+                "label": "TO",
+                "value": "3.0"
+              },
+              {
+                "label": "PTS",
+                "value": "20.9"
+              }
+            ]
+          },
+          {
+            "name": "totals",
+            "teamId": "13",
+            "fields": [
+              {
+                "label": "FG",
+                "value": "473-919"
+              },
+              {
+                "label": "FG%",
+                "value": "51.5"
+              },
+              {
+                "label": "3PT",
+                "value": "77-243"
+              },
+              {
+                "label": "3P%",
+                "value": "31.7"
+              },
+              {
+                "label": "FT",
+                "value": "233-316"
+              },
+              {
+                "label": "FT%",
+                "value": "73.7"
+              },
+              {
+                "label": "OR",
+                "value": "43"
+              },
+              {
+                "label": "DR",
+                "value": "321"
+              },
+              {
+                "label": "REB",
+                "value": "364"
+              },
+              {
+                "label": "AST",
+                "value": "432"
+              },
+              {
+                "label": "BLK",
+                "value": "35"
+              },
+              {
+                "label": "STL",
+                "value": "72"
+              },
+              {
+                "label": "PF",
+                "value": "81"
+              },
+              {
+                "label": "TO",
+                "value": "179"
+              },
+              {
+                "label": "PTS",
+                "value": "1256"
+              }
+            ]
+          },
+          {
+            "name": "miscellaneous",
+            "teamId": "13",
+            "fields": [
+              {
+                "label": "DD2",
+                "value": "17"
+              },
+              {
+                "label": "TD3",
+                "value": "3"
+              },
+              {
+                "label": "DQ",
+                "value": "0"
+              },
+              {
+                "label": "EJECT",
+                "value": "0"
+              },
+              {
+                "label": "TECH",
+                "value": "1"
+              },
+              {
+                "label": "FLAG",
+                "value": "1"
+              },
+              {
+                "label": "AST/TO",
+                "value": "2.4"
+              },
+              {
+                "label": "STL/TO",
+                "value": "0.4"
+              },
+              {
+                "label": "SC-EFF",
+                "value": "1.367"
+              },
+              {
+                "label": "SH-EFF",
+                "value": "0.56"
+              }
+            ]
+          }
+        ],
+        "expectedGames": 60,
+        "issues": []
+      },
+      "byeWeeks": null,
+      "providerRequests": 2,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 60,
+        "fetchedAt": "2026-10-23T17:03:53.300Z",
+        "freshness": "fresh",
+        "issues": []
+      }
+    },
+    {
+      "player": {
+        "sport": "nba",
+        "playerId": 4,
+        "name": "Stephen Curry",
+        "position": "G",
+        "active": true,
+        "nativePlayerId": "201939",
+        "providerPlayerId": "3975",
+        "identity": "resolved"
+      },
+      "season": 2027,
+      "phase": "regular",
+      "source": "provider",
+      "games": [
+        {
+          "provider": "espn",
+          "providerPlayerId": "3975",
+          "eventId": "401909092",
+          "season": 2027,
+          "phase": "regular",
+          "gameAt": "2026-10-22T02:00:00.000Z",
+          "week": null,
+          "teamId": "9",
+          "team": "GS",
+          "opponentId": "13",
+          "opponent": "LAL",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "points": 23,
+            "rebounds": 2,
+            "assists": 1,
+            "steals": 2,
+            "blocks": 0,
+            "turnovers": 2,
+            "minutes": 21,
+            "fieldGoalsMade": 7,
+            "fieldGoalsAttempted": 15,
+            "freeThrowsMade": 7,
+            "freeThrowsAttempted": 7,
+            "threePointersMade": 2,
+            "threePointersAttempted": 7
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/3975/gamelog?season=2027"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.368Z",
+          "issues": []
+        }
+      ],
+      "seasonStats": {
+        "season": 2027,
+        "phase": "regular",
+        "categories": [
+          {
+            "name": "averages",
+            "teamId": "9",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "1"
+              },
+              {
+                "label": "GS",
+                "value": "1"
+              },
+              {
+                "label": "MIN",
+                "value": "21.0"
+              },
+              {
+                "label": "FG",
+                "value": "7.0-15.0"
+              },
+              {
+                "label": "FG%",
+                "value": "46.7"
+              },
+              {
+                "label": "3PT",
+                "value": "2.0-7.0"
+              },
+              {
+                "label": "3P%",
+                "value": "28.6"
+              },
+              {
+                "label": "FT",
+                "value": "7.0-7.0"
+              },
+              {
+                "label": "FT%",
+                "value": "100.0"
+              },
+              {
+                "label": "OR",
+                "value": "1.0"
+              },
+              {
+                "label": "DR",
+                "value": "1.0"
+              },
+              {
+                "label": "REB",
+                "value": "2.0"
+              },
+              {
+                "label": "AST",
+                "value": "1.0"
+              },
+              {
+                "label": "BLK",
+                "value": "0.0"
+              },
+              {
+                "label": "STL",
+                "value": "2.0"
+              },
+              {
+                "label": "PF",
+                "value": "2.0"
+              },
+              {
+                "label": "TO",
+                "value": "2.0"
+              },
+              {
+                "label": "PTS",
+                "value": "23.0"
+              }
+            ]
+          },
+          {
+            "name": "totals",
+            "teamId": "9",
+            "fields": [
+              {
+                "label": "FG",
+                "value": "7-15"
+              },
+              {
+                "label": "FG%",
+                "value": "46.7"
+              },
+              {
+                "label": "3PT",
+                "value": "2-7"
+              },
+              {
+                "label": "3P%",
+                "value": "28.6"
+              },
+              {
+                "label": "FT",
+                "value": "7-7"
+              },
+              {
+                "label": "FT%",
+                "value": "100.0"
+              },
+              {
+                "label": "OR",
+                "value": "1"
+              },
+              {
+                "label": "DR",
+                "value": "1"
+              },
+              {
+                "label": "REB",
+                "value": "2"
+              },
+              {
+                "label": "AST",
+                "value": "1"
+              },
+              {
+                "label": "BLK",
+                "value": "0"
+              },
+              {
+                "label": "STL",
+                "value": "2"
+              },
+              {
+                "label": "PF",
+                "value": "2"
+              },
+              {
+                "label": "TO",
+                "value": "2"
+              },
+              {
+                "label": "PTS",
+                "value": "23"
+              }
+            ]
+          },
+          {
+            "name": "miscellaneous",
+            "teamId": "9",
+            "fields": [
+              {
+                "label": "DD2",
+                "value": "0"
+              },
+              {
+                "label": "TD3",
+                "value": "0"
+              },
+              {
+                "label": "DQ",
+                "value": "0"
+              },
+              {
+                "label": "EJECT",
+                "value": "0"
+              },
+              {
+                "label": "TECH",
+                "value": "0"
+              },
+              {
+                "label": "FLAG",
+                "value": "0"
+              },
+              {
+                "label": "AST/TO",
+                "value": "0.5"
+              },
+              {
+                "label": "STL/TO",
+                "value": "1.0"
+              },
+              {
+                "label": "SC-EFF",
+                "value": "1.533"
+              },
+              {
+                "label": "SH-EFF",
+                "value": "0.53"
+              }
+            ]
+          }
+        ],
+        "expectedGames": 1,
+        "issues": []
+      },
+      "byeWeeks": null,
+      "providerRequests": 2,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 1,
+        "fetchedAt": "2026-10-23T17:03:53.369Z",
+        "freshness": "fresh",
+        "issues": []
+      }
+    },
+    {
+      "player": {
+        "sport": "nfl",
+        "playerId": 435,
+        "name": "Patrick Mahomes",
+        "position": "QB",
+        "active": true,
+        "nativePlayerId": "3139477",
+        "providerPlayerId": "3139477",
+        "identity": "resolved"
+      },
+      "season": 2026,
+      "phase": "regular",
+      "source": "provider",
+      "games": [
+        {
+          "provider": "espn",
+          "providerPlayerId": "3139477",
+          "eventId": "401873006",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-18T20:25:00.000Z",
+          "week": 6,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "24",
+          "opponent": "LAC",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": 23,
+            "passing_attempts": 30,
+            "passing_yards": 272,
+            "passing_tds": 0,
+            "passing_ints": 1,
+            "rushing_attempts": 5,
+            "rushing_yards": 16,
+            "rushing_tds": 0,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3139477/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401873006"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.436Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3139477",
+          "eventId": "401872976",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-04T20:25:00.000Z",
+          "week": 4,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "13",
+          "opponent": "LV",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": 15,
+            "passing_attempts": 30,
+            "passing_yards": 225,
+            "passing_tds": 2,
+            "passing_ints": 0,
+            "rushing_attempts": 2,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3139477/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872976"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.436Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3139477",
+          "eventId": "401872952",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-27T17:00:00.000Z",
+          "week": 3,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "15",
+          "opponent": "MIA",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": 20,
+            "passing_attempts": 24,
+            "passing_yards": 246,
+            "passing_tds": 2,
+            "passing_ints": 1,
+            "rushing_attempts": 1,
+            "rushing_yards": 1,
+            "rushing_tds": 0,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3139477/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872952"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.436Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3139477",
+          "eventId": "401872945",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-21T00:20:00.000Z",
+          "week": 2,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "11",
+          "opponent": "IND",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": 32,
+            "passing_attempts": 47,
+            "passing_yards": 382,
+            "passing_tds": 3,
+            "passing_ints": 0,
+            "rushing_attempts": 2,
+            "rushing_yards": 17,
+            "rushing_tds": 0,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3139477/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872945"
+          ],
+          "fetchedAt": "2026-10-26T15:06:29.174Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3139477",
+          "eventId": "401872931",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-15T00:15:00.000Z",
+          "week": 1,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "7",
+          "opponent": "DEN",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": 15,
+            "passing_attempts": 27,
+            "passing_yards": 184,
+            "passing_tds": 2,
+            "passing_ints": 1,
+            "rushing_attempts": 7,
+            "rushing_yards": 23,
+            "rushing_tds": 1,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3139477/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872931"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.436Z",
+          "issues": []
+        }
+      ],
+      "seasonStats": {
+        "season": 2026,
+        "phase": "regular",
+        "categories": [
+          {
+            "name": "passing",
+            "teamId": "12",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "5"
+              },
+              {
+                "label": "CMP",
+                "value": "105"
+              },
+              {
+                "label": "ATT",
+                "value": "158"
+              },
+              {
+                "label": "CMP%",
+                "value": "66.5"
+              },
+              {
+                "label": "YDS",
+                "value": "1,309"
+              },
+              {
+                "label": "AVG",
+                "value": "8.3"
+              },
+              {
+                "label": "TD",
+                "value": "9"
+              },
+              {
+                "label": "INT",
+                "value": "3"
+              },
+              {
+                "label": "LNG",
+                "value": "59"
+              },
+              {
+                "label": "SACK",
+                "value": "6"
+              },
+              {
+                "label": "RTG",
+                "value": "103.1"
+              },
+              {
+                "label": "QBR",
+                "value": "68.3"
+              }
+            ]
+          },
+          {
+            "name": "rushing",
+            "teamId": "12",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "5"
+              },
+              {
+                "label": "CAR",
+                "value": "17"
+              },
+              {
+                "label": "YDS",
+                "value": "57"
+              },
+              {
+                "label": "AVG",
+                "value": "3.4"
+              },
+              {
+                "label": "TD",
+                "value": "1"
+              },
+              {
+                "label": "LNG",
+                "value": "15"
+              },
+              {
+                "label": "FD",
+                "value": "5"
+              },
+              {
+                "label": "FUM",
+                "value": "0"
+              },
+              {
+                "label": "LST",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "name": "defensive",
+            "teamId": "12",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "5"
+              },
+              {
+                "label": "TOT",
+                "value": "0"
+              },
+              {
+                "label": "SOLO",
+                "value": "0"
+              },
+              {
+                "label": "AST",
+                "value": "0"
+              },
+              {
+                "label": "SACK",
+                "value": "0"
+              },
+              {
+                "label": "FF",
+                "value": "0"
+              },
+              {
+                "label": "FR",
+                "value": "4"
+              },
+              {
+                "label": "YDS",
+                "value": "0"
+              },
+              {
+                "label": "INT",
+                "value": "0"
+              },
+              {
+                "label": "YDS",
+                "value": "0"
+              },
+              {
+                "label": "AVG",
+                "value": "0.0"
+              },
+              {
+                "label": "TD",
+                "value": "0"
+              },
+              {
+                "label": "LNG",
+                "value": "0"
+              },
+              {
+                "label": "PD",
+                "value": "0"
+              },
+              {
+                "label": "STF",
+                "value": "0"
+              },
+              {
+                "label": "STFYDS",
+                "value": "0"
+              },
+              {
+                "label": "KB",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "name": "scoring",
+            "teamId": "12",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "5"
+              },
+              {
+                "label": "PASS",
+                "value": "9"
+              },
+              {
+                "label": "RUSH",
+                "value": "1"
+              },
+              {
+                "label": "REC",
+                "value": "0"
+              },
+              {
+                "label": "RET",
+                "value": "0"
+              },
+              {
+                "label": "TD",
+                "value": "1"
+              },
+              {
+                "label": "2PT",
+                "value": "0"
+              },
+              {
+                "label": "PAT",
+                "value": "0"
+              },
+              {
+                "label": "FG",
+                "value": "0"
+              },
+              {
+                "label": "PTS",
+                "value": "6"
+              }
+            ]
+          }
+        ],
+        "expectedGames": 5,
+        "issues": []
+      },
+      "byeWeeks": null,
+      "providerRequests": 7,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 5,
+        "fetchedAt": "2026-10-23T17:03:53.454Z",
+        "freshness": "fresh",
+        "issues": []
+      }
+    },
+    {
+      "player": {
+        "sport": "nfl",
+        "playerId": 2387,
+        "name": "Harrison Butker",
+        "position": "K",
+        "active": true,
+        "nativePlayerId": "3055899",
+        "providerPlayerId": "3055899",
+        "identity": "resolved"
+      },
+      "season": 2026,
+      "phase": "regular",
+      "source": "provider",
+      "games": [
+        {
+          "provider": "espn",
+          "providerPlayerId": "3055899",
+          "eventId": "401873006",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-18T20:25:00.000Z",
+          "week": 6,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "24",
+          "opponent": "LAC",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": 10,
+            "long_field_goal": 50,
+            "field_goals_made": 3,
+            "field_goals_attempted": 4,
+            "extra_points_made": 1,
+            "extra_points_attempted": 2,
+            "fg_1_19_made": 0,
+            "fg_1_19_attempted": 0,
+            "fg_20_29_made": 0,
+            "fg_20_29_attempted": 0,
+            "fg_30_39_made": 1,
+            "fg_30_39_attempted": 1,
+            "fg_40_49_made": 1,
+            "fg_40_49_attempted": 1,
+            "fg_50_plus_made": 1,
+            "fg_50_plus_attempted": 2
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3055899/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401873006"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.907Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3055899",
+          "eventId": "401872976",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-04T20:25:00.000Z",
+          "week": 4,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "13",
+          "opponent": "LV",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": 6,
+            "long_field_goal": 28,
+            "field_goals_made": 1,
+            "field_goals_attempted": 1,
+            "extra_points_made": 3,
+            "extra_points_attempted": 3,
+            "fg_1_19_made": 0,
+            "fg_1_19_attempted": 0,
+            "fg_20_29_made": 1,
+            "fg_20_29_attempted": 1,
+            "fg_30_39_made": 0,
+            "fg_30_39_attempted": 0,
+            "fg_40_49_made": 0,
+            "fg_40_49_attempted": 0,
+            "fg_50_plus_made": 0,
+            "fg_50_plus_attempted": 0
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3055899/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872976"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.907Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3055899",
+          "eventId": "401872952",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-27T17:00:00.000Z",
+          "week": 3,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "15",
+          "opponent": "MIA",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": 6,
+            "long_field_goal": 34,
+            "field_goals_made": 1,
+            "field_goals_attempted": 2,
+            "extra_points_made": 3,
+            "extra_points_attempted": 3,
+            "fg_1_19_made": 0,
+            "fg_1_19_attempted": 0,
+            "fg_20_29_made": 0,
+            "fg_20_29_attempted": 0,
+            "fg_30_39_made": 1,
+            "fg_30_39_attempted": 1,
+            "fg_40_49_made": 0,
+            "fg_40_49_attempted": 0,
+            "fg_50_plus_made": 0,
+            "fg_50_plus_attempted": 1
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3055899/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872952"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.907Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3055899",
+          "eventId": "401872945",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-21T00:20:00.000Z",
+          "week": 2,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "11",
+          "opponent": "IND",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": null,
+            "kicking_points": 15,
+            "long_field_goal": 46,
+            "field_goals_made": 4,
+            "field_goals_attempted": 5,
+            "extra_points_made": 3,
+            "extra_points_attempted": 3,
+            "fg_1_19_made": 0,
+            "fg_1_19_attempted": 0,
+            "fg_20_29_made": 1,
+            "fg_20_29_attempted": 1,
+            "fg_30_39_made": 1,
+            "fg_30_39_attempted": 1,
+            "fg_40_49_made": 2,
+            "fg_40_49_attempted": 2,
+            "fg_50_plus_made": 0,
+            "fg_50_plus_attempted": 1
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3055899/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872945"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.907Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3055899",
+          "eventId": "401872931",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-15T00:15:00.000Z",
+          "week": 1,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "7",
+          "opponent": "DEN",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": 7,
+            "long_field_goal": 28,
+            "field_goals_made": 1,
+            "field_goals_attempted": 1,
+            "extra_points_made": 4,
+            "extra_points_attempted": 4,
+            "fg_1_19_made": 0,
+            "fg_1_19_attempted": 0,
+            "fg_20_29_made": 1,
+            "fg_20_29_attempted": 1,
+            "fg_30_39_made": 0,
+            "fg_30_39_attempted": 0,
+            "fg_40_49_made": 0,
+            "fg_40_49_attempted": 0,
+            "fg_50_plus_made": 0,
+            "fg_50_plus_attempted": 0
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3055899/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872931"
+          ],
+          "fetchedAt": "2026-10-23T17:03:53.907Z",
+          "issues": []
+        }
+      ],
+      "seasonStats": {
+        "season": 2026,
+        "phase": "regular",
+        "categories": [
+          {
+            "name": "kicking",
+            "teamId": "12",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "5"
+              },
+              {
+                "label": "FG",
+                "value": "10-13"
+              },
+              {
+                "label": "FG%",
+                "value": "76.9"
+              },
+              {
+                "label": "1-19\t",
+                "value": "0-0"
+              },
+              {
+                "label": "20-29\t",
+                "value": "3-3"
+              },
+              {
+                "label": "30-39",
+                "value": "3-3"
+              },
+              {
+                "label": "40-49\t",
+                "value": "3-3"
+              },
+              {
+                "label": "50+",
+                "value": "1-4"
+              },
+              {
+                "label": "LNG",
+                "value": "50"
+              },
+              {
+                "label": "XPM",
+                "value": "14"
+              },
+              {
+                "label": "XPA",
+                "value": "15"
+              },
+              {
+                "label": "PTS",
+                "value": "44"
+              }
+            ]
+          },
+          {
+            "name": "defensive",
+            "teamId": "12",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "5"
+              },
+              {
+                "label": "TOT",
+                "value": "1"
+              },
+              {
+                "label": "SOLO",
+                "value": "0"
+              },
+              {
+                "label": "AST",
+                "value": "1"
+              },
+              {
+                "label": "SACK",
+                "value": "0"
+              },
+              {
+                "label": "FF",
+                "value": "0"
+              },
+              {
+                "label": "FR",
+                "value": "0"
+              },
+              {
+                "label": "YDS",
+                "value": "0"
+              },
+              {
+                "label": "INT",
+                "value": "0"
+              },
+              {
+                "label": "YDS",
+                "value": "0"
+              },
+              {
+                "label": "AVG",
+                "value": "0.0"
+              },
+              {
+                "label": "TD",
+                "value": "0"
+              },
+              {
+                "label": "LNG",
+                "value": "0"
+              },
+              {
+                "label": "PD",
+                "value": "0"
+              },
+              {
+                "label": "STF",
+                "value": "0"
+              },
+              {
+                "label": "STFYDS",
+                "value": "0"
+              },
+              {
+                "label": "KB",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "name": "passing",
+            "teamId": "12",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "5"
+              },
+              {
+                "label": "CMP",
+                "value": "0"
+              },
+              {
+                "label": "ATT",
+                "value": "0"
+              },
+              {
+                "label": "CMP%",
+                "value": "0.0"
+              },
+              {
+                "label": "YDS",
+                "value": "0"
+              },
+              {
+                "label": "AVG",
+                "value": "0.0"
+              },
+              {
+                "label": "TD",
+                "value": "0"
+              },
+              {
+                "label": "INT",
+                "value": "0"
+              },
+              {
+                "label": "LNG",
+                "value": "0"
+              },
+              {
+                "label": "SACK",
+                "value": "0"
+              },
+              {
+                "label": "RTG",
+                "value": "39.6"
+              },
+              {
+                "label": "QBR",
+                "value": null
+              }
+            ]
+          },
+          {
+            "name": "scoring",
+            "teamId": "12",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "5"
+              },
+              {
+                "label": "PASS",
+                "value": "0"
+              },
+              {
+                "label": "RUSH",
+                "value": "0"
+              },
+              {
+                "label": "REC",
+                "value": "0"
+              },
+              {
+                "label": "RET",
+                "value": "0"
+              },
+              {
+                "label": "TD",
+                "value": "0"
+              },
+              {
+                "label": "2PT",
+                "value": "0"
+              },
+              {
+                "label": "PAT",
+                "value": "14"
+              },
+              {
+                "label": "FG",
+                "value": "10"
+              },
+              {
+                "label": "PTS",
+                "value": "44"
+              }
+            ]
+          }
+        ],
+        "expectedGames": 5,
+        "issues": []
+      },
+      "byeWeeks": null,
+      "providerRequests": 2,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 5,
+        "fetchedAt": "2026-10-23T17:03:53.907Z",
+        "freshness": "fresh",
+        "issues": []
+      }
+    },
+    {
+      "player": {
+        "sport": "nfl",
+        "playerId": 2424,
+        "name": "KC D/ST",
+        "position": "D/ST",
+        "active": true,
+        "nativePlayerId": "100000012",
+        "providerPlayerId": "100000012",
+        "identity": "resolved"
+      },
+      "season": 2026,
+      "phase": "regular",
+      "source": "provider",
+      "games": [
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401872931",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-15T00:15:00.000Z",
+          "week": 1,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "7",
+          "opponent": "DEN",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "sacks": 4,
+            "interceptions": 1,
+            "fumbleRecoveries": 1,
+            "safeties": 0,
+            "touchdowns": 0,
+            "pointsAllowed": 10,
+            "yardsAllowed": 176
+          },
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872931"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401872945",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-21T00:20:00.000Z",
+          "week": 2,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "11",
+          "opponent": "IND",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "sacks": 0,
+            "interceptions": 1,
+            "fumbleRecoveries": 0,
+            "safeties": 0,
+            "touchdowns": 0,
+            "pointsAllowed": 30,
+            "yardsAllowed": 329
+          },
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872945"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401872952",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-27T17:00:00.000Z",
+          "week": 3,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "15",
+          "opponent": "MIA",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "sacks": 0,
+            "interceptions": 1,
+            "fumbleRecoveries": 1,
+            "safeties": 0,
+            "touchdowns": 0,
+            "pointsAllowed": 10,
+            "yardsAllowed": 329
+          },
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872952"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401872976",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-04T20:25:00.000Z",
+          "week": 4,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "13",
+          "opponent": "LV",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "sacks": 0,
+            "interceptions": 1,
+            "fumbleRecoveries": 1,
+            "safeties": 0,
+            "touchdowns": 0,
+            "pointsAllowed": 27,
+            "yardsAllowed": 437
+          },
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872976"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873006",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-18T20:25:00.000Z",
+          "week": 6,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "24",
+          "opponent": "LAC",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "sacks": 4,
+            "interceptions": 1,
+            "fumbleRecoveries": 1,
+            "safeties": 0,
+            "touchdowns": 0,
+            "pointsAllowed": 6,
+            "yardsAllowed": 259
+          },
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401873006"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873022",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-26T00:20:00.000Z",
+          "week": 7,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "26",
+          "opponent": "SEA",
+          "homeAway": "away",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873033",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-11-01T21:25:00.000Z",
+          "week": 8,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "7",
+          "opponent": "DEN",
+          "homeAway": "away",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873045",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-11-08T18:00:00.000Z",
+          "week": 9,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "20",
+          "opponent": "NYJ",
+          "homeAway": "home",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873058",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-11-15T18:00:00.000Z",
+          "week": 10,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "1",
+          "opponent": "ATL",
+          "homeAway": "away",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873067",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-11-22T18:00:00.000Z",
+          "week": 11,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "22",
+          "opponent": "ARI",
+          "homeAway": "home",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873082",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-11-27T01:20:00.000Z",
+          "week": 12,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "2",
+          "opponent": "BUF",
+          "homeAway": "away",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873096",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-12-04T01:15:00.000Z",
+          "week": 13,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "14",
+          "opponent": "LAR",
+          "homeAway": "away",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873119",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-12-13T21:25:00.000Z",
+          "week": 14,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "4",
+          "opponent": "CIN",
+          "homeAway": "away",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873139",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-12-22T01:15:00.000Z",
+          "week": 15,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "17",
+          "opponent": "NE",
+          "homeAway": "home",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873153",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-12-27T21:25:00.000Z",
+          "week": 16,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "25",
+          "opponent": "SF",
+          "homeAway": "home",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873158",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2027-01-03T05:00:00.000Z",
+          "week": 17,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "24",
+          "opponent": "LAC",
+          "homeAway": "away",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "100000012",
+          "eventId": "401873178",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2027-01-10T05:00:00.000Z",
+          "week": 18,
+          "teamId": "12",
+          "team": "KC",
+          "opponentId": "13",
+          "opponent": "LV",
+          "homeAway": "home",
+          "status": "scheduled",
+          "participation": "unknown",
+          "stats": {},
+          "sources": [
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12/schedule?season=2026&seasontype=2"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.488Z",
+          "issues": []
+        }
+      ],
+      "seasonStats": null,
+      "byeWeeks": [
+        5
+      ],
+      "providerRequests": 1,
+      "coverage": {
+        "kind": "team_schedule",
+        "expectedGames": 5,
+        "fetchedAt": "2026-10-23T17:03:54.489Z",
+        "freshness": "fresh",
+        "issues": []
+      }
+    },
+    {
+      "player": {
+        "sport": "nfl",
+        "playerId": 1,
+        "name": "Tyler Allgeier",
+        "position": "RB",
+        "active": true,
+        "nativePlayerId": "4373626",
+        "providerPlayerId": "4373626",
+        "identity": "resolved"
+      },
+      "season": 2026,
+      "phase": "regular",
+      "source": "provider",
+      "games": [
+        {
+          "provider": "espn",
+          "providerPlayerId": "4373626",
+          "eventId": "401873004",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-18T20:05:00.000Z",
+          "week": 6,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "14",
+          "opponent": "LAR",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 18,
+            "rushing_yards": 38,
+            "rushing_tds": 0,
+            "receiving_targets": 2,
+            "receptions": 1,
+            "receiving_yards": 10,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401873004"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.514Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "4373626",
+          "eventId": "401872991",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-11T20:25:00.000Z",
+          "week": 5,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "8",
+          "opponent": "DET",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 3,
+            "rushing_yards": 7,
+            "rushing_tds": 0,
+            "receiving_targets": 2,
+            "receptions": 2,
+            "receiving_yards": 9,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872991"
+          ],
+          "fetchedAt": "2026-10-26T15:06:29.148Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "4373626",
+          "eventId": "401872966",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-04T17:00:00.000Z",
+          "week": 4,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "19",
+          "opponent": "NYG",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 8,
+            "rushing_yards": 42,
+            "rushing_tds": 1,
+            "receiving_targets": 2,
+            "receptions": 2,
+            "receiving_yards": 7,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872966"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.514Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "4373626",
+          "eventId": "401872958",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-27T20:05:00.000Z",
+          "week": 3,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "25",
+          "opponent": "SF",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 2,
+            "rushing_yards": -1,
+            "rushing_tds": 0,
+            "receiving_targets": 4,
+            "receptions": 4,
+            "receiving_yards": 10,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872958"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.514Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "4373626",
+          "eventId": "401872943",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-20T20:25:00.000Z",
+          "week": 2,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "26",
+          "opponent": "SEA",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 5,
+            "rushing_yards": 10,
+            "rushing_tds": 0,
+            "receiving_targets": 2,
+            "receptions": 2,
+            "receiving_yards": 9,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872943"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.514Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "4373626",
+          "eventId": "401872926",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-13T20:25:00.000Z",
+          "week": 1,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "24",
+          "opponent": "LAC",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 17,
+            "rushing_yards": 61,
+            "rushing_tds": 0,
+            "receiving_targets": 2,
+            "receptions": 2,
+            "receiving_yards": 9,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872926"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.514Z",
+          "issues": []
+        }
+      ],
+      "seasonStats": {
+        "season": 2026,
+        "phase": "regular",
+        "categories": [
+          {
+            "name": "rushing",
+            "teamId": "22",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "6"
+              },
+              {
+                "label": "CAR",
+                "value": "53"
+              },
+              {
+                "label": "YDS",
+                "value": "157"
+              },
+              {
+                "label": "AVG",
+                "value": "3.0"
+              },
+              {
+                "label": "TD",
+                "value": "1"
+              },
+              {
+                "label": "LNG",
+                "value": "22"
+              },
+              {
+                "label": "FD",
+                "value": "8"
+              },
+              {
+                "label": "FUM",
+                "value": "0"
+              },
+              {
+                "label": "LST",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "name": "receiving",
+            "teamId": "22",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "6"
+              },
+              {
+                "label": "REC",
+                "value": "13"
+              },
+              {
+                "label": "TGTS",
+                "value": "15"
+              },
+              {
+                "label": "YDS",
+                "value": "54"
+              },
+              {
+                "label": "AVG",
+                "value": "4.2"
+              },
+              {
+                "label": "TD",
+                "value": "0"
+              },
+              {
+                "label": "LNG",
+                "value": "10"
+              },
+              {
+                "label": "FD",
+                "value": "2"
+              },
+              {
+                "label": "FUM",
+                "value": "0"
+              },
+              {
+                "label": "LST",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "name": "passing",
+            "teamId": "22",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "6"
+              },
+              {
+                "label": "CMP",
+                "value": "0"
+              },
+              {
+                "label": "ATT",
+                "value": "0"
+              },
+              {
+                "label": "CMP%",
+                "value": "0.0"
+              },
+              {
+                "label": "YDS",
+                "value": "0"
+              },
+              {
+                "label": "AVG",
+                "value": "0.0"
+              },
+              {
+                "label": "TD",
+                "value": "0"
+              },
+              {
+                "label": "INT",
+                "value": "0"
+              },
+              {
+                "label": "LNG",
+                "value": "0"
+              },
+              {
+                "label": "SACK",
+                "value": "0"
+              },
+              {
+                "label": "RTG",
+                "value": "39.6"
+              },
+              {
+                "label": "QBR",
+                "value": null
+              }
+            ]
+          },
+          {
+            "name": "scoring",
+            "teamId": "22",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "6"
+              },
+              {
+                "label": "PASS",
+                "value": "0"
+              },
+              {
+                "label": "RUSH",
+                "value": "1"
+              },
+              {
+                "label": "REC",
+                "value": "0"
+              },
+              {
+                "label": "RET",
+                "value": "0"
+              },
+              {
+                "label": "TD",
+                "value": "1"
+              },
+              {
+                "label": "2PT",
+                "value": "0"
+              },
+              {
+                "label": "PAT",
+                "value": "0"
+              },
+              {
+                "label": "FG",
+                "value": "0"
+              },
+              {
+                "label": "PTS",
+                "value": "6"
+              }
+            ]
+          }
+        ],
+        "expectedGames": 6,
+        "issues": []
+      },
+      "byeWeeks": null,
+      "providerRequests": 8,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 6,
+        "fetchedAt": "2026-10-23T17:03:54.514Z",
+        "freshness": "fresh",
+        "issues": []
+      }
+    },
+    {
+      "player": {
+        "sport": "nfl",
+        "playerId": 4,
+        "name": "Kendrick Bourne",
+        "position": "WR",
+        "active": true,
+        "nativePlayerId": "3045523",
+        "providerPlayerId": "3045523",
+        "identity": "resolved"
+      },
+      "season": 2026,
+      "phase": "regular",
+      "source": "provider",
+      "games": [
+        {
+          "provider": "espn",
+          "providerPlayerId": "3045523",
+          "eventId": "401873004",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-18T20:05:00.000Z",
+          "week": 6,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "14",
+          "opponent": "LAR",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 8,
+            "receptions": 5,
+            "receiving_yards": 47,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3045523/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401873004"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.939Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3045523",
+          "eventId": "401872991",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-11T20:25:00.000Z",
+          "week": 5,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "8",
+          "opponent": "DET",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 8,
+            "receptions": 5,
+            "receiving_yards": 70,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3045523/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872991"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.939Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3045523",
+          "eventId": "401872966",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-10-04T17:00:00.000Z",
+          "week": 4,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "19",
+          "opponent": "NYG",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 0,
+            "receptions": 0,
+            "receiving_yards": 0,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3045523/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872966"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.939Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3045523",
+          "eventId": "401872958",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-27T20:05:00.000Z",
+          "week": 3,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "25",
+          "opponent": "SF",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 3,
+            "receptions": 2,
+            "receiving_yards": 22,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3045523/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872958"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.939Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3045523",
+          "eventId": "401872943",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-20T20:25:00.000Z",
+          "week": 2,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "26",
+          "opponent": "SEA",
+          "homeAway": "home",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 3,
+            "receptions": 2,
+            "receiving_yards": 11,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3045523/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872943"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.939Z",
+          "issues": []
+        },
+        {
+          "provider": "espn",
+          "providerPlayerId": "3045523",
+          "eventId": "401872926",
+          "season": 2026,
+          "phase": "regular",
+          "gameAt": "2026-09-13T20:25:00.000Z",
+          "week": 1,
+          "teamId": "22",
+          "team": "ARI",
+          "opponentId": "24",
+          "opponent": "LAC",
+          "homeAway": "away",
+          "status": "final",
+          "participation": "played",
+          "stats": {
+            "completions": null,
+            "passing_attempts": null,
+            "passing_yards": 0,
+            "passing_tds": 0,
+            "passing_ints": 0,
+            "rushing_attempts": 0,
+            "rushing_yards": 0,
+            "rushing_tds": 0,
+            "receiving_targets": 8,
+            "receptions": 8,
+            "receiving_yards": 75,
+            "receiving_tds": 0,
+            "fumbles_lost": 0,
+            "kicking_points": null,
+            "long_field_goal": null,
+            "field_goals_made": null,
+            "field_goals_attempted": null,
+            "extra_points_made": null,
+            "extra_points_attempted": null,
+            "fg_1_19_made": null,
+            "fg_1_19_attempted": null,
+            "fg_20_29_made": null,
+            "fg_20_29_attempted": null,
+            "fg_30_39_made": null,
+            "fg_30_39_attempted": null,
+            "fg_40_49_made": null,
+            "fg_40_49_attempted": null,
+            "fg_50_plus_made": null,
+            "fg_50_plus_attempted": null
+          },
+          "sources": [
+            "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3045523/gamelog?season=2026",
+            "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872926"
+          ],
+          "fetchedAt": "2026-10-23T17:03:54.939Z",
+          "issues": []
+        }
+      ],
+      "seasonStats": {
+        "season": 2026,
+        "phase": "regular",
+        "categories": [
+          {
+            "name": "receiving",
+            "teamId": "22",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "6"
+              },
+              {
+                "label": "REC",
+                "value": "22"
+              },
+              {
+                "label": "TGTS",
+                "value": "31"
+              },
+              {
+                "label": "YDS",
+                "value": "225"
+              },
+              {
+                "label": "AVG",
+                "value": "10.2"
+              },
+              {
+                "label": "TD",
+                "value": "0"
+              },
+              {
+                "label": "LNG",
+                "value": "23"
+              },
+              {
+                "label": "FD",
+                "value": "11"
+              },
+              {
+                "label": "FUM",
+                "value": "0"
+              },
+              {
+                "label": "LST",
+                "value": "0"
+              }
+            ]
+          },
+          {
+            "name": "passing",
+            "teamId": "22",
+            "fields": [
+              {
+                "label": "GP",
+                "value": "6"
+              },
+              {
+                "label": "CMP",
+                "value": "0"
+              },
+              {
+                "label": "ATT",
+                "value": "0"
+              },
+              {
+                "label": "CMP%",
+                "value": "0.0"
+              },
+              {
+                "label": "YDS",
+                "value": "0"
+              },
+              {
+                "label": "AVG",
+                "value": "0.0"
+              },
+              {
+                "label": "TD",
+                "value": "0"
+              },
+              {
+                "label": "INT",
+                "value": "0"
+              },
+              {
+                "label": "LNG",
+                "value": "0"
+              },
+              {
+                "label": "SACK",
+                "value": "0"
+              },
+              {
+                "label": "RTG",
+                "value": "39.6"
+              },
+              {
+                "label": "QBR",
+                "value": null
+              }
+            ]
+          }
+        ],
+        "expectedGames": 6,
+        "issues": []
+      },
+      "byeWeeks": null,
+      "providerRequests": 2,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 6,
+        "fetchedAt": "2026-10-23T17:03:54.940Z",
+        "freshness": "fresh",
+        "issues": []
+      }
+    }
+  ],
+  "normalizationCorrections": [
+    {
+      "localPlayerId": 1,
+      "providerPlayerId": "4373626",
+      "eventId": "401872991",
+      "season": 2026,
+      "field": "fumbles_lost",
+      "before": null,
+      "after": 0,
+      "verifiedAt": "2026-10-26T15:05:55.376Z",
+      "evidence": "Explicit athlete-log fumblesLost=0 retained when summary omits athlete fumbles.",
+      "sources": [
+        "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872991"
+      ],
+      "fantasyPoints": 3.6
+    },
+    {
+      "localPlayerId": 435,
+      "providerPlayerId": "3139477",
+      "eventId": "401872945",
+      "season": 2026,
+      "field": "fumbles_lost",
+      "before": null,
+      "after": 0,
+      "verifiedAt": "2026-10-26T15:05:55.427Z",
+      "evidence": "Final exact-team fumblesLost=0; empty athlete fumble table is not the zero evidence.",
+      "sources": [
+        "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3139477/gamelog?season=2026",
+        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872945"
+      ],
+      "fantasyPoints": 28.98
+    },
+    {
+      "localPlayerId": 4,
+      "providerPlayerId": "3045523",
+      "eventId": "401872991",
+      "season": 2026,
+      "field": "fumbles_lost",
+      "before": null,
+      "after": 0,
+      "verifiedAt": "2026-10-26T15:05:55.376Z",
+      "evidence": "Final exact-team fumblesLost=0; empty athlete fumble table is not the zero evidence.",
+      "sources": [
+        "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3045523/gamelog?season=2026",
+        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872991"
+      ],
+      "fantasyPoints": 12
+    }
+  ],
+  "correctionsVerifiedAt": "2026-10-26T15:05:55.427Z"
+}

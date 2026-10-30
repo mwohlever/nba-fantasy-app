@@ -173,7 +173,7 @@ test('AppNav links use explicit route sport while the provider still remembers a
   }
 });
 
-const endpoints = ['player-stats', 'slate-availability', 'draft-projections', 'lineups', 'team-results'];
+const endpoints = ['player-stats', 'slate-availability', 'lineups', 'team-results'];
 for (const endpoint of endpoints) test(`${endpoint}: expected sport is enforced after authorization; omission is compatible`, async () => {
   const f = fixture(), route = load(`app/api/${endpoint}/route.ts`, f.mocks);
   const get = (id, sport) => route.GET({ nextUrl: new URL(`http://test/api/${endpoint}?slateId=${id}${sport === undefined ? '' : `&sport=${sport}`}`), headers: new Headers() });

@@ -18,7 +18,7 @@ type Props = {
   teams: OrderedTeam[];
   currentTeamId: number | null;
   getPlayersForTeam: (teamId: number) => Player[];
-  getPlayerProjectionScore: (playerId: number) => number;
+  getPlayerProjectionScore?: (playerId: number) => number;
   getDraftNeeds: (teamId: number) => string;
   rosterSlots: RosterSlotConfig[];
   setResearchPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
@@ -172,11 +172,11 @@ export default function LeagueLineupCards({
             });
 
 
-          const projectedTotal = rosterPlayers.reduce(
+          const projectedTotal = activeSport === "golf" ? rosterPlayers.reduce(
             (sum, player) =>
-              sum + getPlayerProjectionScore(player.id),
+              sum + (getPlayerProjectionScore?.(player.id) ?? 0),
             0
-          );
+          ) : null;
 
           const rosterCount = rosterPlayers.length;
           const isComplete = rosterCount === totalSlots;
@@ -303,9 +303,9 @@ export default function LeagueLineupCards({
 
               <div className="league-lineup-card-footer">
                 <div>
-                  <span>Projected</span>
+                  <span>{activeSport === "golf" ? "Projected" : "Drafted"}</span>
                   <strong>
-                    {projectedTotal.toFixed(1)}
+                    {activeSport === "golf" ? projectedTotal?.toFixed(1) : `${rosterCount} / ${totalSlots}`}
                   </strong>
                 </div>
 

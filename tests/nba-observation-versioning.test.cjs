@@ -29,7 +29,7 @@ const asyncSql = value => new Promise((resolve, reject) => {
 });
 const appendSql = rows => `set role service_role; select public.append_nba_projection_observations(${json(rows)});`;
 const append = rows => Number(sql(appendSql(rows)));
-const pgtest = (name, fn) => test(name, { skip: !bin && 'Set NBA_OBSERVATION_PG_BIN to isolated PostgreSQL 15 binaries' }, fn);
+const pgtest = (name, fn) => test(name, { skip: !bin && 'Set NBA_OBSERVATION_PG_BIN to isolated PostgreSQL binaries' }, fn);
 const count = () => Number(sql('select count(*) from nba_player_game_observation_versions'));
 const current = () => JSON.parse(sql('select row_to_json(c) from nba_player_game_current_observations c'));
 
@@ -83,7 +83,7 @@ before(() => {
     PGDATABASE: 'postgres', PGPASSWORD: '', PGSSLMODE: 'disable',
     LD_LIBRARY_PATH: [path.resolve(bin, '../../../x86_64-linux-gnu'), process.env.LD_LIBRARY_PATH].filter(Boolean).join(':') };
   delete env.PGSERVICE; delete env.PGSERVICEFILE;
-  run('initdb', ['-D', path.join(directory, 'data'), '-L', path.resolve(bin, '../../../../share/postgresql/15'),
+  run('initdb', ['-D', path.join(directory, 'data'), '-L', path.resolve(bin, '../../../../share/postgresql', run('postgres', ['--version']).match(/PostgreSQL\) (\d+)/)[1]),
     '--auth=trust', '--username=nba_test', '--no-locale', '--encoding=UTF8']);
   run('pg_ctl', ['-D', path.join(directory, 'data'), '-l', path.join(directory, 'postgres.log'), '-o',
     `-k ${socket} -p 55448 -c listen_addresses='' -c jit=off`, '-w', 'start']);

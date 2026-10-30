@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import PlayerCenterModal from "@/components/player-center/PlayerCenterModal";
 
 type Sport =
   | "nba"
@@ -44,6 +45,8 @@ export type ResearchPlayer = {
 };
 
 type Props = {
+  slateId?: number | null;
+  centerSeason?: number;
   player:
     ResearchPlayer | null;
 
@@ -453,7 +456,7 @@ function StatCard({
   );
 }
 
-export default function PlayerResearchModal({
+function LegacyPlayerResearchModal({
   player,
   sport,
   season,
@@ -1764,4 +1767,12 @@ export default function PlayerResearchModal({
       </section>
     </div>
   );
+}
+
+export default function PlayerResearchModal(props: Props) {
+  if (props.sport === "golf") return <LegacyPlayerResearchModal {...props} />;
+  if (!props.player) return null;
+  return <PlayerCenterModal identity={props.player} sport={props.sport} season={props.centerSeason} slateId={props.slateId} onClose={props.onClose}>
+    {props.actionLabel && props.onAction ? <button type="button" className="pc-primary-action" onClick={() => { void props.onAction?.(); }}>{props.actionLabel}</button> : null}
+  </PlayerCenterModal>;
 }

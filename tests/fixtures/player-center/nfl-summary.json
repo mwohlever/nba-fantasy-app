@@ -1,0 +1,764 @@
+{
+  "_fixture": {
+    "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401873006",
+    "fetchedAt": "2026-10-23T15:17:00.015Z"
+  },
+  "header": {
+    "id": "401873006",
+    "season": {
+      "year": 2026,
+      "current": true,
+      "type": 2
+    },
+    "competitions": [
+      {
+        "id": "401873006",
+        "status": {
+          "type": {
+            "id": "3",
+            "name": "STATUS_FINAL",
+            "state": "post",
+            "completed": true,
+            "description": "Final",
+            "detail": "Final",
+            "shortDetail": "Final"
+          },
+          "isTBDFlex": false
+        },
+        "competitors": [
+          {
+            "team": {
+              "id": "12"
+            },
+            "score": "22"
+          },
+          {
+            "team": {
+              "id": "24"
+            },
+            "score": "6"
+          }
+        ]
+      }
+    ]
+  },
+  "boxscore": {
+    "players": [
+      {
+        "team": {
+          "id": "24"
+        },
+        "statistics": [
+          {
+            "name": "passing",
+            "labels": [
+              "C/ATT",
+              "YDS",
+              "AVG",
+              "TD",
+              "INT",
+              "SACKS",
+              "QBR",
+              "RTG"
+            ],
+            "totals": [
+              "22/37",
+              "186",
+              "5.5",
+              "0",
+              "1",
+              "4-18",
+              "--",
+              "63.3"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4038941"
+                },
+                "stats": [
+                  "22/37",
+                  "204",
+                  "5.5",
+                  "0",
+                  "1",
+                  "4-18",
+                  "48.8",
+                  "63.3"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "rushing",
+            "labels": [
+              "CAR",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG"
+            ],
+            "totals": [
+              "22",
+              "73",
+              "3.3",
+              "0",
+              "9"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4038941"
+                },
+                "stats": [
+                  "5",
+                  "26",
+                  "5.2",
+                  "0",
+                  "7"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4430968"
+                },
+                "stats": [
+                  "7",
+                  "21",
+                  "3.0",
+                  "0",
+                  "9"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4685382"
+                },
+                "stats": [
+                  "7",
+                  "18",
+                  "2.6",
+                  "0",
+                  "4"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4362477"
+                },
+                "stats": [
+                  "1",
+                  "4",
+                  "4.0",
+                  "0",
+                  "4"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4596334"
+                },
+                "stats": [
+                  "2",
+                  "4",
+                  "2.0",
+                  "0",
+                  "3"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "receiving",
+            "labels": [
+              "REC",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG",
+              "TGTS"
+            ],
+            "totals": [
+              "22",
+              "204",
+              "9.3",
+              "0",
+              "57",
+              "36"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4429025"
+                },
+                "stats": [
+                  "1",
+                  "57",
+                  "57.0",
+                  "0",
+                  "57",
+                  "3"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4430870"
+                },
+                "stats": [
+                  "5",
+                  "32",
+                  "6.4",
+                  "0",
+                  "16",
+                  "9"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4426535"
+                },
+                "stats": [
+                  "2",
+                  "21",
+                  "10.5",
+                  "0",
+                  "14",
+                  "3"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4685382"
+                },
+                "stats": [
+                  "4",
+                  "21",
+                  "5.3",
+                  "0",
+                  "15",
+                  "4"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4241263"
+                },
+                "stats": [
+                  "3",
+                  "20",
+                  "6.7",
+                  "0",
+                  "11",
+                  "6"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4430968"
+                },
+                "stats": [
+                  "3",
+                  "19",
+                  "6.3",
+                  "0",
+                  "13",
+                  "4"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4612826"
+                },
+                "stats": [
+                  "1",
+                  "17",
+                  "17.0",
+                  "0",
+                  "17",
+                  "1"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4595342"
+                },
+                "stats": [
+                  "3",
+                  "17",
+                  "5.7",
+                  "0",
+                  "11",
+                  "5"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4596334"
+                },
+                "stats": [
+                  "0",
+                  "0",
+                  "0.0",
+                  "0",
+                  "0",
+                  "1"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "fumbles",
+            "labels": [
+              "FUM",
+              "LOST",
+              "REC"
+            ],
+            "totals": [
+              "1",
+              "1",
+              "1"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4430870"
+                },
+                "stats": [
+                  "1",
+                  "1",
+                  "0"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4911489"
+                },
+                "stats": [
+                  "0",
+                  "0",
+                  "1"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "12"
+        },
+        "statistics": [
+          {
+            "name": "passing",
+            "labels": [
+              "C/ATT",
+              "YDS",
+              "AVG",
+              "TD",
+              "INT",
+              "SACKS",
+              "QBR",
+              "RTG"
+            ],
+            "totals": [
+              "23/30",
+              "272",
+              "9.1",
+              "0",
+              "1",
+              "0-0",
+              "--",
+              "89.9"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "3139477"
+                },
+                "stats": [
+                  "23/30",
+                  "272",
+                  "9.1",
+                  "0",
+                  "1",
+                  "0-0",
+                  "69.6",
+                  "89.9"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "rushing",
+            "labels": [
+              "CAR",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG"
+            ],
+            "totals": [
+              "27",
+              "150",
+              "5.6",
+              "2",
+              "33"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4567048"
+                },
+                "stats": [
+                  "19",
+                  "128",
+                  "6.7",
+                  "2",
+                  "33"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "3139477"
+                },
+                "stats": [
+                  "5",
+                  "16",
+                  "3.2",
+                  "0",
+                  "10"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4832955"
+                },
+                "stats": [
+                  "3",
+                  "6",
+                  "2.0",
+                  "0",
+                  "4"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "receiving",
+            "labels": [
+              "REC",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG",
+              "TGTS"
+            ],
+            "totals": [
+              "23",
+              "272",
+              "11.8",
+              "0",
+              "31",
+              "29"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4683062"
+                },
+                "stats": [
+                  "7",
+                  "73",
+                  "10.4",
+                  "0",
+                  "19",
+                  "7"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4240472"
+                },
+                "stats": [
+                  "3",
+                  "53",
+                  "17.7",
+                  "0",
+                  "31",
+                  "3"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "15847"
+                },
+                "stats": [
+                  "4",
+                  "53",
+                  "13.3",
+                  "0",
+                  "24",
+                  "5"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4912218"
+                },
+                "stats": [
+                  "2",
+                  "27",
+                  "13.5",
+                  "0",
+                  "23",
+                  "2"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "5082630"
+                },
+                "stats": [
+                  "2",
+                  "24",
+                  "12.0",
+                  "0",
+                  "18",
+                  "4"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4832955"
+                },
+                "stats": [
+                  "2",
+                  "18",
+                  "9.0",
+                  "0",
+                  "14",
+                  "3"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "5093923"
+                },
+                "stats": [
+                  "1",
+                  "13",
+                  "13.0",
+                  "0",
+                  "13",
+                  "2"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4567048"
+                },
+                "stats": [
+                  "2",
+                  "11",
+                  "5.5",
+                  "0",
+                  "6",
+                  "3"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "fumbles",
+            "labels": [
+              "FUM",
+              "LOST",
+              "REC"
+            ],
+            "totals": [
+              "2",
+              "1",
+              "2"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "id": "4372716"
+                },
+                "stats": [
+                  "1",
+                  "1",
+                  "0"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "4241385"
+                },
+                "stats": [
+                  "1",
+                  "0",
+                  "0"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "3139477"
+                },
+                "stats": [
+                  "0",
+                  "0",
+                  "1"
+                ]
+              },
+              {
+                "athlete": {
+                  "id": "3129310"
+                },
+                "stats": [
+                  "0",
+                  "0",
+                  "1"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "teams": [
+      {
+        "team": {
+          "id": "24"
+        },
+        "statistics": [
+          {
+            "name": "totalYards",
+            "label": "Total Yards",
+            "displayValue": "259"
+          },
+          {
+            "name": "interceptions",
+            "label": "Interceptions thrown",
+            "displayValue": "1"
+          },
+          {
+            "name": "sacksYardsLost",
+            "label": "Sacks-Yards Lost",
+            "displayValue": "4-18"
+          },
+          {
+            "name": "fumblesLost",
+            "label": "Fumbles lost",
+            "displayValue": "1"
+          },
+          {
+            "name": "interceptions",
+            "label": "Interceptions thrown",
+            "displayValue": "1"
+          },
+          {
+            "name": "defensiveTouchdowns",
+            "label": "Defensive / Special Teams TDs",
+            "displayValue": "0"
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "12"
+        },
+        "statistics": [
+          {
+            "name": "totalYards",
+            "label": "Total Yards",
+            "displayValue": "422"
+          },
+          {
+            "name": "interceptions",
+            "label": "Interceptions thrown",
+            "displayValue": "1"
+          },
+          {
+            "name": "sacksYardsLost",
+            "label": "Sacks-Yards Lost",
+            "displayValue": "0-0"
+          },
+          {
+            "name": "fumblesLost",
+            "label": "Fumbles lost",
+            "displayValue": "1"
+          },
+          {
+            "name": "interceptions",
+            "label": "Interceptions thrown",
+            "displayValue": "1"
+          },
+          {
+            "name": "defensiveTouchdowns",
+            "label": "Defensive / Special Teams TDs",
+            "displayValue": "0"
+          }
+        ]
+      }
+    ]
+  },
+  "scoringPlays": [
+    {
+      "type": {
+        "id": "59"
+      },
+      "team": {
+        "id": "12"
+      }
+    },
+    {
+      "type": {
+        "id": "68"
+      },
+      "team": {
+        "id": "12"
+      }
+    },
+    {
+      "type": {
+        "id": "59"
+      },
+      "team": {
+        "id": "24"
+      }
+    },
+    {
+      "type": {
+        "id": "68"
+      },
+      "team": {
+        "id": "12"
+      }
+    },
+    {
+      "type": {
+        "id": "59"
+      },
+      "team": {
+        "id": "12"
+      }
+    },
+    {
+      "type": {
+        "id": "59"
+      },
+      "team": {
+        "id": "24"
+      }
+    },
+    {
+      "type": {
+        "id": "59"
+      },
+      "team": {
+        "id": "12"
+      }
+    }
+  ]
+}

@@ -1,0 +1,2774 @@
+{
+  "generatedAt": "2026-10-23T15:04:39.352Z",
+  "season": "2026-27",
+  "databaseWrites": 0,
+  "providerRequests": 32,
+  "source": {
+    "nativeSource": "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+    "teamsSource": "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams?limit=50",
+    "originalReview": "data/analytics/nba-provider-identity-review.json"
+  },
+  "summary": {
+    "activePlayers": 530,
+    "storedResolved": 367,
+    "gaps": 163,
+    "originalGapReasons": {
+      "tier4": 61,
+      "tier2": 102
+    },
+    "currentGapReasons": {
+      "absent_from_native_season": 64,
+      "corroborated_current_rosters": 98,
+      "native_name_requires_review": 1
+    },
+    "achievableAfterApproval": 465
+  },
+  "gaps": [
+    {
+      "playerId": 22,
+      "name": "Ochai Agbaji",
+      "nbaPlayerId": 1630534,
+      "storedTeam": "BKN",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 23,
+      "name": "Santi Aldama",
+      "nbaPlayerId": 1630583,
+      "storedTeam": "MEM",
+      "native": {
+        "nbaPlayerId": 1630583,
+        "name": "Santi Aldama",
+        "team": "DAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4593125",
+        "evidence": "Native NBA ID 1630583 has a unique matching name and current team DAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/6/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 24,
+      "name": "Trey Alexander",
+      "nbaPlayerId": 1641725,
+      "storedTeam": "NOP",
+      "native": {
+        "nbaPlayerId": 1641725,
+        "name": "Trey Alexander",
+        "team": "UTA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4433268",
+        "evidence": "Native NBA ID 1641725 has a unique matching name and current team UTA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/26/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 26,
+      "name": "Grayson Allen",
+      "nbaPlayerId": 1628960,
+      "storedTeam": "PHX",
+      "native": {
+        "nbaPlayerId": 1628960,
+        "name": "Grayson Allen",
+        "team": "CHA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3135045",
+        "evidence": "Native NBA ID 1628960 has a unique matching name and current team CHA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/30/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 29,
+      "name": "Kyle Anderson",
+      "nbaPlayerId": 203937,
+      "storedTeam": "MIN",
+      "native": {
+        "nbaPlayerId": 203937,
+        "name": "Kyle Anderson",
+        "team": "TOR",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2993874",
+        "evidence": "Native NBA ID 203937 has a unique matching name and current team TOR in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/28/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 30,
+      "name": "Alex Antetokounmpo",
+      "nbaPlayerId": 1630828,
+      "storedTeam": "MIL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 32,
+      "name": "Thanasis Antetokounmpo",
+      "nbaPlayerId": 203648,
+      "storedTeam": "MIL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 36,
+      "name": "Deandre Ayton",
+      "nbaPlayerId": 1629028,
+      "storedTeam": "LAL",
+      "native": {
+        "nbaPlayerId": 1629028,
+        "name": "Deandre Ayton",
+        "team": "WAS",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4278129",
+        "evidence": "Native NBA ID 1629028 has a unique matching name and current team WAS in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/27/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 37,
+      "name": "Marvin Bagley III",
+      "nbaPlayerId": 1628963,
+      "storedTeam": "DAL",
+      "native": {
+        "nbaPlayerId": 1628963,
+        "name": "Marvin Bagley III",
+        "team": "DEN",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4277848",
+        "evidence": "Native NBA ID 1628963 has a unique matching name and current team DEN in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/7/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 40,
+      "name": "Patrick Baldwin Jr.",
+      "nbaPlayerId": 1631116,
+      "storedTeam": "SAC",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 41,
+      "name": "LaMelo Ball",
+      "nbaPlayerId": 1630163,
+      "storedTeam": "CHA",
+      "native": {
+        "nbaPlayerId": 1630163,
+        "name": "LaMelo Ball",
+        "team": "MIN",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4432816",
+        "evidence": "Native NBA ID 1630163 has a unique matching name and current team MIN in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/16/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 45,
+      "name": "Dalano Banton",
+      "nbaPlayerId": 1630625,
+      "storedTeam": "BOS",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 53,
+      "name": "Nicolas Batum",
+      "nbaPlayerId": 201587,
+      "storedTeam": "LAC",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 55,
+      "name": "MarJon Beauchamp",
+      "nbaPlayerId": 1630699,
+      "storedTeam": "PHI",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 59,
+      "name": "Bismack Biyombo",
+      "nbaPlayerId": 202687,
+      "storedTeam": "SAS",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 61,
+      "name": "Leaky Black",
+      "nbaPlayerId": 1641778,
+      "storedTeam": "WAS",
+      "native": {
+        "nbaPlayerId": 1641778,
+        "name": "Leaky Black",
+        "team": "SAC",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4395650",
+        "evidence": "Native NBA ID 1641778 has a unique matching name and current team SAC in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/23/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 63,
+      "name": "Bogdan Bogdanović",
+      "nbaPlayerId": 203992,
+      "storedTeam": "LAC",
+      "native": {
+        "nbaPlayerId": 203992,
+        "name": "Bogdan Bogdanović",
+        "team": "HOU",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3037789",
+        "evidence": "Native NBA ID 203992 has a unique matching name and current team HOU in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/10/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 68,
+      "name": "Tony Bradley",
+      "nbaPlayerId": 1628396,
+      "storedTeam": "ATL",
+      "native": {
+        "nbaPlayerId": 1628396,
+        "name": "Tony Bradley",
+        "team": "UTA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4065673",
+        "evidence": "Native NBA ID 1628396 has a unique matching name and current team UTA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/26/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 73,
+      "name": "Miles Bridges",
+      "nbaPlayerId": 1628970,
+      "storedTeam": "CHA",
+      "native": {
+        "nbaPlayerId": 1628970,
+        "name": "Miles Bridges",
+        "team": "PHX",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4066383",
+        "evidence": "Native NBA ID 1628970 has a unique matching name and current team PHX in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/21/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 75,
+      "name": "Johni Broome",
+      "nbaPlayerId": 1641780,
+      "storedTeam": "PHI",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 76,
+      "name": "Bruce Brown",
+      "nbaPlayerId": 1628971,
+      "storedTeam": "DEN",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 78,
+      "name": "Jaylen Brown",
+      "nbaPlayerId": 1627759,
+      "storedTeam": "BOS",
+      "native": {
+        "nbaPlayerId": 1627759,
+        "name": "Jaylen Brown",
+        "team": "PHI",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3917376",
+        "evidence": "Native NBA ID 1627759 has a unique matching name and current team PHI in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/20/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 87,
+      "name": "Kentavious Caldwell-Pope",
+      "nbaPlayerId": 203484,
+      "storedTeam": "MEM",
+      "native": {
+        "nbaPlayerId": 203484,
+        "name": "Kentavious Caldwell-Pope",
+        "team": "PHI",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2581018",
+        "evidence": "Native NBA ID 203484 has a unique matching name and current team PHI in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/20/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 91,
+      "name": "Branden Carlson",
+      "nbaPlayerId": 1642382,
+      "storedTeam": "OKC",
+      "native": {
+        "nbaPlayerId": 1642382,
+        "name": "Branden Carlson",
+        "team": "POR",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4592435",
+        "evidence": "Native NBA ID 1642382 has a unique matching name and current team POR in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/22/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 93,
+      "name": "Devin Carter",
+      "nbaPlayerId": 1642269,
+      "storedTeam": "SAC",
+      "native": {
+        "nbaPlayerId": 1642269,
+        "name": "Devin Carter",
+        "team": "BOS",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4433188",
+        "evidence": "Native NBA ID 1642269 has a unique matching name and current team BOS in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/2/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 107,
+      "name": "Brandon Clarke",
+      "nbaPlayerId": 1629634,
+      "storedTeam": "MEM",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 109,
+      "name": "Nic Claxton",
+      "nbaPlayerId": 1629651,
+      "storedTeam": "BKN",
+      "native": {
+        "nbaPlayerId": 1629651,
+        "name": "Nic Claxton",
+        "team": "CHI",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4278067",
+        "evidence": "Native NBA ID 1629651 has a unique matching name and current team CHI in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/4/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 114,
+      "name": "Amir Coffey",
+      "nbaPlayerId": 1629599,
+      "storedTeam": "PHX",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 116,
+      "name": "John Collins",
+      "nbaPlayerId": 1628381,
+      "storedTeam": "LAC",
+      "native": {
+        "nbaPlayerId": 1628381,
+        "name": "John Collins",
+        "team": "DET",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3908845",
+        "evidence": "Native NBA ID 1628381 has a unique matching name and current team DET in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/8/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 118,
+      "name": "Mike Conley",
+      "nbaPlayerId": 201144,
+      "storedTeam": "MIN",
+      "native": {
+        "nbaPlayerId": 201144,
+        "name": "Mike Conley",
+        "team": "BOS",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3195",
+        "evidence": "Native NBA ID 201144 has a unique matching name and current team BOS in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/2/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 127,
+      "name": "Seth Curry",
+      "nbaPlayerId": 203552,
+      "storedTeam": "GSW",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 132,
+      "name": "JD Davison",
+      "nbaPlayerId": 1631120,
+      "storedTeam": "HOU",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 133,
+      "name": "DeMar DeRozan",
+      "nbaPlayerId": 201942,
+      "storedTeam": "SAC",
+      "native": {
+        "nbaPlayerId": 201942,
+        "name": "DeMar DeRozan",
+        "team": "DEN",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3978",
+        "evidence": "Native NBA ID 201942 has a unique matching name and current team DEN in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/7/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 138,
+      "name": "Gradey Dick",
+      "nbaPlayerId": 1641711,
+      "storedTeam": "TOR",
+      "native": {
+        "nbaPlayerId": 1641711,
+        "name": "Gradey Dick",
+        "team": "LAC",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "5106258",
+        "evidence": "Native NBA ID 1641711 has a unique matching name and current team LAC in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/12/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 139,
+      "name": "Hunter Dickinson",
+      "nbaPlayerId": 1630621,
+      "storedTeam": "NOP",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 143,
+      "name": "Luguentz Dort",
+      "nbaPlayerId": 1629652,
+      "storedTeam": "OKC",
+      "native": {
+        "nbaPlayerId": 1629652,
+        "name": "Luguentz Dort",
+        "team": "ATL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4397020",
+        "evidence": "Native NBA ID 1629652 has a unique matching name and current team ATL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/1/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 145,
+      "name": "Andre Drummond",
+      "nbaPlayerId": 203083,
+      "storedTeam": "PHI",
+      "native": {
+        "nbaPlayerId": 203083,
+        "name": "Andre Drummond",
+        "team": "NYK",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "6585",
+        "evidence": "Native NBA ID 203083 has a unique matching name and current team NYK in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/18/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 155,
+      "name": "Keon Ellis",
+      "nbaPlayerId": 1631165,
+      "storedTeam": "CLE",
+      "native": {
+        "nbaPlayerId": 1631165,
+        "name": "Keon Ellis",
+        "team": "BKN",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4702177",
+        "evidence": "Native NBA ID 1631165 has a unique matching name and current team BKN in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/17/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 160,
+      "name": "Drew Eubanks",
+      "nbaPlayerId": 1629234,
+      "storedTeam": "SAC",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 161,
+      "name": "Tosan Evbuomwan",
+      "nbaPlayerId": 1641787,
+      "storedTeam": "CHA",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 164,
+      "name": "Dorian Finney-Smith",
+      "nbaPlayerId": 1627827,
+      "storedTeam": "HOU",
+      "native": {
+        "nbaPlayerId": 1627827,
+        "name": "Dorian Finney-Smith",
+        "team": "ATL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2578185",
+        "evidence": "Native NBA ID 1627827 has a unique matching name and current team ATL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/1/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 180,
+      "name": "Paul George",
+      "nbaPlayerId": 202331,
+      "storedTeam": "PHI",
+      "native": {
+        "nbaPlayerId": 202331,
+        "name": "Paul George",
+        "team": "BOS",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4251",
+        "evidence": "Native NBA ID 202331 has a unique matching name and current team BOS in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/2/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 181,
+      "name": "Taj Gibson",
+      "nbaPlayerId": 201959,
+      "storedTeam": "MEM",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 185,
+      "name": "Anthony Gill",
+      "nbaPlayerId": 1630264,
+      "storedTeam": "WAS",
+      "native": {
+        "nbaPlayerId": 1630264,
+        "name": "Anthony Gill",
+        "team": "WAS",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2581184",
+        "evidence": "Native NBA ID 1630264 has a unique matching name and current team WAS in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/27/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 193,
+      "name": "Jerami Grant",
+      "nbaPlayerId": 203924,
+      "storedTeam": "POR",
+      "native": {
+        "nbaPlayerId": 203924,
+        "name": "Jerami Grant",
+        "team": "MEM",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2991070",
+        "evidence": "Native NBA ID 203924 has a unique matching name and current team MEM in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/29/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 194,
+      "name": "Hayden Gray",
+      "nbaPlayerId": 1643060,
+      "storedTeam": "UTA",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 199,
+      "name": "Jeff Green",
+      "nbaPlayerId": 201145,
+      "storedTeam": "HOU",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 200,
+      "name": "Josh Green",
+      "nbaPlayerId": 1630182,
+      "storedTeam": "CHA",
+      "native": {
+        "nbaPlayerId": 1630182,
+        "name": "Josh Green",
+        "team": "UTA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4432811",
+        "evidence": "Native NBA ID 1630182 has a unique matching name and current team UTA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/26/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 201,
+      "name": "Quentin Grimes",
+      "nbaPlayerId": 1629656,
+      "storedTeam": "PHI",
+      "native": {
+        "nbaPlayerId": 1629656,
+        "name": "Quentin Grimes",
+        "team": "LAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4397014",
+        "evidence": "Native NBA ID 1629656 has a unique matching name and current team LAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/13/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 202,
+      "name": "Mouhamadou Gueye",
+      "nbaPlayerId": 1631338,
+      "storedTeam": "CHI",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 204,
+      "name": "Rui Hachimura",
+      "nbaPlayerId": 1629060,
+      "storedTeam": "LAL",
+      "native": {
+        "nbaPlayerId": 1629060,
+        "name": "Rui Hachimura",
+        "team": "LAC",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4066648",
+        "evidence": "Native NBA ID 1629060 has a unique matching name and current team LAC in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/12/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 206,
+      "name": "Tim Hardaway Jr.",
+      "nbaPlayerId": 203501,
+      "storedTeam": "DEN",
+      "native": {
+        "nbaPlayerId": 203501,
+        "name": "Tim Hardaway Jr.",
+        "team": "MIA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2528210",
+        "evidence": "Native NBA ID 203501 has a unique matching name and current team MIA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/14/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 208,
+      "name": "Jaden Hardy",
+      "nbaPlayerId": 1630702,
+      "storedTeam": "WAS",
+      "native": {
+        "nbaPlayerId": 1630702,
+        "name": "Jaden Hardy",
+        "team": "LAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4868423",
+        "evidence": "Native NBA ID 1630702 has a unique matching name and current team LAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/13/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 209,
+      "name": "Elijah Harkless",
+      "nbaPlayerId": 1641989,
+      "storedTeam": "UTA",
+      "native": {
+        "nbaPlayerId": 1641989,
+        "name": "Elijah Harkless",
+        "team": "DET",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4397449",
+        "evidence": "Native NBA ID 1641989 has a unique matching name and current team DET in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/8/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 212,
+      "name": "Gary Harris",
+      "nbaPlayerId": 203914,
+      "storedTeam": "MIL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 213,
+      "name": "Tobias Harris",
+      "nbaPlayerId": 202699,
+      "storedTeam": "DET",
+      "native": {
+        "nbaPlayerId": 202699,
+        "name": "Tobias Harris",
+        "team": "SAS",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "6440",
+        "evidence": "Native NBA ID 202699 has a unique matching name and current team SAS in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/24/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 217,
+      "name": "Jordan Hawkins",
+      "nbaPlayerId": 1641722,
+      "storedTeam": "NOP",
+      "native": {
+        "nbaPlayerId": 1641722,
+        "name": "Jordan Hawkins",
+        "team": "CHI",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4683750",
+        "evidence": "Native NBA ID 1641722 has a unique matching name and current team CHI in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/4/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 218,
+      "name": "Jaxson Hayes",
+      "nbaPlayerId": 1629637,
+      "storedTeam": "LAL",
+      "native": {
+        "nbaPlayerId": 1629637,
+        "name": "Jaxson Hayes",
+        "team": "UTA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4397077",
+        "evidence": "Native NBA ID 1629637 has a unique matching name and current team UTA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/26/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 219,
+      "name": "Killian Hayes",
+      "nbaPlayerId": 1630165,
+      "storedTeam": "SAC",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 224,
+      "name": "Tyler Herro",
+      "nbaPlayerId": 1629639,
+      "storedTeam": "MIA",
+      "native": {
+        "nbaPlayerId": 1629639,
+        "name": "Tyler Herro",
+        "team": "MIL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4395725",
+        "evidence": "Native NBA ID 1629639 has a unique matching name and current team MIL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/15/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 228,
+      "name": "Aaron Holiday",
+      "nbaPlayerId": 1628988,
+      "storedTeam": "HOU",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 235,
+      "name": "Jett Howard",
+      "nbaPlayerId": 1641724,
+      "storedTeam": "ORL",
+      "native": {
+        "nbaPlayerId": 1641724,
+        "name": "Jett Howard",
+        "team": "DAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "5105806",
+        "evidence": "Native NBA ID 1641724 has a unique matching name and current team DAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/6/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 238,
+      "name": "Ariel Hukporti",
+      "nbaPlayerId": 1630574,
+      "storedTeam": "NYK",
+      "native": {
+        "nbaPlayerId": 1630574,
+        "name": "Ariel Hukporti",
+        "team": "PHI",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4871141",
+        "evidence": "Native NBA ID 1630574 has a unique matching name and current team PHI in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/20/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 243,
+      "name": "Joe Ingles",
+      "nbaPlayerId": 204060,
+      "storedTeam": "MIN",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 244,
+      "name": "Brandon Ingram",
+      "nbaPlayerId": 1627742,
+      "storedTeam": "TOR",
+      "native": {
+        "nbaPlayerId": 1627742,
+        "name": "Brandon Ingram",
+        "team": "LAC",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3913176",
+        "evidence": "Native NBA ID 1627742 has a unique matching name and current team LAC in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/12/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 252,
+      "name": "Andre Jackson Jr.",
+      "nbaPlayerId": 1641748,
+      "storedTeam": "MIL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 255,
+      "name": "Kasparas Jakučionis",
+      "nbaPlayerId": 1642857,
+      "storedTeam": "MIA",
+      "native": {
+        "nbaPlayerId": 1642857,
+        "name": "Kasparas Jakučionis",
+        "team": "MIL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "5214640",
+        "evidence": "Native NBA ID 1642857 has a unique matching name and current team MIL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/15/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 258,
+      "name": "Jaime Jaquez Jr.",
+      "nbaPlayerId": 1631170,
+      "storedTeam": "MIA",
+      "native": {
+        "nbaPlayerId": 1631170,
+        "name": "Jaime Jaquez Jr.",
+        "team": "MIL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4432848",
+        "evidence": "Native NBA ID 1631170 has a unique matching name and current team MIL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/15/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 261,
+      "name": "Trey Jemison III",
+      "nbaPlayerId": 1641998,
+      "storedTeam": "NYK",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 264,
+      "name": "Isaiah Joe",
+      "nbaPlayerId": 1630198,
+      "storedTeam": "OKC",
+      "native": {
+        "nbaPlayerId": 1630198,
+        "name": "Isaiah Joe",
+        "team": "DET",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4395702",
+        "evidence": "Native NBA ID 1630198 has a unique matching name and current team DET in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/8/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 265,
+      "name": "AJ Johnson",
+      "nbaPlayerId": 1642358,
+      "storedTeam": "DAL",
+      "native": {
+        "nbaPlayerId": 1642358,
+        "name": "AJ Johnson",
+        "team": "NOP",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "5170947",
+        "evidence": "Native NBA ID 1642358 has a unique matching name and current team NOP in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/3/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 273,
+      "name": "Curtis Jones",
+      "nbaPlayerId": 1642938,
+      "storedTeam": "DEN",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 274,
+      "name": "Dillon Jones",
+      "nbaPlayerId": 1641794,
+      "storedTeam": "NYK",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 277,
+      "name": "Kam Jones",
+      "nbaPlayerId": 1642880,
+      "storedTeam": "IND",
+      "native": {
+        "nbaPlayerId": 1642880,
+        "name": "Kam Jones",
+        "team": "MIL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4697268",
+        "evidence": "Native NBA ID 1642880 has a unique matching name and current team MIL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/15/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 287,
+      "name": "Yuki Kawamura",
+      "nbaPlayerId": 1642530,
+      "storedTeam": "CHI",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 290,
+      "name": "Luke Kennard",
+      "nbaPlayerId": 1628379,
+      "storedTeam": "LAL",
+      "native": {
+        "nbaPlayerId": 1628379,
+        "name": "Luke Kennard",
+        "team": "PHX",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3913174",
+        "evidence": "Native NBA ID 1628379 has a unique matching name and current team PHX in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/21/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 294,
+      "name": "Maxi Kleber",
+      "nbaPlayerId": 1628467,
+      "storedTeam": "LAL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 299,
+      "name": "Christian Koloko",
+      "nbaPlayerId": 1631132,
+      "storedTeam": "ATL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 300,
+      "name": "John Konchar",
+      "nbaPlayerId": 1629723,
+      "storedTeam": "UTA",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 312,
+      "name": "Caris LeVert",
+      "nbaPlayerId": 1627747,
+      "storedTeam": "DET",
+      "native": {
+        "nbaPlayerId": 1627747,
+        "name": "Caris LeVert",
+        "team": "MIL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2991043",
+        "evidence": "Native NBA ID 1627747 has a unique matching name and current team MIL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/15/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 313,
+      "name": "Kawhi Leonard",
+      "nbaPlayerId": 202695,
+      "storedTeam": "LAC",
+      "native": {
+        "nbaPlayerId": 202695,
+        "name": "Kawhi Leonard",
+        "team": "TOR",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "6450",
+        "evidence": "Native NBA ID 202695 has a unique matching name and current team TOR in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/28/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 320,
+      "name": "Kevon Looney",
+      "nbaPlayerId": 1626172,
+      "storedTeam": "NOP",
+      "native": {
+        "nbaPlayerId": 1626172,
+        "name": "Kevon Looney",
+        "team": "LAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3155535",
+        "evidence": "Native NBA ID 1626172 has a unique matching name and current team LAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/13/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 322,
+      "name": "Caleb Love",
+      "nbaPlayerId": 1631126,
+      "storedTeam": "POR",
+      "native": {
+        "nbaPlayerId": 1631126,
+        "name": "Caleb Love",
+        "team": "PHI",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4433144",
+        "evidence": "Native NBA ID 1631126 has a unique matching name and current team PHI in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/20/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 323,
+      "name": "Kevin Love",
+      "nbaPlayerId": 201567,
+      "storedTeam": "UTA",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 325,
+      "name": "Kyle Lowry",
+      "nbaPlayerId": 200768,
+      "storedTeam": "PHI",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 327,
+      "name": "Sandro Mamukelashvili",
+      "nbaPlayerId": 1630572,
+      "storedTeam": "TOR",
+      "native": {
+        "nbaPlayerId": 1630572,
+        "name": "Sandro Mamukelashvili",
+        "team": "LAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4278580",
+        "evidence": "Native NBA ID 1630572 has a unique matching name and current team LAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/13/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 329,
+      "name": "Tre Mann",
+      "nbaPlayerId": 1630544,
+      "storedTeam": "CHA",
+      "native": {
+        "nbaPlayerId": 1630544,
+        "name": "Tre Mann",
+        "team": "WAS",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4432819",
+        "evidence": "Native NBA ID 1630544 has a unique matching name and current team WAS in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/27/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 335,
+      "name": "Tyrese Martin",
+      "nbaPlayerId": 1631213,
+      "storedTeam": "PHI",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 338,
+      "name": "Bennedict Mathurin",
+      "nbaPlayerId": 1631097,
+      "storedTeam": "LAC",
+      "native": {
+        "nbaPlayerId": 1631097,
+        "name": "Bennedict Mathurin",
+        "team": "NOP",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4683634",
+        "evidence": "Native NBA ID 1631097 has a unique matching name and current team NOP in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/3/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 350,
+      "name": "Doug McDermott",
+      "nbaPlayerId": 203926,
+      "storedTeam": "SAC",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 356,
+      "name": "Khris Middleton",
+      "nbaPlayerId": 203114,
+      "storedTeam": "DAL",
+      "native": {
+        "nbaPlayerId": 203114,
+        "name": "Khris Middleton",
+        "team": "WAS",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "6609",
+        "evidence": "Native NBA ID 203114 has a unique matching name and current team WAS in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/27/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 368,
+      "name": "Jonathan Mogbo",
+      "nbaPlayerId": 1642367,
+      "storedTeam": "TOR",
+      "native": {
+        "nbaPlayerId": 1642367,
+        "name": "Jonathan Mogbo",
+        "team": "SAC",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "5107897",
+        "evidence": "Native NBA ID 1642367 has a unique matching name and current team SAC in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/23/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 379,
+      "name": "Kris Murray",
+      "nbaPlayerId": 1631200,
+      "storedTeam": "POR",
+      "native": {
+        "nbaPlayerId": 1631200,
+        "name": "Kris Murray",
+        "team": "MEM",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4594326",
+        "evidence": "Native NBA ID 1631200 has a unique matching name and current team MEM in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/29/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 383,
+      "name": "Larry Nance Jr.",
+      "nbaPlayerId": 1626204,
+      "storedTeam": "CLE",
+      "native": {
+        "nbaPlayerId": 1626204,
+        "name": "Larry Nance Jr.",
+        "team": "IND",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2580365",
+        "evidence": "Native NBA ID 1626204 has a unique matching name and current team IND in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/11/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 386,
+      "name": "Ryan Nembhard",
+      "nbaPlayerId": 1642948,
+      "storedTeam": "DAL",
+      "native": {
+        "nbaPlayerId": 1642948,
+        "name": "Ryan Nembhard",
+        "team": "DEN",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4433629",
+        "evidence": "Native NBA ID 1642948 has a unique matching name and current team DEN in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/7/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 389,
+      "name": "Tristen Newton",
+      "nbaPlayerId": 1641803,
+      "storedTeam": "HOU",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 393,
+      "name": "Royce O'Neale",
+      "nbaPlayerId": 1626220,
+      "storedTeam": "PHX",
+      "native": {
+        "nbaPlayerId": 1626220,
+        "name": "Royce O'Neale",
+        "team": "CHA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2583632",
+        "evidence": "Native NBA ID 1626220 has a unique matching name and current team CHA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/30/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 396,
+      "name": "Josh Okogie",
+      "nbaPlayerId": 1629006,
+      "storedTeam": "HOU",
+      "native": {
+        "nbaPlayerId": 1629006,
+        "name": "Josh Okogie",
+        "team": "UTA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4065663",
+        "evidence": "Native NBA ID 1629006 has a unique matching name and current team UTA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/26/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 399,
+      "name": "Lachlan Olbrich",
+      "nbaPlayerId": 1642950,
+      "storedTeam": "CHI",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 400,
+      "name": "Kelly Olynyk",
+      "nbaPlayerId": 203482,
+      "storedTeam": "SAS",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 401,
+      "name": "Norchad Omier",
+      "nbaPlayerId": 1641807,
+      "storedTeam": "LAC",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 402,
+      "name": "Kelly Oubre Jr.",
+      "nbaPlayerId": 1626162,
+      "storedTeam": "PHI",
+      "native": {
+        "nbaPlayerId": 1626162,
+        "name": "Kelly Oubre Jr.",
+        "team": "IND",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3133603",
+        "evidence": "Native NBA ID 1626162 has a unique matching name and current team IND in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/11/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 406,
+      "name": "Micah Peavy",
+      "nbaPlayerId": 1642877,
+      "storedTeam": "NOP",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 407,
+      "name": "Sean Pedulla",
+      "nbaPlayerId": 1642951,
+      "storedTeam": "LAC",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 409,
+      "name": "Taelon Peter",
+      "nbaPlayerId": 1643007,
+      "storedTeam": "IND",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 412,
+      "name": "Jalen Pickett",
+      "nbaPlayerId": 1629618,
+      "storedTeam": "DEN",
+      "native": {
+        "nbaPlayerId": 1629618,
+        "name": "Jalen Pickett",
+        "team": "LAC",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4398390",
+        "evidence": "Native NBA ID 1629618 has a unique matching name and current team LAC in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/12/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 415,
+      "name": "Mason Plumlee",
+      "nbaPlayerId": 203486,
+      "storedTeam": "SAS",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 422,
+      "name": "Bobby Portis",
+      "nbaPlayerId": 1626171,
+      "storedTeam": "MIL",
+      "native": {
+        "nbaPlayerId": 1626171,
+        "name": "Bobby Portis Jr.",
+        "team": "MIA",
+        "rostered": true
+      },
+      "category": "native_name_requires_review",
+      "candidate": null
+    },
+    {
+      "playerId": 424,
+      "name": "Quinten Post",
+      "nbaPlayerId": 1642366,
+      "storedTeam": "GSW",
+      "native": {
+        "nbaPlayerId": 1642366,
+        "name": "Quinten Post",
+        "team": "MEM",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4593016",
+        "evidence": "Native NBA ID 1642366 has a unique matching name and current team MEM in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/29/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 425,
+      "name": "Micah Potter",
+      "nbaPlayerId": 1630695,
+      "storedTeam": "IND",
+      "native": {
+        "nbaPlayerId": 1630695,
+        "name": "Micah Potter",
+        "team": "POR",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4066399",
+        "evidence": "Native NBA ID 1630695 has a unique matching name and current team POR in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/22/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 428,
+      "name": "Dwight Powell",
+      "nbaPlayerId": 203939,
+      "storedTeam": "DAL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 429,
+      "name": "Norman Powell",
+      "nbaPlayerId": 1626181,
+      "storedTeam": "MIA",
+      "native": {
+        "nbaPlayerId": 1626181,
+        "name": "Norman Powell",
+        "team": "CHI",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2595516",
+        "evidence": "Native NBA ID 1626181 has a unique matching name and current team CHI in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/4/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 430,
+      "name": "Taurean Prince",
+      "nbaPlayerId": 1627752,
+      "storedTeam": "MIL",
+      "native": {
+        "nbaPlayerId": 1627752,
+        "name": "Taurean Prince",
+        "team": "DET",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2990962",
+        "evidence": "Native NBA ID 1627752 has a unique matching name and current team DET in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/8/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 438,
+      "name": "Julius Randle",
+      "nbaPlayerId": 203944,
+      "storedTeam": "MIN",
+      "native": {
+        "nbaPlayerId": 203944,
+        "name": "Julius Randle",
+        "team": "BKN",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3064514",
+        "evidence": "Native NBA ID 203944 has a unique matching name and current team BKN in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/17/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 443,
+      "name": "Julian Reese",
+      "nbaPlayerId": 1642882,
+      "storedTeam": "WAS",
+      "native": {
+        "nbaPlayerId": 1642882,
+        "name": "Julian Reese",
+        "team": "NOP",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4683742",
+        "evidence": "Native NBA ID 1642882 has a unique matching name and current team NOP in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/3/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 444,
+      "name": "Antonio Reeves",
+      "nbaPlayerId": 1641810,
+      "storedTeam": "CHA",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 445,
+      "name": "Naz Reid",
+      "nbaPlayerId": 1629675,
+      "storedTeam": "MIN",
+      "native": {
+        "nbaPlayerId": 1629675,
+        "name": "Naz Reid",
+        "team": "CHA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4396971",
+        "evidence": "Native NBA ID 1629675 has a unique matching name and current team CHA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/30/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 447,
+      "name": "Nick Richards",
+      "nbaPlayerId": 1630208,
+      "storedTeam": "CHI",
+      "native": {
+        "nbaPlayerId": 1630208,
+        "name": "Nick Richards",
+        "team": "MIA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4278076",
+        "evidence": "Native NBA ID 1630208 has a unique matching name and current team MIA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/14/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 451,
+      "name": "Zaccharie Risacher",
+      "nbaPlayerId": 1642258,
+      "storedTeam": "ATL",
+      "native": {
+        "nbaPlayerId": 1642258,
+        "name": "Zaccharie Risacher",
+        "team": "DAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "5211175",
+        "evidence": "Native NBA ID 1642258 has a unique matching name and current team DAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/6/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 453,
+      "name": "Mitchell Robinson",
+      "nbaPlayerId": 1629011,
+      "storedTeam": "NYK",
+      "native": {
+        "nbaPlayerId": 1629011,
+        "name": "Mitchell Robinson",
+        "team": "BOS",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4351852",
+        "evidence": "Native NBA ID 1629011 has a unique matching name and current team BOS in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/2/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 458,
+      "name": "Rayan Rupert",
+      "nbaPlayerId": 1641712,
+      "storedTeam": "MEM",
+      "native": {
+        "nbaPlayerId": 1641712,
+        "name": "Rayan Rupert",
+        "team": "PHI",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "5099752",
+        "evidence": "Native NBA ID 1641712 has a unique matching name and current team PHI in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/20/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 459,
+      "name": "D'Angelo Russell",
+      "nbaPlayerId": 1626156,
+      "storedTeam": "WAS",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 465,
+      "name": "Payton Sandfort",
+      "nbaPlayerId": 1642362,
+      "storedTeam": "OKC",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 471,
+      "name": "Marcus Sasser",
+      "nbaPlayerId": 1631204,
+      "storedTeam": "DET",
+      "native": {
+        "nbaPlayerId": 1631204,
+        "name": "Marcus Sasser",
+        "team": "DAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4432107",
+        "evidence": "Native NBA ID 1631204 has a unique matching name and current team DAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/6/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 473,
+      "name": "Dennis Schröder",
+      "nbaPlayerId": 203471,
+      "storedTeam": "CLE",
+      "native": {
+        "nbaPlayerId": 203471,
+        "name": "Dennis Schröder",
+        "team": "CHA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3032979",
+        "evidence": "Native NBA ID 203471 has a unique matching name and current team CHA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/30/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 478,
+      "name": "Collin Sexton",
+      "nbaPlayerId": 1629012,
+      "storedTeam": "CHI",
+      "native": {
+        "nbaPlayerId": 1629012,
+        "name": "Collin Sexton",
+        "team": "LAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4277811",
+        "evidence": "Native NBA ID 1629012 has a unique matching name and current team LAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/13/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 486,
+      "name": "Max Shulga",
+      "nbaPlayerId": 1642917,
+      "storedTeam": "BOS",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 488,
+      "name": "Anfernee Simons",
+      "nbaPlayerId": 1629014,
+      "storedTeam": "CHI",
+      "native": {
+        "nbaPlayerId": 1629014,
+        "name": "Anfernee Simons",
+        "team": "PHI",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4351851",
+        "evidence": "Native NBA ID 1629014 has a unique matching name and current team PHI in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/20/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 493,
+      "name": "Marcus Smart",
+      "nbaPlayerId": 203935,
+      "storedTeam": "LAL",
+      "native": {
+        "nbaPlayerId": 203935,
+        "name": "Marcus Smart",
+        "team": "HOU",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "2990992",
+        "evidence": "Native NBA ID 203935 has a unique matching name and current team HOU in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/10/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 496,
+      "name": "Malachi Smith",
+      "nbaPlayerId": 1641869,
+      "storedTeam": "BKN",
+      "native": {
+        "nbaPlayerId": 1641869,
+        "name": "Malachi Smith",
+        "team": "TOR",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4397784",
+        "evidence": "Native NBA ID 1641869 has a unique matching name and current team TOR in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/28/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 498,
+      "name": "Tyler Smith",
+      "nbaPlayerId": 1641890,
+      "storedTeam": "DAL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 500,
+      "name": "Nick Smith Jr.",
+      "nbaPlayerId": 1641733,
+      "storedTeam": "LAL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 501,
+      "name": "Jeremy Sochan",
+      "nbaPlayerId": 1631110,
+      "storedTeam": "NYK",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 504,
+      "name": "Pat Spencer",
+      "nbaPlayerId": 1630311,
+      "storedTeam": "GSW",
+      "native": {
+        "nbaPlayerId": 1630311,
+        "name": "Pat Spencer",
+        "team": "PHX",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4592714",
+        "evidence": "Native NBA ID 1630311 has a unique matching name and current team PHX in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/21/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 505,
+      "name": "Isaiah Stevens",
+      "nbaPlayerId": 1641815,
+      "storedTeam": "SAC",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 506,
+      "name": "Isaiah Stewart",
+      "nbaPlayerId": 1630191,
+      "storedTeam": "DET",
+      "native": {
+        "nbaPlayerId": 1630191,
+        "name": "Isaiah Stewart",
+        "team": "MEM",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4432810",
+        "evidence": "Native NBA ID 1630191 has a unique matching name and current team MEM in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/29/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 508,
+      "name": "Max Strus",
+      "nbaPlayerId": 1629622,
+      "storedTeam": "CLE",
+      "native": {
+        "nbaPlayerId": 1629622,
+        "name": "Max Strus",
+        "team": "LAC",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4065778",
+        "evidence": "Native NBA ID 1629622 has a unique matching name and current team LAC in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/12/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 512,
+      "name": "Garrett Temple",
+      "nbaPlayerId": 202066,
+      "storedTeam": "TOR",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 513,
+      "name": "Dalen Terry",
+      "nbaPlayerId": 1631207,
+      "storedTeam": "PHI",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 518,
+      "name": "Ethan Thompson",
+      "nbaPlayerId": 1630679,
+      "storedTeam": "IND",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 519,
+      "name": "Klay Thompson",
+      "nbaPlayerId": 202691,
+      "storedTeam": "DAL",
+      "native": {
+        "nbaPlayerId": 202691,
+        "name": "Klay Thompson",
+        "team": "MIA",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "6475",
+        "evidence": "Native NBA ID 202691 has a unique matching name and current team MIA in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/14/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 520,
+      "name": "Matisse Thybulle",
+      "nbaPlayerId": 1629680,
+      "storedTeam": "POR",
+      "native": {
+        "nbaPlayerId": 1629680,
+        "name": "Matisse Thybulle",
+        "team": "LAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3907498",
+        "evidence": "Native NBA ID 1629680 has a unique matching name and current team LAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/13/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 521,
+      "name": "Xavier Tillman",
+      "nbaPlayerId": 1630214,
+      "storedTeam": "CHA",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 522,
+      "name": "Drew Timme",
+      "nbaPlayerId": 1631166,
+      "storedTeam": "LAL",
+      "native": {
+        "nbaPlayerId": 1631166,
+        "name": "Drew Timme",
+        "team": "PHX",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4431695",
+        "evidence": "Native NBA ID 1631166 has a unique matching name and current team PHX in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/21/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 524,
+      "name": "John Tonje",
+      "nbaPlayerId": 1642910,
+      "storedTeam": "BOS",
+      "native": {
+        "nbaPlayerId": 1642910,
+        "name": "John Tonje",
+        "team": "POR",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4593043",
+        "evidence": "Native NBA ID 1642910 has a unique matching name and current team POR in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/22/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 537,
+      "name": "Jonas Valančiūnas",
+      "nbaPlayerId": 202685,
+      "storedTeam": "DEN",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 541,
+      "name": "Gabe Vincent",
+      "nbaPlayerId": 1629216,
+      "storedTeam": "ATL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 543,
+      "name": "Nikola Vučević",
+      "nbaPlayerId": 202696,
+      "storedTeam": "BOS",
+      "native": {
+        "nbaPlayerId": 202696,
+        "name": "Nikola Vučević",
+        "team": "ORL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "6478",
+        "evidence": "Native NBA ID 202696 has a unique matching name and current team ORL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/19/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 544,
+      "name": "Dean Wade",
+      "nbaPlayerId": 1629731,
+      "storedTeam": "CLE",
+      "native": {
+        "nbaPlayerId": 1629731,
+        "name": "Dean Wade",
+        "team": "PHI",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3912848",
+        "evidence": "Native NBA ID 1629731 has a unique matching name and current team PHI in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/20/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 546,
+      "name": "Moritz Wagner",
+      "nbaPlayerId": 1629021,
+      "storedTeam": "ORL",
+      "native": {
+        "nbaPlayerId": 1629021,
+        "name": "Moritz Wagner",
+        "team": "BKN",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "3150844",
+        "evidence": "Native NBA ID 1629021 has a unique matching name and current team BKN in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/17/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 550,
+      "name": "Keaton Wallace",
+      "nbaPlayerId": 1630811,
+      "storedTeam": "ATL",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 553,
+      "name": "Kel'el Ware",
+      "nbaPlayerId": 1642276,
+      "storedTeam": "MIA",
+      "native": {
+        "nbaPlayerId": 1642276,
+        "name": "Kel'el Ware",
+        "team": "MIL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "5105623",
+        "evidence": "Native NBA ID 1642276 has a unique matching name and current team MIL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/15/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 556,
+      "name": "Lindy Waters III",
+      "nbaPlayerId": 1630322,
+      "storedTeam": "SAS",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 557,
+      "name": "Trendon Watford",
+      "nbaPlayerId": 1630570,
+      "storedTeam": "PHI",
+      "native": {
+        "nbaPlayerId": 1630570,
+        "name": "Trendon Watford",
+        "team": "NOP",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4431675",
+        "evidence": "Native NBA ID 1630570 has a unique matching name and current team NOP in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/3/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 559,
+      "name": "Peyton Watson",
+      "nbaPlayerId": 1631212,
+      "storedTeam": "DEN",
+      "native": {
+        "nbaPlayerId": 1631212,
+        "name": "Peyton Watson",
+        "team": "CLE",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4576087",
+        "evidence": "Native NBA ID 1631212 has a unique matching name and current team CLE in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/5/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 562,
+      "name": "Blake Wesley",
+      "nbaPlayerId": 1631104,
+      "storedTeam": "POR",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 563,
+      "name": "Russell Westbrook",
+      "nbaPlayerId": 201566,
+      "storedTeam": "SAC",
+      "native": null,
+      "category": "absent_from_native_season",
+      "candidate": null
+    },
+    {
+      "playerId": 567,
+      "name": "Cam Whitmore",
+      "nbaPlayerId": 1641715,
+      "storedTeam": "WAS",
+      "native": {
+        "nbaPlayerId": 1641715,
+        "name": "Cam Whitmore",
+        "team": "DEN",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "5105592",
+        "evidence": "Native NBA ID 1641715 has a unique matching name and current team DEN in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/7/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 568,
+      "name": "Aaron Wiggins",
+      "nbaPlayerId": 1630598,
+      "storedTeam": "OKC",
+      "native": {
+        "nbaPlayerId": 1630598,
+        "name": "Aaron Wiggins",
+        "team": "ATL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4397183",
+        "evidence": "Native NBA ID 1630598 has a unique matching name and current team ATL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/1/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 572,
+      "name": "Brandon Williams",
+      "nbaPlayerId": 1630314,
+      "storedTeam": "DAL",
+      "native": {
+        "nbaPlayerId": 1630314,
+        "name": "Brandon Williams",
+        "team": "GSW",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4397040",
+        "evidence": "Native NBA ID 1630314 has a unique matching name and current team GSW in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/9/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 573,
+      "name": "Cody Williams",
+      "nbaPlayerId": 1642262,
+      "storedTeam": "UTA",
+      "native": {
+        "nbaPlayerId": 1642262,
+        "name": "Cody Williams",
+        "team": "MIN",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4895758",
+        "evidence": "Native NBA ID 1642262 has a unique matching name and current team MIN in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/16/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 581,
+      "name": "Ziaire Williams",
+      "nbaPlayerId": 1630533,
+      "storedTeam": "BKN",
+      "native": {
+        "nbaPlayerId": 1630533,
+        "name": "Ziaire Williams",
+        "team": "LAL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4433137",
+        "evidence": "Native NBA ID 1630533 has a unique matching name and current team LAL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/13/roster"
+        ],
+        "needsApproval": true
+      }
+    },
+    {
+      "playerId": 586,
+      "name": "Jalen Wilson",
+      "nbaPlayerId": 1630592,
+      "storedTeam": "BKN",
+      "native": {
+        "nbaPlayerId": 1630592,
+        "name": "Jalen Wilson",
+        "team": "ATL",
+        "rostered": true
+      },
+      "category": "corroborated_current_rosters",
+      "candidate": {
+        "providerPlayerId": "4431714",
+        "evidence": "Native NBA ID 1630592 has a unique matching name and current team ATL in both provider rosters",
+        "sources": [
+          "https://stats.nba.com/stats/commonallplayers?IsOnlyCurrentSeason=1&LeagueID=00&Season=2026-27",
+          "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/1/roster"
+        ],
+        "needsApproval": true
+      }
+    }
+  ]
+}
