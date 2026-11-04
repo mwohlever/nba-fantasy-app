@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "maintenance/nba-observation-recovery": false
+      "maintenance/nba-observation-recovery": false,
+      "player-center-work-in-progress": false
     }
   }
 }
