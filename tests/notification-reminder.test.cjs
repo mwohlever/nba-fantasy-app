@@ -69,7 +69,7 @@ function component(options={}) {
  const b=browser(options);const h=load('lib/notificationReminder.ts',b.globals);
  let refs=[],refIndex=0,states=[],index=0,effects=[],deps=[],effectIndex=0,path='/home',cleanup=[];
  const react={useRef:initial=>{const i=refIndex++;return refs[i]??(refs[i]={current:initial});},useState:initial=>{const i=index++;if(!(i in states))states[i]=initial;return [states[i],v=>states[i]=v];},useEffect:(fn,next)=>{const i=effectIndex++;if(!deps[i]||next.some((v,j)=>v!==deps[i][j])){deps[i]=next;effects.push(()=>{cleanup[i]?.();cleanup[i]=fn();});}}};
- const mocks={'react':react,'next/navigation':{usePathname:()=>path},'next/link':{default:'a'},'@/lib/notificationReminder':h,'@/lib/pushDevice':load('lib/pushDevice.ts',b.globals),'react/jsx-runtime':{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})}};
+ const mocks={'@/lib/player-center/feature':{playerCenterReadOnlyLocal:()=>false},'react':react,'next/navigation':{usePathname:()=>path},'next/link':{default:'a'},'@/lib/notificationReminder':h,'@/lib/pushDevice':load('lib/pushDevice.ts',b.globals),'react/jsx-runtime':{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})}};
  const C=load('components/NotificationReminder.tsx',b.globals,mocks).default;
  function render(){index=0;refIndex=0;effectIndex=0;const tree=C();effects.splice(0).forEach(f=>f());return tree;}
  const flush=async()=>{await new Promise(resolve => setImmediate(resolve));};

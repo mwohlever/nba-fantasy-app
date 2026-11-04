@@ -3,10 +3,12 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { loadNflSlateAvailability } from "@/lib/nfl/slateAvailability.server";
 
 type SlateRecord = {
   id: number;
   sport?: string | null;
+  date: string;
   start_date: string;
   end_date: string;
   nba_team_abbreviations: string[] | null;
@@ -68,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")
-      .select("id, sport, start_date, end_date, nba_team_abbreviations")
+      .select("id, sport, date, start_date, end_date, nba_team_abbreviations")
       .eq("id", slateId)
       .single();
 
@@ -85,6 +87,28 @@ export async function GET(request: NextRequest) {
     }
 
     const safeSlate = slate as SlateRecord;
+
+    if (safeSlate.sport === "nfl") {
+      try {
+        const availability = await loadNflSlateAvailability(safeSlate);
+        return NextResponse.json({
+          success: true,
+          ...responseContext,
+          slateId,
+          startDate: availability.start,
+          endDate: availability.end,
+          source: "nfl_schedule",
+          debugTeamAbbreviations: availability.teamAbbreviations,
+          availablePlayerIds: availability.availablePlayerIds,
+        }, { headers: { "Cache-Control": "no-store, max-age=0" } });
+      } catch (error) {
+        console.error("NFL slate availability failed:", error);
+        return NextResponse.json({ error: "NFL slate availability is unavailable. Try again." }, {
+          status: 502,
+          headers: { "Cache-Control": "no-store, max-age=0" },
+        });
+      }
+    }
 
     if (safeSlate.sport === "golf") {
       const { data: eventPlayers, error: eventPlayersError } =

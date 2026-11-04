@@ -1,0 +1,353 @@
+{
+  "verifiedAt": "2026-10-23T15:45:50.752Z",
+  "databaseWrites": 0,
+  "providerRequests": 14,
+  "profiles": [
+    {
+      "sport": "nba",
+      "nativeId": "2544",
+      "providerPlayerId": "1966",
+      "position": "F/C",
+      "season": 2027,
+      "games": 2,
+      "finalGames": 2,
+      "scoredGames": 2,
+      "providerRequests": 2,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 2,
+        "fetchedAt": "2026-10-23T15:45:46.855Z",
+        "freshness": "fresh",
+        "issues": []
+      },
+      "byeWeeks": null,
+      "unscoredEvents": [],
+      "windows": {
+        "last1": {
+          "sampleSize": 1,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 39.5
+        },
+        "last3": {
+          "sampleSize": 2,
+          "comparable": false,
+          "fantasyComparable": false,
+          "missingFantasySamples": 0,
+          "fantasyAverage": null
+        },
+        "last5": {
+          "sampleSize": 2,
+          "comparable": false,
+          "fantasyComparable": false,
+          "missingFantasySamples": 0,
+          "fantasyAverage": null
+        },
+        "season": {
+          "sampleSize": 2,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 38.9
+        }
+      }
+    },
+    {
+      "sport": "nba",
+      "nativeId": "2544",
+      "providerPlayerId": "1966",
+      "position": "F/C",
+      "season": 2026,
+      "games": 60,
+      "finalGames": 60,
+      "scoredGames": 60,
+      "providerRequests": 2,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 60,
+        "fetchedAt": "2026-10-23T15:45:47.130Z",
+        "freshness": "fresh",
+        "issues": []
+      },
+      "byeWeeks": null,
+      "unscoredEvents": [],
+      "windows": {
+        "last1": {
+          "sampleSize": 1,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 33.8
+        },
+        "last3": {
+          "sampleSize": 3,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 49.03333333333333
+        },
+        "last5": {
+          "sampleSize": 5,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 46.71999999999999
+        },
+        "season": {
+          "sampleSize": 60,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 39.59666666666665
+        }
+      }
+    },
+    {
+      "sport": "nfl",
+      "nativeId": "3139477",
+      "providerPlayerId": "3139477",
+      "position": "QB",
+      "season": 2026,
+      "games": 5,
+      "finalGames": 5,
+      "scoredGames": 4,
+      "providerRequests": 7,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 5,
+        "fetchedAt": "2026-10-23T15:45:48.172Z",
+        "freshness": "fresh",
+        "issues": []
+      },
+      "byeWeeks": null,
+      "unscoredEvents": [
+        {
+          "eventId": "401872945",
+          "missingFields": [
+            "fumbles_lost",
+            "kicking_points",
+            "long_field_goal",
+            "field_goals_made",
+            "field_goals_attempted",
+            "extra_points_made",
+            "extra_points_attempted",
+            "fg_1_19_made",
+            "fg_1_19_attempted",
+            "fg_20_29_made",
+            "fg_20_29_attempted",
+            "fg_30_39_made",
+            "fg_30_39_attempted",
+            "fg_40_49_made",
+            "fg_40_49_attempted",
+            "fg_50_plus_made",
+            "fg_50_plus_attempted"
+          ]
+        }
+      ],
+      "windows": {
+        "last1": {
+          "sampleSize": 1,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 10.48
+        },
+        "last3": {
+          "sampleSize": 3,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 14.473333333333334
+        },
+        "last5": {
+          "sampleSize": 5,
+          "comparable": true,
+          "fantasyComparable": false,
+          "missingFantasySamples": 1,
+          "fantasyAverage": null
+        },
+        "season": {
+          "sampleSize": 5,
+          "comparable": true,
+          "fantasyComparable": false,
+          "missingFantasySamples": 1,
+          "fantasyAverage": null
+        }
+      }
+    },
+    {
+      "sport": "nfl",
+      "nativeId": "3055899",
+      "providerPlayerId": "3055899",
+      "position": "K",
+      "season": 2026,
+      "games": 5,
+      "finalGames": 5,
+      "scoredGames": 0,
+      "providerRequests": 2,
+      "coverage": {
+        "kind": "appearance_log",
+        "expectedGames": 5,
+        "fetchedAt": "2026-10-23T15:45:48.815Z",
+        "freshness": "fresh",
+        "issues": []
+      },
+      "byeWeeks": null,
+      "unscoredEvents": [
+        {
+          "eventId": "401873006",
+          "missingFields": [
+            "completions",
+            "passing_attempts"
+          ]
+        },
+        {
+          "eventId": "401872976",
+          "missingFields": [
+            "completions",
+            "passing_attempts"
+          ]
+        },
+        {
+          "eventId": "401872952",
+          "missingFields": [
+            "completions",
+            "passing_attempts"
+          ]
+        },
+        {
+          "eventId": "401872945",
+          "missingFields": [
+            "completions",
+            "passing_attempts",
+            "fumbles_lost"
+          ]
+        },
+        {
+          "eventId": "401872931",
+          "missingFields": [
+            "completions",
+            "passing_attempts"
+          ]
+        }
+      ],
+      "windows": {
+        "last1": {
+          "sampleSize": 1,
+          "comparable": true,
+          "fantasyComparable": false,
+          "missingFantasySamples": 1,
+          "fantasyAverage": null
+        },
+        "last3": {
+          "sampleSize": 3,
+          "comparable": true,
+          "fantasyComparable": false,
+          "missingFantasySamples": 3,
+          "fantasyAverage": null
+        },
+        "last5": {
+          "sampleSize": 5,
+          "comparable": true,
+          "fantasyComparable": false,
+          "missingFantasySamples": 5,
+          "fantasyAverage": null
+        },
+        "season": {
+          "sampleSize": 5,
+          "comparable": true,
+          "fantasyComparable": false,
+          "missingFantasySamples": 5,
+          "fantasyAverage": null
+        }
+      }
+    },
+    {
+      "sport": "nfl",
+      "nativeId": "100000012",
+      "providerPlayerId": "100000012",
+      "position": "D/ST",
+      "season": 2026,
+      "games": 17,
+      "finalGames": 5,
+      "scoredGames": 5,
+      "providerRequests": 1,
+      "coverage": {
+        "kind": "team_schedule",
+        "expectedGames": 5,
+        "fetchedAt": "2026-10-23T15:45:49.277Z",
+        "freshness": "fresh",
+        "issues": []
+      },
+      "byeWeeks": [
+        5
+      ],
+      "unscoredEvents": [],
+      "windows": {
+        "last1": {
+          "sampleSize": 1,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 17
+        },
+        "last3": {
+          "sampleSize": 3,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 8.666666666666666
+        },
+        "last5": {
+          "sampleSize": 5,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 8.4
+        },
+        "season": {
+          "sampleSize": 5,
+          "comparable": true,
+          "fantasyComparable": true,
+          "missingFantasySamples": 0,
+          "fantasyAverage": 8.4
+        }
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "sport": "nba",
+      "season": 2027,
+      "source": "stored",
+      "readAt": "2026-10-23T15:45:49.637Z",
+      "providerRequests": 0,
+      "coverage": {
+        "poolPlayers": 530,
+        "relevantPlayers": 530,
+        "mappedPlayers": 367,
+        "playersWithGames": 0,
+        "rankablePlayers": 0,
+        "canSort": false,
+        "reason": "Coverage, source freshness, or complete metric windows are not verified across the relevant pool; alphabetical order retained."
+      }
+    },
+    {
+      "sport": "nfl",
+      "season": 2026,
+      "source": "stored",
+      "readAt": "2026-10-23T15:45:50.689Z",
+      "providerRequests": 0,
+      "coverage": {
+        "poolPlayers": 1031,
+        "relevantPlayers": 993,
+        "mappedPlayers": 1031,
+        "playersWithGames": 536,
+        "rankablePlayers": 0,
+        "canSort": false,
+        "reason": "Coverage, source freshness, or complete metric windows are not verified across the relevant pool; alphabetical order retained."
+      }
+    }
+  ]
+}

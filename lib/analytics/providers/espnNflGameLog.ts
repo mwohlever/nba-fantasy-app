@@ -5,11 +5,10 @@ const text = (value: unknown): string | null => typeof value === "string" && val
 const id = (value: unknown): string | null => typeof value === "string" && /^\d+$/.test(value) ? value : null;
 const nflPositions = new Set(["QB", "RB", "WR", "TE"]);
 
-function numeric(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return value;
-  if (typeof value !== "string" || !/^\d+(?:\.\d+)?$/.test(value.trim())) return null;
+function numeric(value: unknown, signed = false): number | null {
+  if (typeof value !== "number" && !(typeof value === "string" && /^-?\d+$/.test(value.trim()))) return null;
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  return Number.isSafeInteger(parsed) && parsed >= (signed ? -2147483648 : 0) && parsed <= 2147483647 ? parsed : null;
 }
 function timestamp(value: unknown): string | null {
   if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) return null;
@@ -83,11 +82,11 @@ export function normalizeEspnNflGameLog(payload: unknown, request: { espnPlayerI
         const required = (name: string) => {
           const index = names.indexOf(name);
           if (index < 0) throw new Error(`Required ESPN NFL stat missing: ${name}`);
-          return numeric(values[index]);
+          return numeric(values[index], /^(passing|rushing|receiving)Yards$/.test(name));
         };
         const optional = (name: string) => {
           const index = names.indexOf(name);
-          return index < 0 ? null : numeric(values[index]);
+          return index < 0 ? null : numeric(values[index], /^(passing|rushing|receiving)Yards$/.test(name));
         };
         const team = obj(event.team), opponent = obj(event.opponent);
         const teamId = id(team.id), opponentId = id(opponent.id), gameAt = timestamp(event.gameDate), week = Number(event.week);

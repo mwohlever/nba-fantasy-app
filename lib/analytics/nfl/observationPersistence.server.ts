@@ -1,4 +1,5 @@
 import { observationRecordFromNflObservation, resolveDirectNflIdentity, type NflEligiblePlayer, type NflObservationRecord, nflObservationFromUnknown } from "./observationIngestion";
+import { nflSignedYardInputs } from "./observationFoundation";
 
 export type NflObservationPersistenceRepository = {
   loadEligiblePlayers: () => Promise<NflEligiblePlayer[]>;
@@ -12,6 +13,9 @@ export async function persistNflObservationBatch(input: { observations: readonly
   const eligible = await input.repository.loadEligiblePlayers();
   const rows = input.observations.map(raw => {
     const observation = nflObservationFromUnknown(raw);
+    // Prepared SQL is unapplied. Do not pass newly accepted signed facts to the
+    // incompatible installed checks or silently convert them back to null/zero.
+    if (Object.keys(nflSignedYardInputs(observation.stats)).length) throw new Error("NFL_SIGNED_YARDS_STORAGE_REVIEW_REQUIRED: signed facts retained by parser; approve schema and persistence capability before ingestion");
     const identity = resolveDirectNflIdentity({ providerPlayerId: observation.providerPlayerId, position: observation.position, eligible });
     if (observation.localPlayerId !== identity.localPlayerId) throw new Error(`NFL observation local player identity mismatch: ${observation.providerPlayerId}`);
     return observationRecordFromNflObservation(observation);

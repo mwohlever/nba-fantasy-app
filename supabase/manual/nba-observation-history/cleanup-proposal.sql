@@ -1,0 +1,61 @@
+-- REVIEW ONLY. Deliberately entirely commented out. NOT a deployable migration.
+-- Never paste/run before backup, dependency review, replica validation, and
+-- explicit approval of the exact candidate manifest/count/cutoff.
+-- See docs/nba-observation-history-growth.md for requirements and recovery.
+--
+-- 1. Pause factual observation writers (not the live Fantasy scoring worker).
+-- 2. Export full versions + current state + schema off-database, test restore.
+-- 3. Inventory ALL incoming foreign keys, views/functions, external consumers:
+--
+-- select conrelid::regclass as referencing_table, conname, pg_get_constraintdef(oid)
+-- from pg_constraint
+-- where contype='f' and confrelid='public.nba_player_game_observation_versions'::regclass;
+-- select tgname, tgenabled, pg_get_triggerdef(oid)
+-- from pg_trigger
+-- where tgrelid='public.nba_player_game_observation_versions'::regclass and not tgisinternal;
+--
+-- 4. Materialize redundant-candidates.sql as a TEMP table in a maintenance session,
+--    export exact IDs and their complete source rows off-database. Review count
+--    and checksum. Preserve every externally referenced ID too. Unknown consumer
+--    dependencies block deletion until resolved. Do not store a permanent backup
+--    in the same over-quota database.
+--
+-- 5. After approval, revalidate the exact manifest against a fresh candidate query
+--    under the locks below; abort on ANY mismatch or new reference. Small batches
+--    reduce WAL/transaction pressure, but each needs its own revalidation/backup.
+--    Use a bounded lock_timeout. This outline intentionally omits manifest import
+--    and its project-specific verification so it cannot be accidentally executed.
+--
+-- begin;
+-- set local lock_timeout = '5s';
+-- lock table public.nba_player_game_observation_versions in share row exclusive mode;
+-- lock table public.nba_player_game_current_observations in share row exclusive mode;
+-- -- ASSERT: exact approved count/checksum, fresh candidate eligibility, all FK
+-- -- references excluded, immutable trigger enabled and expected definition.
+-- alter table public.nba_player_game_observation_versions
+--   disable trigger nba_observation_versions_immutable;
+-- delete from public.nba_player_game_observation_versions v
+-- using approved_revalidated_candidate_ids a
+-- where v.id = a.id
+--   and not exists(select 1 from public.nba_player_game_current_observations c
+--                  where c.version_id = v.id);
+-- alter table public.nba_player_game_observation_versions
+--   enable trigger nba_observation_versions_immutable;
+-- -- ASSERT: deleted count exactly matches manifest, current rows byte-identical,
+-- -- latest view matches current, retained history/as-of comparisons match backup,
+-- -- all constraints/triggers/grants intact, live slate scores unchanged.
+-- rollback; -- Dry run only. COMMIT requires separate, explicit approval.
+--
+-- Only the named immutability trigger is temporarily disabled, transactionally.
+-- Never disable ALL triggers or foreign-key checks. Failed assertions roll back
+-- the deletion AND trigger state. Never rewrite hashes or current version IDs.
+--
+-- 6. Separately approved maintenance AFTER the deletion transaction:
+-- vacuum (analyze) public.nba_player_game_observation_versions;
+-- -- Makes dead tuple/index space reusable; usually does NOT shrink disk files.
+-- -- If physical quota remains high, plan a separate maintenance window:
+-- vacuum (full, analyze) public.nba_player_game_observation_versions;
+-- -- NOT automatic: exclusive table lock, temporary free disk required, index
+-- -- rebuild/WAL costs. Cannot run in the deletion transaction. Confirm available
+-- -- capacity with Supabase first; use support/temporary capacity if insufficient.
+-- -- No separate REINDEX by default: FULL already rebuilds table indexes.

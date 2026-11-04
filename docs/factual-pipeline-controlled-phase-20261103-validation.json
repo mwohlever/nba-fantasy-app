@@ -1,0 +1,230 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-03T20:09:17.529Z",
+  "branch": "main",
+  "head": "d572341fcfa55408dfde13160b0709ffb55b9d6e",
+  "databaseWrites": 0,
+  "liveSourceAcquisitionJobsRun": 0,
+  "schemaApplied": false,
+  "rosterModelWiredToLiveConsumers": false,
+  "nbaAppendFingerprint": "9308a04b52fecc6993b7730490cf686a",
+  "validation": {
+    "regression": {
+      "testFiles": 24,
+      "tests": 283,
+      "passed": 283,
+      "failed": 0,
+      "skipped": 0,
+      "logSha256": "341ab39788f7e8c0bfe1036a4a7e7c7bdba4cb9543a1204cb93f999fd4ffb565"
+    },
+    "finalPlanningRerun": {
+      "tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "logSha256": "021827d183970de1a80fe2f3f12444f50df05e23c4342ce9399596e42533d506"
+    },
+    "typescript": {
+      "command": "tsc --noEmit --incremental false",
+      "exitCode": 0,
+      "diagnostics": ""
+    },
+    "eslint": {
+      "paths": 17,
+      "exitCode": 0,
+      "diagnostics": ""
+    },
+    "build": {
+      "command": "npm run build -- --webpack",
+      "exitCode": 0,
+      "framework": "Next.js 16.2.4",
+      "logSha256": "41d9695d26369fa4b0a52f021d881182ae6ab71df9307263cf1eeeceaa9b7ee1",
+      "serviceCredential": "nonprivileged build-only placeholder",
+      "networkGuard": "external temporary preloader; mutating requests/RPC/refresh paths rejected",
+      "telemetryDisabled": true
+    },
+    "diffCheck": {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    "sqlExecution": "None; proposal requires separately authorized restored-copy validation"
+  },
+  "preservation": {
+    "baselineFiles": 1101,
+    "unchangedPreExistingFiles": 1090,
+    "expectedEditedExistingFiles": 11,
+    "unexpectedChanges": [],
+    "headUnchanged": true,
+    "stashUnchanged": true,
+    "worktreeRegistrationsUnchanged": true,
+    "protectedFiles": [
+      {
+        "file": ".github/workflows/nba-projection-shadow-refresh.yml",
+        "unchanged": true
+      },
+      {
+        "file": ".github/workflows/nfl-projection-observation-refresh.yml",
+        "unchanged": true
+      },
+      {
+        "file": ".github/workflows/nfl-projection-shadow-generate.yml",
+        "unchanged": true
+      },
+      {
+        "file": "supabase/migrations/20261027000100_nba_observation_semantic_append.sql",
+        "unchanged": true
+      },
+      {
+        "file": "supabase/manual/player-center/factual-refresh-v1.sql",
+        "unchanged": true
+      },
+      {
+        "file": "lib/player-center/nbaRefresh.ts",
+        "unchanged": true
+      },
+      {
+        "file": "lib/rules/leagueRules.ts",
+        "unchanged": true
+      },
+      {
+        "file": "docs/nba-nfl-factual-pipeline-audit-20261103.md",
+        "unchanged": true
+      },
+      {
+        "file": "docs/nba-nfl-factual-pipeline-audit-20261103.json",
+        "unchanged": true
+      },
+      {
+        "file": "app/api/lineups/route.ts",
+        "unchanged": true
+      },
+      {
+        "file": "app/lineups/draft/page.tsx",
+        "unchanged": true
+      },
+      {
+        "file": "lib/lineups/draftHistory.server.ts",
+        "unchanged": true
+      },
+      {
+        "file": "lib/supabaseAdmin.ts",
+        "unchanged": true
+      },
+      {
+        "file": "next.config.ts",
+        "unchanged": true
+      }
+    ]
+  },
+  "changedExistingFiles": [
+    {
+      "file": "lib/player-center/espn.ts",
+      "beforeSha256": "831394058e244831f2f493a57edec133548fe5a9301d6dbb25442fbc505b8a13",
+      "afterSha256": "d5187fa481f3bd9a76895b5d067a3f2378eb5a3b956596d7e82ce9c5252f50df"
+    },
+    {
+      "file": "tests/nfl-fumbles-readiness.test.cjs",
+      "beforeSha256": "ea6a34d596e5fbea8214f0706f0165203e0f12473b198a68d19237fd1c5b105b",
+      "afterSha256": "8749177dcda94e48966d71b60944cee57350344a2eae58ebf526c8495ebbfb28"
+    },
+    {
+      "file": "lib/analytics/nfl/observationAcquisition.ts",
+      "beforeSha256": "ff99e4a9238474b8b8b063dfdcc72518ef86e04633a8ca295dbbfbff092928b2",
+      "afterSha256": "f6b0340ef1b6fbc342c0fe39de15b4c256a6c3569c2dfb2e7a8dcd93cad6a474"
+    },
+    {
+      "file": "lib/analytics/nfl/observationFoundation.ts",
+      "beforeSha256": "4db7a42b7137dc76c081e72cabb403415993b311027bb6583762fb613f8de198",
+      "afterSha256": "690c6fea4463596858903f27819eeca8500b16a218aca5a0e7104dbc1d78e27c"
+    },
+    {
+      "file": "lib/analytics/nfl/observationIngestion.ts",
+      "beforeSha256": "0923b7dab44d79c7572e06ea32e8e8d235cf2374986653a7fbb0fe418ca4c06e",
+      "afterSha256": "bfa2b7c24ff155a4704b9f07ba96de45fed4da27fd102f6205c6c940fcc09434"
+    },
+    {
+      "file": "lib/analytics/nfl/observationPersistence.server.ts",
+      "beforeSha256": "6fdf5672d3cce56de47693596c7e59041a4b88a25cf1ac15d12bf7ba3794ab07",
+      "afterSha256": "23b1a0177a12a55ff293f6d2e30363cc264053a0c45a7dda66ba4d9d5e561b69"
+    },
+    {
+      "file": "lib/analytics/providers/espnNbaGameLog.ts",
+      "beforeSha256": "7833630a49ab0bb27fbae9fc339aa3cb20b37becf28fdaa292f161aafe417815",
+      "afterSha256": "394963d7eec2b0a57e8c439cd418ac3f1ef4f0b500c084f05c7e0f3a981f864d"
+    },
+    {
+      "file": "lib/analytics/providers/espnNflEventFumbles.ts",
+      "beforeSha256": "86c68efb96275f23cb810bb22b598f873b6a4f52699c1e4c8cadde67af76bbab",
+      "afterSha256": "13da82f5778733698fd1cbb27e028ada38b6103be254aff729433441a0839576"
+    },
+    {
+      "file": "lib/analytics/providers/espnNflGameLog.ts",
+      "beforeSha256": "bef81ed1eb7f5f0683c1a6d2791cb8b28a7a93d7cb6de31e485795cab2da522f",
+      "afterSha256": "3caf9c8720591d098ce6140790e917494a4cccee0ff41c78c19e047cbd4e65b5"
+    },
+    {
+      "file": "tests/nfl-observation-acquisition.test.cjs",
+      "beforeSha256": "101d0ff4b0b37f0294aa483c2bd78883fbdf5704bada20d9817b6789e5edae4c",
+      "afterSha256": "e00defb519f7956806304e54a1817798b420529e1be0d09b021955511998ffed"
+    },
+    {
+      "file": "tests/nfl-research-dataset.test.cjs",
+      "beforeSha256": "ddcae85301de05e85761affe7425e459e9a6ef2e9ec735524cd86789dec4482a",
+      "afterSha256": "696d3b5523d34a6427c1cdae0a4b0957a155b2d3e5a337f17d8a1cd6a8c31c73"
+    }
+  ],
+  "addedFiles": [
+    {
+      "file": "docs/factual-pipeline-controlled-phase-20261103.md",
+      "sha256": "58335e1872655d315407f4e5fae3a02d10494156c4d8e06d2544e4fc042ecc63"
+    },
+    {
+      "file": "docs/nba-roster-reconciliation-plan-20261103.json",
+      "sha256": "83751b3c606a0a38d10ad44a61e0fd5d0cfa5604526eb02078555cb9d8728395"
+    },
+    {
+      "file": "lib/analytics/providers/nflFumbleEvidence.ts",
+      "sha256": "c78f353a7426271e898c74870fceb41814e46cbee14a013124d6a2a5937cca5c"
+    },
+    {
+      "file": "lib/rosters/nbaReconciliation.ts",
+      "sha256": "613c9d1846004633fa923c59c10d5c7e8896c9622a7a8c407c35232cc9cb167e"
+    },
+    {
+      "file": "lib/rosters/planning.ts",
+      "sha256": "91a663c8ebf38b5ef246a7504621928f1ea1576ae06750910606cfa0847427ac"
+    },
+    {
+      "file": "scripts/plan-nba-roster-reconciliation.cjs",
+      "sha256": "76d7571223a8bc41561e19bba1be9e841431686d5841512e8a48f3d463c8d5b3"
+    },
+    {
+      "file": "supabase/manual/factual-pipeline/nfl-signed-yard-constraints.proposed.sql",
+      "sha256": "3530037e2c1d13dccdf98d37807c211d057897e4a2d12c222f3c7b7526634dd2"
+    },
+    {
+      "file": "tests/factual-pipeline-parsers.test.cjs",
+      "sha256": "68cf635c1039622e333be2eba8867eb064321612c0a6e53099474b15be4a17b5"
+    },
+    {
+      "file": "tests/fixtures/factual-pipeline/nba-curry-2026-phases.json",
+      "sha256": "dcf5e23717b40ce533247aa1984803e996fb6139293d37759859379d7de55cb8"
+    },
+    {
+      "file": "tests/fixtures/factual-pipeline/nba-curry-2026-season.json",
+      "sha256": "689279ace198dbc6affd1af823806f80f17a26a9d59f0775dad45ef48a1c4185"
+    },
+    {
+      "file": "tests/fixtures/factual-pipeline/nba-roster-audit-20261103.json",
+      "sha256": "5a165e3df0cc8b6547e6b8f5aede7d4d20ce60a5ae8a860ed971393b0e805590"
+    },
+    {
+      "file": "tests/fixtures/factual-pipeline/nfl-allgeier-negative-yards.json",
+      "sha256": "d86c6efb75582c58ed0533f6d819958ee9190d6af9c631014e8c11f534e316b7"
+    },
+    {
+      "file": "tests/season-roster-planning.test.cjs",
+      "sha256": "7cb5b447ad0cfa6bf0a52077dd3b55989f23efed1e84514321f227c5bba71a96"
+    }
+  ],
+  "receiptNote": "This receipt is the final added file; its own hash is intentionally not recursive."
+}

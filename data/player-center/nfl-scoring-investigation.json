@@ -1,0 +1,218 @@
+{
+  "verifiedAt": "2026-10-26T15:14:29.744Z",
+  "databaseWrites": 0,
+  "databaseSelects": 2,
+  "providerGets": 6,
+  "originalFixtureCutoff": "2026-10-23T17:03:48.642Z",
+  "targets": [
+    {
+      "localPlayerId": 1,
+      "providerPlayerId": "4373626",
+      "eventId": "401872991",
+      "season": 2026,
+      "field": "fumbles_lost",
+      "before": null,
+      "after": 0,
+      "verifiedAt": "2026-10-26T15:05:55.376Z",
+      "evidence": "Explicit athlete-log fumblesLost=0 retained when summary omits athlete fumbles.",
+      "sources": [
+        "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872991"
+      ],
+      "fantasyPoints": 3.6,
+      "name": "Tyler Allgeier",
+      "gameAt": "2026-10-11T20:25:00.000Z",
+      "teamId": "22",
+      "opponentId": "8",
+      "week": 5,
+      "missingCanonicalFieldsBefore": [
+        "fumbles_lost"
+      ],
+      "logHasFumblesLostColumn": true,
+      "summaryAthleteFumbleRows": 0,
+      "summaryFumbleTotals": [],
+      "explicitTeamEvidence": [
+        {
+          "name": "fumblesLost",
+          "displayValue": "0",
+          "value": 0,
+          "label": "Fumbles lost"
+        }
+      ],
+      "stored": {
+        "rowId": 8412,
+        "localPlayerId": 1,
+        "providerPlayerId": "4373626",
+        "eventId": "401872991",
+        "season": 2026,
+        "phase": "regular",
+        "fumblesLost": 0,
+        "fumbleSource": null,
+        "logSource": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+        "knownAt": "2026-10-13T20:14:50.071+00:00",
+        "offPositionFields": {
+          "passingYards": null,
+          "receptions": 2,
+          "receivingYards": 9
+        }
+      },
+      "alternativeSummaryCheck": {
+        "source": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872991",
+        "fetchedAt": "2026-10-26T15:14:29.602Z",
+        "id": "401872991",
+        "season": {
+          "year": 2026,
+          "current": true,
+          "type": 2
+        },
+        "status": {
+          "id": "3",
+          "name": "STATUS_FINAL",
+          "state": "post",
+          "completed": true,
+          "description": "Final",
+          "detail": "Final",
+          "shortDetail": "Final"
+        },
+        "teams": [
+          {
+            "id": "8",
+            "statistics": [
+              {
+                "name": "fumblesLost",
+                "displayValue": "0",
+                "value": 0,
+                "label": "Fumbles lost"
+              }
+            ]
+          },
+          {
+            "id": "22",
+            "statistics": [
+              {
+                "name": "fumblesLost",
+                "displayValue": "0",
+                "value": 0,
+                "label": "Fumbles lost"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "localPlayerId": 435,
+      "providerPlayerId": "3139477",
+      "eventId": "401872945",
+      "season": 2026,
+      "field": "fumbles_lost",
+      "before": null,
+      "after": 0,
+      "verifiedAt": "2026-10-26T15:05:55.427Z",
+      "evidence": "Final exact-team fumblesLost=0; empty athlete fumble table is not the zero evidence.",
+      "sources": [
+        "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3139477/gamelog?season=2026",
+        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872945"
+      ],
+      "fantasyPoints": 28.98,
+      "name": "Patrick Mahomes",
+      "gameAt": "2026-09-21T00:20:00.000Z",
+      "teamId": "12",
+      "opponentId": "11",
+      "week": 2,
+      "missingCanonicalFieldsBefore": [
+        "fumbles_lost"
+      ],
+      "logHasFumblesLostColumn": false,
+      "summaryAthleteFumbleRows": 0,
+      "summaryFumbleTotals": [],
+      "explicitTeamEvidence": [
+        {
+          "name": "fumblesLost",
+          "displayValue": "0",
+          "value": 0,
+          "label": "Fumbles lost"
+        }
+      ],
+      "stored": {
+        "rowId": 7218,
+        "localPlayerId": 435,
+        "providerPlayerId": "3139477",
+        "eventId": "401872945",
+        "season": 2026,
+        "phase": "regular",
+        "fumblesLost": 0,
+        "fumbleSource": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872945",
+        "logSource": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3139477/gamelog?season=2026",
+        "knownAt": "2026-09-22T18:03:59.349+00:00",
+        "offPositionFields": {
+          "passingYards": 382,
+          "receptions": null,
+          "receivingYards": null
+        }
+      },
+      "alternativeSummaryCheck": {
+        "source": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872945",
+        "fetchedAt": "2026-10-26T15:14:29.744Z",
+        "id": "401872945",
+        "season": {
+          "year": 2026,
+          "current": true,
+          "type": 2
+        },
+        "status": {
+          "id": "3",
+          "name": "STATUS_FINAL",
+          "state": "post",
+          "completed": true,
+          "description": "Final",
+          "detail": "Final/OT",
+          "shortDetail": "Final/OT",
+          "altDetail": "OT"
+        },
+        "teams": [
+          {
+            "id": "11",
+            "statistics": [
+              {
+                "name": "fumblesLost",
+                "displayValue": "0",
+                "value": 0,
+                "label": "Fumbles lost"
+              }
+            ]
+          },
+          {
+            "id": "12",
+            "statistics": [
+              {
+                "name": "fumblesLost",
+                "displayValue": "0",
+                "value": 0,
+                "label": "Fumbles lost"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "additionalAffectedFixture": {
+    "localPlayerId": 4,
+    "providerPlayerId": "3045523",
+    "eventId": "401872991",
+    "season": 2026,
+    "field": "fumbles_lost",
+    "before": null,
+    "after": 0,
+    "verifiedAt": "2026-10-26T15:05:55.376Z",
+    "evidence": "Final exact-team fumblesLost=0; empty athlete fumble table is not the zero evidence.",
+    "sources": [
+      "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3045523/gamelog?season=2026",
+      "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401872991"
+    ],
+    "fantasyPoints": 12
+  },
+  "scope": "Read-only normalization and local fixture corrections only; original October 23 season sample is preserved.",
+  "databaseReadAt": "2026-10-26T15:06:15.315Z"
+}

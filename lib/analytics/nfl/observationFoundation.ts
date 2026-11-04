@@ -55,8 +55,14 @@ function requiredNumericId(label: string, value: string) {
   if (!/^\d+$/.test(value)) throw new Error(`NFL observation requires numeric ${label}`);
   return value;
 }
-function validStat(value: number | null) {
-  return value === null || Number.isFinite(value) && value >= 0 && Number.isInteger(value);
+function validStat(value: number | null, signed: boolean) {
+  return value === null || Number.isSafeInteger(value) && value >= (signed ? -2147483648 : 0) && value <= 2147483647;
+}
+
+/** The installed v1 SQL checks still reject signed yards. Keep this gate explicit. */
+export function nflSignedYardInputs(stats: NflObservationStats): Record<string, number> {
+  return Object.fromEntries((["passingYards", "rushingYards", "receivingYards"] as const)
+    .flatMap(key => stats[key] !== null && stats[key]! < 0 ? [[key, stats[key]!]] : []));
 }
 function timestamp(label: string, value: string | null) {
   if (value === null) return null;
@@ -95,7 +101,7 @@ export function canonicalNflObservationHashPayload(row: NflObservation) {
   if (completedAt !== null && completedAt < gameAt!) throw new Error("NFL completion cannot precede game");
   if (knownAt < gameLogFetchedAt || fumbleFetchedAt !== null && knownAt < fumbleFetchedAt || knownAt <= gameAt!) throw new Error("NFL known timestamp is inconsistent with final evidence");
   if (!row.provenance.normalizationVersion.trim()) throw new Error("NFL observation needs normalization version");
-  for (const key of STAT_KEYS) if (!validStat(row.stats[key])) throw new Error(`Invalid NFL factual stat: ${key}`);
+  for (const key of STAT_KEYS) if (!validStat(row.stats[key], ["passingYards", "rushingYards", "receivingYards"].includes(key))) throw new Error(`Invalid NFL factual stat: ${key}`);
   return {
     provider: row.provider,
     providerPlayerId: row.providerPlayerId,

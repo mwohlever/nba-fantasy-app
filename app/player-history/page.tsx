@@ -1,11 +1,13 @@
 "use client";
 
+import { playerCenterEnabled } from "@/lib/player-center/feature";
 import {
   useEffect,
   useMemo,
   useState,
 } from "react";
 
+import PlayerHistoryCenter from "@/components/player-center/PlayerHistoryCenter";
 import AppNav from "@/components/AppNav";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
 import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
@@ -2393,7 +2395,7 @@ function PlayerCompareModal({
   );
 }
 
-export default function PlayerHistoryPage() {
+function LegacyPlayerHistoryPage({ initialMode = "season", initialSeason = 2026 }: { initialMode?: HistoryMode; initialSeason?: number | "all" }) {
   const {
     selectedSport,
     isHydrated,
@@ -2403,17 +2405,6 @@ export default function PlayerHistoryPage() {
   const isGolf =
     selectedSport ===
     "golf";
-
-  const [
-    playerProjections,
-    setPlayerProjections,
-  ] =
-    useState<
-      Record<
-        number,
-        any
-      >
-    >({});
 
   const [
     rows,
@@ -2429,14 +2420,14 @@ export default function PlayerHistoryPage() {
   ] =
     useState<
       number | "all"
-    >(2026);
+    >(initialSeason);
 
   const [
     historyMode,
     setHistoryMode,
   ] =
     useState<HistoryMode>(
-      "season",
+      initialMode,
     );
 
   const [golfGameType, setGolfGameType] =
@@ -2655,63 +2646,6 @@ export default function PlayerHistoryPage() {
   }, [
     selectedSport,
     historyMode,
-  ]);
-
-  useEffect(() => {
-    if (
-      !isHydrated
-    ) {
-      return;
-    }
-
-    if (
-      selectedSport !==
-      "nba"
-    ) {
-      setPlayerProjections(
-        {},
-      );
-
-      return;
-    }
-
-    async function loadPlayerProjections() {
-      try {
-        const response =
-          await fetch(
-            `/api/player-projections?season=${
-              season ===
-              "all"
-                ? 2026
-                : season
-            }`,
-            {
-              cache:
-                "no-store",
-            },
-          );
-
-        const result =
-          await response.json();
-
-        setPlayerProjections(
-          result.projections ??
-            {},
-        );
-      } catch (
-        error
-      ) {
-        console.error(
-          error,
-        );
-      }
-    }
-
-    void loadPlayerProjections();
-  }, [
-    isHydrated,
-    selectedSport,
-    season,
   ]);
 
   async function loadPlayerHistory() {
@@ -4434,6 +4368,7 @@ export default function PlayerHistoryPage() {
                 League History
               </button>
 
+              {isGolf && (
               <button
                 type="button"
                 onClick={() => {
@@ -4482,6 +4417,7 @@ export default function PlayerHistoryPage() {
               >
                 Season Stats
               </button>
+              )}
             </div>
 
             <div>
@@ -8125,4 +8061,31 @@ export default function PlayerHistoryPage() {
       ) : null}
     </main>
   );
+}
+
+export default function PlayerHistoryPage() {
+  const { selectedSport, isHydrated } = useSelectedSport();
+  const [leagueHistory, setLeagueHistory] = useState(false);
+  const [historyVisited, setHistoryVisited] = useState(false);
+  const [leagueSeason, setLeagueSeason] = useState<number | "all">(new Date().getUTCFullYear());
+  useEffect(() => {
+    if (!isHydrated) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("sport") && params.get("sport") !== selectedSport) return;
+    const rawSeason = params.get("season"), parsed = Number(rawSeason);
+    queueMicrotask(() => {
+      if (rawSeason === "all" || rawSeason && Number.isInteger(parsed) && parsed >= 2000 && parsed <= new Date().getUTCFullYear()) setLeagueSeason(rawSeason === "all" ? "all" : parsed);
+      if (params.get("mode") === "league") { setLeagueHistory(true); setHistoryVisited(true); }
+    });
+  }, [selectedSport, isHydrated]);
+  if (!isHydrated) return null;
+  if (selectedSport !== "nba" && selectedSport !== "nfl") return <LegacyPlayerHistoryPage />;
+  if (!playerCenterEnabled()) return <LegacyPlayerHistoryPage key={`${selectedSport}:${leagueSeason}`} initialMode="league" initialSeason={leagueSeason} />;
+  return <>
+    <div hidden={leagueHistory}><PlayerHistoryCenter key={selectedSport} sport={selectedSport} onLeagueHistory={() => { setHistoryVisited(true); setLeagueHistory(true); }} /></div>
+    {historyVisited && <div hidden={!leagueHistory}>
+      <div className="pc pc-history-return"><button className="pc-text-button" onClick={() => setLeagueHistory(false)}>← Player Center</button></div>
+      <LegacyPlayerHistoryPage key={`${selectedSport}:${leagueSeason}`} initialMode="league" initialSeason={leagueSeason} />
+    </div>}
+  </>;
 }

@@ -141,10 +141,9 @@ export async function loadNbaProviderIdentities(): Promise<NbaProviderIdentity[]
 
 export async function upsertNbaProjectionObservations(rows: readonly NbaObservationRecord[]) {
   for (const group of batches(rows, 200)) {
-    // Evidence is append-only by content hash. A provider correction is a new
-    // version; an identical repeated refresh is a harmless no-op.
-    const result = await db.from('nba_player_game_observation_versions').upsert(group,
-      { onConflict: 'provider,provider_player_id,provider_event_id,observation_hash', ignoreDuplicates: true });
+    // Compare facts atomically with the current observation, not the hash of
+    // the entire fetched payload (which includes acquisition timestamps).
+    const result = await db.rpc('append_nba_projection_observations', { observations: group });
     fail('NBA projection observation upsert failed', result.error);
   }
 }

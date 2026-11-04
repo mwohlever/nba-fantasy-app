@@ -1,0 +1,397 @@
+{
+  "sport": "nba",
+  "provider": "espn",
+  "provider_player_id": "3975",
+  "season": 2027,
+  "phase": "regular",
+  "nba_local_player_id": 4,
+  "nfl_local_player_id": null,
+  "as_of": "2026-10-31T21:21:20.716+00:00",
+  "checked_at": "2026-10-31T21:21:22.891+00:00",
+  "expected_games": 5,
+  "observed_games": 5,
+  "complete": true,
+  "games": [
+    {
+      "team": "GS",
+      "week": null,
+      "phase": "regular",
+      "stats": {
+        "blocks": 0,
+        "points": 23,
+        "steals": 2,
+        "assists": 1,
+        "minutes": 21,
+        "rebounds": 2,
+        "turnovers": 2,
+        "fieldGoalsMade": 7,
+        "freeThrowsMade": 7,
+        "threePointersMade": 2,
+        "fieldGoalsAttempted": 15,
+        "freeThrowsAttempted": 7,
+        "threePointersAttempted": 7
+      },
+      "gameAt": "2026-10-22T02:00:00.000Z",
+      "issues": [],
+      "season": 2027,
+      "status": "final",
+      "teamId": "9",
+      "eventId": "401909092",
+      "sources": [
+        "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/3975/gamelog?season=2027"
+      ],
+      "homeAway": "away",
+      "opponent": "LAL",
+      "provider": "espn",
+      "fetchedAt": "2026-10-31T21:21:21.028Z",
+      "opponentId": "13",
+      "participation": "played",
+      "providerPlayerId": "3975"
+    },
+    {
+      "team": "GS",
+      "week": null,
+      "phase": "regular",
+      "stats": {
+        "blocks": 0,
+        "points": 24,
+        "steals": 0,
+        "assists": 4,
+        "minutes": 30,
+        "rebounds": 2,
+        "turnovers": 0,
+        "fieldGoalsMade": 5,
+        "freeThrowsMade": 11,
+        "threePointersMade": 3,
+        "fieldGoalsAttempted": 15,
+        "freeThrowsAttempted": 11,
+        "threePointersAttempted": 10
+      },
+      "gameAt": "2026-10-24T02:00:00.000Z",
+      "issues": [],
+      "season": 2027,
+      "status": "final",
+      "teamId": "9",
+      "eventId": "401909850",
+      "sources": [
+        "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/3975/gamelog?season=2027"
+      ],
+      "homeAway": "home",
+      "opponent": "MEM",
+      "provider": "espn",
+      "fetchedAt": "2026-10-31T21:21:21.028Z",
+      "opponentId": "29",
+      "participation": "played",
+      "providerPlayerId": "3975"
+    },
+    {
+      "team": "GS",
+      "week": null,
+      "phase": "regular",
+      "stats": {
+        "blocks": 0,
+        "points": 24,
+        "steals": 2,
+        "assists": 3,
+        "minutes": 27,
+        "rebounds": 3,
+        "turnovers": 3,
+        "fieldGoalsMade": 8,
+        "freeThrowsMade": 5,
+        "threePointersMade": 3,
+        "fieldGoalsAttempted": 8,
+        "freeThrowsAttempted": 5,
+        "threePointersAttempted": 3
+      },
+      "gameAt": "2026-10-27T02:00:00.000Z",
+      "issues": [],
+      "season": 2027,
+      "status": "final",
+      "teamId": "9",
+      "eventId": "401909876",
+      "sources": [
+        "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/3975/gamelog?season=2027"
+      ],
+      "homeAway": "away",
+      "opponent": "DEN",
+      "provider": "espn",
+      "fetchedAt": "2026-10-31T21:21:21.028Z",
+      "opponentId": "7",
+      "participation": "played",
+      "providerPlayerId": "3975"
+    },
+    {
+      "team": "GS",
+      "week": null,
+      "phase": "regular",
+      "stats": {
+        "blocks": 0,
+        "points": 44,
+        "steals": 2,
+        "assists": 6,
+        "minutes": 32,
+        "rebounds": 8,
+        "turnovers": 2,
+        "fieldGoalsMade": 11,
+        "freeThrowsMade": 16,
+        "threePointersMade": 6,
+        "fieldGoalsAttempted": 27,
+        "freeThrowsAttempted": 16,
+        "threePointersAttempted": 16
+      },
+      "gameAt": "2026-10-29T00:00:00.000Z",
+      "issues": [],
+      "season": 2027,
+      "status": "final",
+      "teamId": "9",
+      "eventId": "401909888",
+      "sources": [
+        "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/3975/gamelog?season=2027"
+      ],
+      "homeAway": "away",
+      "opponent": "MIN",
+      "provider": "espn",
+      "fetchedAt": "2026-10-31T21:21:21.028Z",
+      "opponentId": "16",
+      "participation": "played",
+      "providerPlayerId": "3975"
+    },
+    {
+      "team": "GS",
+      "week": null,
+      "phase": "regular",
+      "stats": {
+        "blocks": 1,
+        "points": 31,
+        "steals": 1,
+        "assists": 6,
+        "minutes": 31,
+        "rebounds": 4,
+        "turnovers": 2,
+        "fieldGoalsMade": 11,
+        "freeThrowsMade": 1,
+        "threePointersMade": 8,
+        "fieldGoalsAttempted": 23,
+        "freeThrowsAttempted": 1,
+        "threePointersAttempted": 14
+      },
+      "gameAt": "2026-10-31T02:00:00.000Z",
+      "issues": [],
+      "season": 2027,
+      "status": "final",
+      "teamId": "9",
+      "eventId": "401909285",
+      "sources": [
+        "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/3975/gamelog?season=2027"
+      ],
+      "homeAway": "home",
+      "opponent": "LAL",
+      "provider": "espn",
+      "fetchedAt": "2026-10-31T21:21:21.028Z",
+      "opponentId": "13",
+      "participation": "played",
+      "providerPlayerId": "3975"
+    }
+  ],
+  "season_stats": {
+    "phase": "regular",
+    "issues": [],
+    "season": 2027,
+    "categories": [
+      {
+        "name": "averages",
+        "fields": [
+          {
+            "label": "GP",
+            "value": "5"
+          },
+          {
+            "label": "GS",
+            "value": "5"
+          },
+          {
+            "label": "MIN",
+            "value": "28.0"
+          },
+          {
+            "label": "FG",
+            "value": "8.4-17.6"
+          },
+          {
+            "label": "FG%",
+            "value": "47.7"
+          },
+          {
+            "label": "3PT",
+            "value": "4.4-10.0"
+          },
+          {
+            "label": "3P%",
+            "value": "44.0"
+          },
+          {
+            "label": "FT",
+            "value": "8.0-8.0"
+          },
+          {
+            "label": "FT%",
+            "value": "100.0"
+          },
+          {
+            "label": "OR",
+            "value": "0.4"
+          },
+          {
+            "label": "DR",
+            "value": "3.4"
+          },
+          {
+            "label": "REB",
+            "value": "3.8"
+          },
+          {
+            "label": "AST",
+            "value": "4.0"
+          },
+          {
+            "label": "BLK",
+            "value": "0.2"
+          },
+          {
+            "label": "STL",
+            "value": "1.4"
+          },
+          {
+            "label": "PF",
+            "value": "1.4"
+          },
+          {
+            "label": "TO",
+            "value": "1.8"
+          },
+          {
+            "label": "PTS",
+            "value": "29.2"
+          }
+        ],
+        "teamId": "9"
+      },
+      {
+        "name": "totals",
+        "fields": [
+          {
+            "label": "FG",
+            "value": "42-88"
+          },
+          {
+            "label": "FG%",
+            "value": "47.7"
+          },
+          {
+            "label": "3PT",
+            "value": "22-50"
+          },
+          {
+            "label": "3P%",
+            "value": "44.0"
+          },
+          {
+            "label": "FT",
+            "value": "40-40"
+          },
+          {
+            "label": "FT%",
+            "value": "100.0"
+          },
+          {
+            "label": "OR",
+            "value": "2"
+          },
+          {
+            "label": "DR",
+            "value": "17"
+          },
+          {
+            "label": "REB",
+            "value": "19"
+          },
+          {
+            "label": "AST",
+            "value": "20"
+          },
+          {
+            "label": "BLK",
+            "value": "1"
+          },
+          {
+            "label": "STL",
+            "value": "7"
+          },
+          {
+            "label": "PF",
+            "value": "7"
+          },
+          {
+            "label": "TO",
+            "value": "9"
+          },
+          {
+            "label": "PTS",
+            "value": "146"
+          }
+        ],
+        "teamId": "9"
+      },
+      {
+        "name": "miscellaneous",
+        "fields": [
+          {
+            "label": "DD2",
+            "value": "0"
+          },
+          {
+            "label": "TD3",
+            "value": "0"
+          },
+          {
+            "label": "DQ",
+            "value": "0"
+          },
+          {
+            "label": "EJECT",
+            "value": "0"
+          },
+          {
+            "label": "TECH",
+            "value": "0"
+          },
+          {
+            "label": "FLAG",
+            "value": "0"
+          },
+          {
+            "label": "AST/TO",
+            "value": "2.2"
+          },
+          {
+            "label": "STL/TO",
+            "value": "0.8"
+          },
+          {
+            "label": "SC-EFF",
+            "value": "1.659"
+          },
+          {
+            "label": "SH-EFF",
+            "value": "0.60"
+          }
+        ],
+        "teamId": "9"
+      }
+    ],
+    "expectedGames": 5
+  },
+  "issues": [],
+  "content_hash": "ed63b4ac621b2aee45c35e8aa46b1ca91ea92c2867bac9705a2ed3086f13a3c1",
+  "rollout_batch_id": "15cb0a8b-cc8a-465a-8ccb-4eda185fc14b"
+}

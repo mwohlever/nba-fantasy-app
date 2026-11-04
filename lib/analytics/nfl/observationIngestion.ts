@@ -58,20 +58,21 @@ export function buildNflObservation(input: {
     ? input.fumbles.filter(evidence => evidence.providerEventId === row.eventId && evidence.providerPlayerId === row.providerPlayerId)
     : [];
   if (matches.length > 1) throw new Error(`Duplicate NFL QB fumble evidence: ${row.providerPlayerId}:${row.eventId}`);
-  if (row.position === "QB" && matches.length !== 1) throw new Error(`Missing validated NFL QB fumble evidence: ${row.providerPlayerId}:${row.eventId}`);
+  if (row.position === "QB" && matches.length !== 1 && row.stats.fumblesLost === null) throw new Error(`Missing validated NFL QB fumble evidence: ${row.providerPlayerId}:${row.eventId}`);
   const fumble = matches[0] ?? null;
+  if (fumble && row.stats.fumblesLost !== null && fumble.fumblesLost !== row.stats.fumblesLost) throw new Error("Conflicting NFL log/summary fumbles lost");
   const observation: NflObservation = {
     provider: "espn", providerPlayerId: row.providerPlayerId, providerEventId: row.eventId, localPlayerId: identity.localPlayerId,
     position: row.position, season: row.season, week: row.week, phase: "regular", gameAt: row.gameAt, completedAt: null,
     team: row.team, opponent: row.opponent, homeAway: row.homeAway,
-    stats: { ...row.stats, fumblesLost: row.position === "QB" ? fumble!.fumblesLost : row.stats.fumblesLost },
+    stats: { ...row.stats, fumblesLost: row.position === "QB" ? fumble?.fumblesLost ?? row.stats.fumblesLost : row.stats.fumblesLost },
     provenance: { gameLogSourceUrl: row.provenance.source, gameLogFetchedAt: row.provenance.fetchedAt,
       fumbleSummarySourceUrl: fumble?.sourceUrl ?? null, fumbleSummaryFetchedAt: fumble?.fetchedAt ?? null,
       knownAt: input.knownAt, normalizationVersion: input.normalizationVersion },
   };
   canonicalNflObservationHashPayload(observation);
-  if (observation.position === "QB" && (observation.stats.fumblesLost === null || observation.provenance.fumbleSummarySourceUrl === null || observation.provenance.fumbleSummaryFetchedAt === null)) {
-    throw new Error("NFL QB observation requires validated fumble-summary evidence");
+  if (observation.position === "QB" && observation.stats.fumblesLost === null) {
+    throw new Error("NFL QB observation requires explicit log or validated fumble-summary evidence");
   }
   if (observation.position !== "QB" && (observation.provenance.fumbleSummarySourceUrl !== null || observation.provenance.fumbleSummaryFetchedAt !== null)) {
     throw new Error("NFL non-QB observation must not carry QB fumble-summary provenance");

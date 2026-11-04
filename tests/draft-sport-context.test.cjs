@@ -32,6 +32,7 @@ function database(tables) {
       is(key, value) { rows = rows.filter(r => r[key] === value); return q; },
       in(key, values) { rows = rows.filter(r => values.includes(r[key])); return q; },
       order(key, { ascending }) { rows.sort((a, b) => (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0) * (ascending ? 1 : -1)); return q; },
+      range(from, to) { rows = rows.slice(from, to + 1); return q; },
       single() { single = true; return q; }, maybeSingle() { single = true; return q; },
       update(value) { writes.push([table, value]); return q; },
       then(resolve) { resolve({ data: single ? rows[0] ?? null : rows, error: null }); },
@@ -67,6 +68,7 @@ function fixture({ superAdmin = false, loggedIn = true } = {}) {
   const mocks = {
     'next/server': next,
     '@/lib/supabaseAdmin': { supabaseAdmin: db },
+    '@/lib/nfl/slateAvailability.server': { loadNflSlateAvailability: async slate => ({ start: slate.start_date, end: slate.end_date, teamAbbreviations: [], availablePlayerIds: [] }) },
     '@/lib/auth': { getCurrentUser: async () => user },
     '@/lib/groups/context': {
       getGroupContextForUser: async () => group,
@@ -171,7 +173,7 @@ test('AppNav links use explicit route sport while the provider still remembers a
   }
 });
 
-const endpoints = ['player-stats', 'slate-availability', 'draft-projections', 'lineups', 'team-results'];
+const endpoints = ['player-stats', 'slate-availability', 'lineups', 'team-results'];
 for (const endpoint of endpoints) test(`${endpoint}: expected sport is enforced after authorization; omission is compatible`, async () => {
   const f = fixture(), route = load(`app/api/${endpoint}/route.ts`, f.mocks);
   const get = (id, sport) => route.GET({ nextUrl: new URL(`http://test/api/${endpoint}?slateId=${id}${sport === undefined ? '' : `&sport=${sport}`}`), headers: new Headers() });

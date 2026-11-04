@@ -24,12 +24,19 @@ function timestamp(value: unknown): string | null {
   const n = instant(value);
   return n === null ? null : new Date(n).toISOString();
 }
-function phase(value: unknown): SeasonPhase {
-  const name = String(value ?? "").toLowerCase();
-  if (name.includes("postseason")) return "postseason";
-  if (name.includes("regular season")) return "regular";
-  if (name.includes("preseason")) return "preseason";
-  return "unknown";
+export function classifyEspnNbaPhase(value: unknown, season: number): SeasonPhase {
+  if (typeof value !== "string") return "unknown";
+  const match = value.trim().match(/^(\d{4})-(\d{2})\s+(.+)$/);
+  if (!match || Number(match[1]) !== season - 1 || Number(match[2]) !== season % 100) return "unknown";
+  // Exact provider competition labels, not a substring search. ESPN's play-in
+  // label contains "Regular Season" but its games do not count toward regular GP.
+  switch (match[3].toLowerCase()) {
+    case "regular season": return "regular";
+    case "preseason": return "preseason";
+    case "postseason":
+    case "play in regular season": return "postseason";
+    default: return "unknown"; // Cup/exhibition/new labels need independent review.
+  }
 }
 export type EspnNbaLogRequest = {
   espnPlayerId: string;
@@ -110,7 +117,7 @@ export function normalizeEspnNbaGameLog(payload: unknown, request: EspnNbaLogReq
         for (const key of NBA_STATS) if (stats[key] === null) missing.push(key);
         if (gameStatus !== "final") missing.push("final-status");
         const seasonPhase = obj(event.team).isAllStar === true || obj(event.opponent).isAllStar === true
-          ? "unknown" : phase(seasonType.displayName);
+          ? "unknown" : classifyEspnNbaPhase(seasonType.displayName, request.season);
         if (seasonPhase === "unknown") missing.push("season-phase");
         const pair = (name: string): [number | null, number | null] => {
           const match = String(field(name) ?? "").match(/^(\d+)-(\d+)$/);

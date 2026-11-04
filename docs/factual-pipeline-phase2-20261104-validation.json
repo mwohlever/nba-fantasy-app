@@ -1,0 +1,302 @@
+{
+  "version": 1,
+  "generatedAt": "2026-11-04T15:09:38.796Z",
+  "phase": "Factual pipeline Phase 2",
+  "branch": "main",
+  "head": "d572341fcfa55408dfde13160b0709ffb55b9d6e",
+  "production": {
+    "databaseWrites": 0,
+    "schemaApplied": false,
+    "rosterSyncs": 0,
+    "mappingApplications": 0,
+    "ingestionOrBackfills": 0,
+    "cachePublications": 0,
+    "scheduleChanges": 0,
+    "deployments": 0,
+    "liveEligibilityChanged": false,
+    "playerCenterBehaviorChanged": false,
+    "explicitDatabaseQueries": 0,
+    "buildReadRequestsMetered": false
+  },
+  "isolation": {
+    "fixtureOnly": true,
+    "sanitizedRestore": false,
+    "postgresVersion": "15.19",
+    "productionVersionFromDatedAudit": "17.6",
+    "transport": "verified private Unix socket, no TCP",
+    "credentialsLoadedByHarness": false,
+    "databaseEnvironmentVariablesInherited": false,
+    "clusterRemovedAfterTests": true,
+    "rehearsalReceipt": "docs/factual-pipeline-phase2-20261104-rehearsal.json"
+  },
+  "validation": {
+    "rehearsal": {
+      "tests": 23,
+      "passed": 23,
+      "failed": 0,
+      "skipped": 0,
+      "logSha256": "2e925447b7a6a76c8c5cbf62dad5810bbab296125da15318973d5b7d110ba76d",
+      "command": "FACTUAL_PIPELINE_PG_BIN=/absolute/PostgreSQL/bin node --test tests/factual-pipeline-phase2-postgres.test.cjs",
+      "exitCode": 0
+    },
+    "regression": {
+      "tests": 300,
+      "passed": 280,
+      "failed": 0,
+      "skipped": 20,
+      "logSha256": "07099baf7b05022cf5c397fe50b30181450156aebb5726dc8ec93c6fa52b4d29",
+      "files": [
+        "tests/factual-pipeline-parsers.test.cjs",
+        "tests/season-roster-planning.test.cjs",
+        "tests/nfl-fumbles-readiness.test.cjs",
+        "tests/nfl-observation-acquisition.test.cjs",
+        "tests/nfl-research-dataset.test.cjs",
+        "tests/nfl-observation-foundation.test.cjs",
+        "tests/nfl-player-catalog.test.cjs",
+        "tests/player-center.test.cjs",
+        "tests/player-center-server.test.cjs",
+        "tests/player-center-integrity.test.cjs",
+        "tests/player-center-presentation.test.cjs",
+        "tests/player-center-local-safety.test.cjs",
+        "tests/player-center-canary.test.cjs",
+        "tests/player-comparison-context.test.cjs",
+        "tests/draft-history.test.cjs",
+        "tests/draft-sport-context.test.cjs",
+        "tests/nba-factual-refresh.test.cjs",
+        "tests/nba-factual-refresh-api.test.cjs",
+        "tests/nba-observation-seasons.test.cjs",
+        "tests/nba-observation-versioning.test.cjs",
+        "tests/nba-factual-refresh-postgres.test.cjs",
+        "tests/nba-projection-infrastructure.test.cjs",
+        "tests/nba-projection-v1.test.cjs",
+        "tests/nfl-projection-v2.test.cjs",
+        "tests/projection-retirement.test.cjs",
+        "tests/projection-retirement-compatibility.test.cjs"
+      ],
+      "environment": {
+        "NBA_OBSERVATION_PG_BIN": "isolated PostgreSQL binaries"
+      },
+      "note": "All 20 skipped cases were subsequently exercised in the supplemental isolated run"
+    },
+    "supplementalPostgres": {
+      "tests": 20,
+      "passed": 20,
+      "failed": 0,
+      "skipped": 0,
+      "logSha256": "ef3e23c390b2b70459b957472f1b3bfb7831b5fa05f0c42fb9c2957bee1af1ef",
+      "command": "NBA_REFRESH_PG_BIN=/absolute/PostgreSQL/bin node --test tests/nba-factual-refresh-postgres.test.cjs"
+    },
+    "combinedDistinctPassed": 323,
+    "typescript": {
+      "command": "tsc --noEmit --incremental false",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    "eslint": {
+      "command": "eslint lib/rosters/storageContracts.ts tests/factual-pipeline-phase2-postgres.test.cjs tests/helpers/factual-pipeline-phase2-postgres.cjs",
+      "exitCode": 0,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diagnostics": ""
+    },
+    "build": {
+      "command": "npm run build -- --webpack",
+      "framework": "Next.js 16.2.4",
+      "completion": "Successful compile, TypeScript, 113/113 static pages, complete route manifest",
+      "exitCode": null,
+      "exitCodeNote": "Process handle was lost during workspace routing interruption; not inferred or fabricated",
+      "logSha256": "6a0521709b3b8847f438855382dcc4d503e5db68a5f72d29b40a7ad84f866eee",
+      "serviceCredential": "nonprivileged build-only placeholder",
+      "telemetryDisabled": true,
+      "guard": "external temporary HTTP mutation/RPC/refresh preloader",
+      "guardSha256": "74d6f9cf24e09ca2a7431fecb5f9b09553e987d214e2a9c3a6ef39a664cd6647",
+      "warning": "Edge runtime disables static generation for one page"
+    },
+    "diff": {
+      "existingDiffCheckExitCode": 0,
+      "newFileWhitespaceErrors": [],
+      "note": "New files also checked with git diff --no-index --check /dev/null; status 1 is expected for new file differences"
+    }
+  },
+  "preservation": {
+    "baselineFiles": 1115,
+    "unchangedOriginalFiles": 1115,
+    "unexpectedChanges": [],
+    "headUnchanged": true,
+    "stashUnchanged": true,
+    "worktreeRegistrationsUnchanged": true,
+    "originalManifestSha256": "257de143590acc923c2d7e06c128d860424d4cf1907b7d2ea933f389eb6049c4",
+    "finalOriginalManifestSha256": "257de143590acc923c2d7e06c128d860424d4cf1907b7d2ea933f389eb6049c4",
+    "baselineCaptureSha256": "e56a33cde82fa870bdc912abc8f0a233938a7d2772bbe1ce104c653ff1cc0efe",
+    "nbaAppendFingerprintInIsolatedFixture": "9308a04b52fecc6993b7730490cf686a",
+    "installedProductionFingerprintNotQueriedOrModified": true,
+    "protectedFiles": [
+      {
+        "file": ".github/workflows/nba-projection-shadow-refresh.yml",
+        "unchanged": true,
+        "sha256": "cba66b6f8ddcce1cf572f5ad2022b937cc5c840a2c5fc24b9f5b1d4564ebb2b4"
+      },
+      {
+        "file": ".github/workflows/nfl-projection-observation-refresh.yml",
+        "unchanged": true,
+        "sha256": "5980a4f93e38536be912f0c07fc4860074fc631f0ed479bc711ed85ec4c43f9a"
+      },
+      {
+        "file": ".github/workflows/nfl-projection-shadow-generate.yml",
+        "unchanged": true,
+        "sha256": "51be017d21355b0d67e03cca9644b67c9a8dfe259b3173f184f66dc7606fbfa6"
+      },
+      {
+        "file": "supabase/migrations/20261027000100_nba_observation_semantic_append.sql",
+        "unchanged": true,
+        "sha256": "e0f1683d3798da4c04bbe0d78a039544f3ab6b42c52f53035c3968f5fb230485"
+      },
+      {
+        "file": "supabase/manual/factual-pipeline/nfl-signed-yard-constraints.proposed.sql",
+        "unchanged": true,
+        "sha256": "3530037e2c1d13dccdf98d37807c211d057897e4a2d12c222f3c7b7526634dd2"
+      },
+      {
+        "file": "supabase/manual/player-center/factual-refresh-v1.sql",
+        "unchanged": true,
+        "sha256": "40c3f6430092f04c7734e64a875ff52518d00f876f19d38c5ecd7591d6888d31"
+      },
+      {
+        "file": "lib/analytics/nfl/observationAcquisition.ts",
+        "unchanged": true,
+        "sha256": "f6b0340ef1b6fbc342c0fe39de15b4c256a6c3569c2dfb2e7a8dcd93cad6a474"
+      },
+      {
+        "file": "lib/analytics/nfl/observationPersistence.server.ts",
+        "unchanged": true,
+        "sha256": "23b1a0177a12a55ff293f6d2e30363cc264053a0c45a7dda66ba4d9d5e561b69"
+      },
+      {
+        "file": "lib/player-center/nbaRefresh.ts",
+        "unchanged": true,
+        "sha256": "aa2c764ffbf02573b33ea2bd53fc267ac92d5cf8e9fd0d0c85e2a15fa380d81c"
+      },
+      {
+        "file": "lib/rules/leagueRules.ts",
+        "unchanged": true,
+        "sha256": "9142f3ba94a37ad2588a37e28709a3730ee1737d0d00ffc4d62beb5045b0dbc8"
+      },
+      {
+        "file": "app/api/lineups/route.ts",
+        "unchanged": true,
+        "sha256": "5ac87b9601c9921a0c9cc43592b53a94b6f3b5eda2a81d40f9aaa7b2a2b311f8"
+      },
+      {
+        "file": "app/lineups/draft/page.tsx",
+        "unchanged": true,
+        "sha256": "64633c6e08c81ca30ca0f89f8d74afafdcd51192e884ac16b088671121738dbd"
+      },
+      {
+        "file": "lib/lineups/draftHistory.server.ts",
+        "unchanged": true,
+        "sha256": "ac2268eac58fa44f3c400c6270414deb49823e6d66b0ffb22ce1017652430f69"
+      },
+      {
+        "file": "lib/supabaseAdmin.ts",
+        "unchanged": true,
+        "sha256": "b7577e108bf01b0a1af073329cbcf065d6e1296d3094c301e8e702426a560711"
+      },
+      {
+        "file": "next.config.ts",
+        "unchanged": true,
+        "sha256": "72a266971a850d844918ee35af0b34a5e0d3ea24de0887563a2f1c1dc11d4ce5"
+      }
+    ]
+  },
+  "reconciliation": {
+    "source": "docs/nba-roster-reconciliation-plan-20261103.json",
+    "datedEvidenceAt": "2026-11-03T18:37:42.685Z",
+    "sha256": "83751b3c606a0a38d10ad44a61e0fd5d0cfa5604526eb02078555cb9d8728395",
+    "replayedOfflineExactly": true,
+    "liveRosterFetch": false,
+    "appliedChanges": 0,
+    "summary": {
+      "activeCatalog": 530,
+      "currentNativeRoster": 523,
+      "rosterAdditions": 82,
+      "newNativeIdentities": 76,
+      "inactiveExistingIdentities": 6,
+      "rosterAbsences": 89,
+      "teamDifferences": 112,
+      "unresolvedActiveMappings": 163,
+      "existingMappingsNeedingEvidence": 29,
+      "historicalOnly": 28,
+      "noCurrentSeasonObservations": 312,
+      "rosteredWithoutStoredAppearances": 164
+    },
+    "additions": {
+      "newCorroboratedCandidates": 74,
+      "newUncertain": 2,
+      "existingInactiveCorroboratedCandidates": 6
+    },
+    "teamChanges": {
+      "corroboratedCandidates": 111,
+      "uncertain": 1
+    },
+    "identityReview": {
+      "corroboratedCandidates": 101,
+      "absentFromNative": 61,
+      "nameDiscrepancy": 1,
+      "existingMappingsNeedingReview": 29
+    },
+    "candidateIsNotAuthorization": true
+  },
+  "proposals": {
+    "automaticMigrationRunnerInputs": false,
+    "files": [
+      "supabase/manual/factual-pipeline/phase2/01-rosters-and-pools.proposed.sql",
+      "supabase/manual/factual-pipeline/nfl-signed-yard-constraints.proposed.sql",
+      "supabase/manual/factual-pipeline/phase2/02-nfl-semantic-append.proposed.sql"
+    ],
+    "rollback": "supabase/manual/factual-pipeline/phase2/03-unused-only-rollback.proposed.sql",
+    "newWriteRpcGrants": "owner-only",
+    "signedYardQuarantineUnchanged": true,
+    "legacyNflWriterCutoverRequired": true,
+    "legacyFullPoolReconstructionAllowed": false,
+    "productionOperationsSeparatelyAuthorized": false
+  },
+  "addedFiles": [
+    {
+      "file": "docs/factual-pipeline-phase2-20261104-rehearsal.json",
+      "sha256": "d57c39aed959259ea3a9d7bcb364a5ac5241ac0a2cf4a366e2075062974af4ed"
+    },
+    {
+      "file": "docs/factual-pipeline-phase2-20261104.md",
+      "sha256": "5dd4adf51249bab6b3440ee4e89ab67b539b356626243e2424e669a8586257c2"
+    },
+    {
+      "file": "lib/rosters/storageContracts.ts",
+      "sha256": "f7655805692a45a6d2a016d3e9fc36554af126651bbcf9163c1c2620da37ca15"
+    },
+    {
+      "file": "supabase/manual/factual-pipeline/phase2/01-rosters-and-pools.proposed.sql",
+      "sha256": "e0c2eafa38b48fcc4e9ffdc95613cb2be7a125841056ab64411d8833c7882904"
+    },
+    {
+      "file": "supabase/manual/factual-pipeline/phase2/02-nfl-semantic-append.proposed.sql",
+      "sha256": "112dc0abdef65bcab9983dc781185d92dae929eca45e3fddaa3a5750276124f8"
+    },
+    {
+      "file": "supabase/manual/factual-pipeline/phase2/03-unused-only-rollback.proposed.sql",
+      "sha256": "ec0105553dd7d9c24ce1f839b6abc432c42727cc95b5d1a2274039fb97486748"
+    },
+    {
+      "file": "tests/factual-pipeline-phase2-postgres.test.cjs",
+      "sha256": "33be684b3e083dce0abf667e8fa20f4648df3b969cf070bdab512e08d08fd272"
+    },
+    {
+      "file": "tests/fixtures/factual-pipeline/phase2-parents.sql",
+      "sha256": "f74c531bfbcad12d269e4780579cf9565901b81bca8e5db6e53267d03c36fb5a"
+    },
+    {
+      "file": "tests/helpers/factual-pipeline-phase2-postgres.cjs",
+      "sha256": "fec111c636c2df8545b187c0d0f447fe648b00fd4a4948c83b879caa8e28c468"
+    }
+  ],
+  "receiptNote": "This validation receipt is the tenth new file and intentionally omits its own recursive hash. All captured original files are unchanged."
+}

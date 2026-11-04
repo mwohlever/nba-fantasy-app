@@ -21,8 +21,10 @@ async function scoreboard(){const weeks=Array.from({length:18},(_,index)=>index+
   const gameLogs=logsByPlayer.flat(),statusIds=new Set(events.map(event=>event.providerEventId));
   const missingStatus=[...new Set(gameLogs.map(row=>row.eventId).filter(eventId=>!statusIds.has(eventId)))];
   if(missingStatus.length)throw new Error(`ESPN scoreboard omitted game-log events: ${missingStatus.join(',')}`);
-  const observations=await acquireNflObservations({eligible:players,season,finalEvents:events.filter(event=>event.completed),gameLogs,fetchFumbles:fetchEspnNflEventFumbles});
-  const report={season,eligiblePlayers:players.length,gameLogRows:gameLogs.length,finalEvents:events.filter(event=>event.completed).length,completedObservations:observations.length,qbSummaryRequests:new Set(observations.filter(row=>row.position==='QB').map(row=>row.providerEventId)).size,dryRun,batches:[]};
+  const incomplete=[];
+  const observations=await acquireNflObservations({eligible:players,season,finalEvents:events.filter(event=>event.completed),gameLogs,fetchFumbles:fetchEspnNflEventFumbles,onIncomplete:issue=>incomplete.push(issue)});
+  const report={season,eligiblePlayers:players.length,gameLogRows:gameLogs.length,finalEvents:events.filter(event=>event.completed).length,completedObservations:observations.length,qbSummaryRequests:new Set(gameLogs.filter(row=>row.position==='QB'&&events.some(event=>event.completed&&event.providerEventId===row.eventId)).map(row=>row.eventId)).size,incomplete,dryRun,batches:[]};
   if(!dryRun)for(const batch of chunks(observations,500))report.batches.push(await post({action:'observations',observations:batch}));
   console.log(JSON.stringify(report,null,2));
+  if(incomplete.length)process.exitCode=1; // Valid facts can progress; incomplete acquisition is never green.
 })().catch(error=>{console.error(error instanceof Error?error.message:String(error));process.exitCode=1});

@@ -1,0 +1,392 @@
+[
+  {
+    "playerId": 22,
+    "name": "Ochai Agbaji",
+    "nbaPlayerId": 1630534,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 30,
+    "name": "Alex Antetokounmpo",
+    "nbaPlayerId": 1630828,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 32,
+    "name": "Thanasis Antetokounmpo",
+    "nbaPlayerId": 203648,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 40,
+    "name": "Patrick Baldwin Jr.",
+    "nbaPlayerId": 1631116,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 45,
+    "name": "Dalano Banton",
+    "nbaPlayerId": 1630625,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 53,
+    "name": "Nicolas Batum",
+    "nbaPlayerId": 201587,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 55,
+    "name": "MarJon Beauchamp",
+    "nbaPlayerId": 1630699,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 59,
+    "name": "Bismack Biyombo",
+    "nbaPlayerId": 202687,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 75,
+    "name": "Johni Broome",
+    "nbaPlayerId": 1641780,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 76,
+    "name": "Bruce Brown",
+    "nbaPlayerId": 1628971,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 107,
+    "name": "Brandon Clarke",
+    "nbaPlayerId": 1629634,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 114,
+    "name": "Amir Coffey",
+    "nbaPlayerId": 1629599,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 127,
+    "name": "Seth Curry",
+    "nbaPlayerId": 203552,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 132,
+    "name": "JD Davison",
+    "nbaPlayerId": 1631120,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 139,
+    "name": "Hunter Dickinson",
+    "nbaPlayerId": 1630621,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 160,
+    "name": "Drew Eubanks",
+    "nbaPlayerId": 1629234,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 161,
+    "name": "Tosan Evbuomwan",
+    "nbaPlayerId": 1641787,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 181,
+    "name": "Taj Gibson",
+    "nbaPlayerId": 201959,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 194,
+    "name": "Hayden Gray",
+    "nbaPlayerId": 1643060,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 199,
+    "name": "Jeff Green",
+    "nbaPlayerId": 201145,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 202,
+    "name": "Mouhamadou Gueye",
+    "nbaPlayerId": 1631338,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 212,
+    "name": "Gary Harris",
+    "nbaPlayerId": 203914,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 219,
+    "name": "Killian Hayes",
+    "nbaPlayerId": 1630165,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 228,
+    "name": "Aaron Holiday",
+    "nbaPlayerId": 1628988,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 243,
+    "name": "Joe Ingles",
+    "nbaPlayerId": 204060,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 252,
+    "name": "Andre Jackson Jr.",
+    "nbaPlayerId": 1641748,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 261,
+    "name": "Trey Jemison III",
+    "nbaPlayerId": 1641998,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 273,
+    "name": "Curtis Jones",
+    "nbaPlayerId": 1642938,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 274,
+    "name": "Dillon Jones",
+    "nbaPlayerId": 1641794,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 287,
+    "name": "Yuki Kawamura",
+    "nbaPlayerId": 1642530,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 294,
+    "name": "Maxi Kleber",
+    "nbaPlayerId": 1628467,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 299,
+    "name": "Christian Koloko",
+    "nbaPlayerId": 1631132,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 300,
+    "name": "John Konchar",
+    "nbaPlayerId": 1629723,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 323,
+    "name": "Kevin Love",
+    "nbaPlayerId": 201567,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 325,
+    "name": "Kyle Lowry",
+    "nbaPlayerId": 200768,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 335,
+    "name": "Tyrese Martin",
+    "nbaPlayerId": 1631213,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 350,
+    "name": "Doug McDermott",
+    "nbaPlayerId": 203926,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 389,
+    "name": "Tristen Newton",
+    "nbaPlayerId": 1641803,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 399,
+    "name": "Lachlan Olbrich",
+    "nbaPlayerId": 1642950,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 400,
+    "name": "Kelly Olynyk",
+    "nbaPlayerId": 203482,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 401,
+    "name": "Norchad Omier",
+    "nbaPlayerId": 1641807,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 406,
+    "name": "Micah Peavy",
+    "nbaPlayerId": 1642877,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 407,
+    "name": "Sean Pedulla",
+    "nbaPlayerId": 1642951,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 409,
+    "name": "Taelon Peter",
+    "nbaPlayerId": 1643007,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 415,
+    "name": "Mason Plumlee",
+    "nbaPlayerId": 203486,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 422,
+    "name": "Bobby Portis",
+    "nbaPlayerId": 1626171,
+    "reason": "native_name_requires_review"
+  },
+  {
+    "playerId": 428,
+    "name": "Dwight Powell",
+    "nbaPlayerId": 203939,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 444,
+    "name": "Antonio Reeves",
+    "nbaPlayerId": 1641810,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 459,
+    "name": "D'Angelo Russell",
+    "nbaPlayerId": 1626156,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 465,
+    "name": "Payton Sandfort",
+    "nbaPlayerId": 1642362,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 486,
+    "name": "Max Shulga",
+    "nbaPlayerId": 1642917,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 498,
+    "name": "Tyler Smith",
+    "nbaPlayerId": 1641890,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 500,
+    "name": "Nick Smith Jr.",
+    "nbaPlayerId": 1641733,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 501,
+    "name": "Jeremy Sochan",
+    "nbaPlayerId": 1631110,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 505,
+    "name": "Isaiah Stevens",
+    "nbaPlayerId": 1641815,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 512,
+    "name": "Garrett Temple",
+    "nbaPlayerId": 202066,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 513,
+    "name": "Dalen Terry",
+    "nbaPlayerId": 1631207,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 518,
+    "name": "Ethan Thompson",
+    "nbaPlayerId": 1630679,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 521,
+    "name": "Xavier Tillman",
+    "nbaPlayerId": 1630214,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 537,
+    "name": "Jonas Valančiūnas",
+    "nbaPlayerId": 202685,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 541,
+    "name": "Gabe Vincent",
+    "nbaPlayerId": 1629216,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 550,
+    "name": "Keaton Wallace",
+    "nbaPlayerId": 1630811,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 556,
+    "name": "Lindy Waters III",
+    "nbaPlayerId": 1630322,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 562,
+    "name": "Blake Wesley",
+    "nbaPlayerId": 1631104,
+    "reason": "absent_from_native_season"
+  },
+  {
+    "playerId": 563,
+    "name": "Russell Westbrook",
+    "nbaPlayerId": 201566,
+    "reason": "absent_from_native_season"
+  }
+]

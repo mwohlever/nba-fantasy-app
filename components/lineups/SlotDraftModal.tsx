@@ -19,6 +19,7 @@ import type {
 } from "@/components/lineups/types";
 
 type Props = {
+  sport?: "nba" | "nfl" | "golf";
   targetDraftSlot:
     TargetDraftSlot | null;
 
@@ -69,6 +70,8 @@ type Props = {
     string;
 
   nflSeason?: string;
+  slateId?: number | null;
+  centerSeason?: number;
 
   rosterSlots?:
     RosterSlotConfig[];
@@ -80,6 +83,7 @@ type Props = {
 };
 
 export default function SlotDraftModal({
+  sport,
   targetDraftSlot,
   setTargetDraftSlot,
   players,
@@ -93,6 +97,8 @@ export default function SlotDraftModal({
   handleAssignPlayerToTeam,
   selectedSeason,
   nflSeason,
+  slateId,
+  centerSeason,
   rosterSlots = [],
   hidden = false,
   isAssigningPlayer,
@@ -330,6 +336,7 @@ export default function SlotDraftModal({
           className="min-h-0 flex-1 overflow-y-auto px-4 pb-28 pt-4 sm:px-6 sm:pb-6"
         >
           <PlayerPool
+            sport={sport}
             players={
               players
             }
@@ -388,6 +395,8 @@ export default function SlotDraftModal({
               selectedSeason
             }
             nflSeason={nflSeason}
+            slateId={slateId}
+            centerSeason={centerSeason}
             hidePositionFilter
             slotDraftContext={{
               targetDraftSlot,

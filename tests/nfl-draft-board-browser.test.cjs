@@ -36,7 +36,8 @@ test('NFL complete board: 360/390/486/1024, current-only actions, corrections, f
           else if(url.pathname==='/api/slate-availability')body={...identity,availablePlayerIds:players.map(p=>p.id)};
           else if(url.pathname==='/api/player-stats')body={...identity,playerStats:[],teamResults:[]};
           else if(url.pathname==='/api/team-results')body={...identity,teamResults:[]};
-          else if(url.pathname==='/api/draft-projections')body={...identity,projections:{}};
+          else if(url.pathname==='/api/draft-projections')body={...identity,projections:{899:{projection:9999,source:'fixture_projection'}}};
+          else if(url.pathname==='/api/player-center')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Fixture profile not captured for this draft player.'})});
           else if(url.pathname==='/api/lineups/nfl-games')body={slateId:193,gamesByTeam:{}};
           else if(url.pathname==='/api/player-history-detail')body={games:[],history:[],summary:null};
           else body={success:true,notifications:[],unreadCount:0};
@@ -48,6 +49,15 @@ test('NFL complete board: 360/390/486/1024, current-only actions, corrections, f
           ReactDOMClient.createRoot(document.getElementById('app')).render(React.createElement(React.Fragment,null,React.createElement(AppNav),React.createElement('main',{className:'app-page-content mx-auto max-w-5xl p-4'},React.createElement(DraftBuilder,${JSON.stringify(props)}))));</script></html>`});
       });
       await page.goto('http://nfl-draft.test/lineups/draft?sport=nfl&slateId=193');
+      // The normal Players path opens the shared profile plus the established roster actions in one click.
+      await page.getByRole('button',{name:'Players',exact:true}).click();
+      await page.locator('button.pc-player-button').filter({hasText:'Final QB'}).click();
+      const profile=page.getByRole('dialog',{name:'Final QB player profile'});await profile.waitFor();
+      assert.equal(await profile.getByRole('tab',{name:'Game log',exact:true}).getAttribute('aria-selected'),'true');
+      assert.equal(await profile.getByRole('region',{name:'Roster actions'}).count(),1);
+      await profile.getByText('Statistics unavailable',{exact:true}).waitFor();assert.ok(!(await profile.locator('.pc-profile').innerText()).includes('9999'),'missing logs never fall back to projections');
+      await profile.getByRole('button',{name:'Close player profile'}).click();await profile.waitFor({state:'detached'});
+      assert.equal(writes.length,0,'researching a player does not save a pick');
       await page.getByRole('button',{name:'Draft Order',exact:true}).click();
       const board=page.getByRole('region',{name:'Draft order'});await board.locator('[data-draft-slot="21"]').waitFor();
       assert.equal(await board.locator('[data-draft-slot]').count(),21);

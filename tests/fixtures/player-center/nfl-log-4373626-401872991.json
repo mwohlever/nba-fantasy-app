@@ -1,0 +1,129 @@
+{
+  "_fixture": {
+    "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+    "fetchedAt": "2026-10-26T15:06:29.148Z",
+    "reduced": true
+  },
+  "filters": [
+    {
+      "name": "league",
+      "value": "nfl"
+    },
+    {
+      "name": "season",
+      "value": "2026"
+    }
+  ],
+  "names": [
+    "rushingAttempts",
+    "rushingYards",
+    "yardsPerRushAttempt",
+    "rushingTouchdowns",
+    "longRushing",
+    "receptions",
+    "receivingTargets",
+    "receivingYards",
+    "yardsPerReception",
+    "receivingTouchdowns",
+    "longReception",
+    "fumbles",
+    "fumblesLost",
+    "fumblesForced",
+    "kicksBlocked"
+  ],
+  "seasonTypes": [
+    {
+      "displayName": "2026 Regular Season",
+      "displayTeam": "ARI",
+      "categories": [
+        {
+          "displayName": "Regular Season Stats",
+          "type": "event",
+          "splitType": "2",
+          "events": [
+            {
+              "eventId": "401872991",
+              "stats": [
+                "3",
+                "7",
+                "2.3",
+                "0",
+                "3",
+                "2",
+                "2",
+                "9",
+                "4.5",
+                "0",
+                "5",
+                "0",
+                "0",
+                "-",
+                "-"
+              ]
+            }
+          ],
+          "totals": [
+            "61",
+            "176",
+            "2.9",
+            "1",
+            "22",
+            "16",
+            "19",
+            "84",
+            "5.3",
+            "0",
+            "22",
+            "0",
+            "0",
+            "-",
+            "-"
+          ]
+        }
+      ],
+      "summary": {
+        "displayName": "Regular Season Stats",
+        "stats": [
+          {
+            "displayName": "Totals",
+            "stats": [
+              "61",
+              "176",
+              "2.9",
+              "1",
+              "22",
+              "16",
+              "19",
+              "84",
+              "5.3",
+              "0",
+              "22",
+              "0",
+              "0",
+              "-",
+              "-"
+            ],
+            "type": "total"
+          }
+        ]
+      }
+    }
+  ],
+  "events": {
+    "401872991": {
+      "id": "401872991",
+      "gameDate": "2026-10-11T20:25:00.000+00:00",
+      "week": 5,
+      "homeTeamId": "22",
+      "awayTeamId": "8",
+      "team": {
+        "id": "22",
+        "abbreviation": "ARI"
+      },
+      "opponent": {
+        "id": "8",
+        "abbreviation": "DET"
+      }
+    }
+  }
+}

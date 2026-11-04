@@ -38,6 +38,7 @@ function fixture() {
       is(key, value) { rows = rows.filter(row => row[key] === value); return query; },
       in(key, values) { rows = rows.filter(row => values.includes(row[key])); return query; },
       order(key, { ascending }) { rows.sort((a,b) => (a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0) * (ascending ? 1 : -1)); return query; },
+      range(from, to) { rows = rows.slice(from, to + 1); return query; },
       limit(n) { rows = rows.slice(0,n); return query; }, single() { single = true; return query; }, maybeSingle() { single = true; return query; },
       then(resolve) { resolve({data: single ? rows[0] ?? null : rows, error: null}); },
     }; return query;

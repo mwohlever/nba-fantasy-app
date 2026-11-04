@@ -64,11 +64,11 @@ type RecentHistoryRow = {
   finishPosition: number | null;
   stats: Record<string, number>;
   fantasyPoints: number | null;
-  projectedFantasyPoints: number | null;
-  projectionDifference: number | null;
-  projectionConfidence: string | null;
-  projectionSource: string | null;
-  projectedAt: string | null;
+  projectedFantasyPoints?: number | null;
+  projectionDifference?: number | null;
+  projectionConfidence?: string | null;
+  projectionSource?: string | null;
+  projectedAt?: string | null;
 };
 
 function round(value: number, digits = 1) {
@@ -1199,12 +1199,7 @@ export async function GET(request: Request) {
       .map((column) => column.key)
       .join(", ")}`;
 
-    /*
-     * The generated Supabase Database type has not yet been refreshed with
-     * the new projection snapshot columns. Using a local untyped client here
-     * prevents those stale generated types from turning valid select fields
-     * into GenericStringError.
-     */
+    // Factual league history stays Group-scoped. Historical forecast columns are not read.
     const db = supabaseAdmin as any;
 
     // History follows actual league slates, not today's active membership list.
@@ -1236,7 +1231,7 @@ export async function GET(request: Request) {
 
       lineupIds.length ? db
         .from("lineup_players")
-        .select("lineup_id, player_id, projected_fantasy_points, projection_confidence, projection_source, projected_at")
+        .select("lineup_id, player_id")
         .eq("player_id", playerId)
         .in("lineup_id", lineupIds) : { data: [], error: null },
 
@@ -1348,15 +1343,6 @@ export async function GET(request: Request) {
 
         const fantasyPoints = numberOrNull(stat?.fantasy_points);
 
-        const projectedFantasyPoints = numberOrNull(
-          lineupPlayer.projected_fantasy_points,
-        );
-
-        const projectionDifference =
-          fantasyPoints !== null && projectedFantasyPoints !== null
-            ? round(fantasyPoints - projectedFantasyPoints)
-            : null;
-
         const statsObj: Record<string, number> = {};
         statColumns.forEach((column) => {
           statsObj[column.key] = numberOrZero(stat?.[column.key]);
@@ -1371,11 +1357,13 @@ export async function GET(request: Request) {
           finishPosition: numberOrNull(result?.finish_position),
           stats: statsObj,
           fantasyPoints,
-          projectedFantasyPoints,
-          projectionDifference,
-          projectionConfidence: lineupPlayer.projection_confidence ?? null,
-          projectionSource: lineupPlayer.projection_source ?? null,
-          projectedAt: lineupPlayer.projected_at ?? null,
+          // Compatibility fields are retired; stored historical snapshots remain untouched.
+          projectedFantasyPoints: null,
+          projectionDifference: null,
+          projectionConfidence: null,
+          projectionSource: null,
+          projectedAt: null,
+
         };
       });
 
@@ -1394,19 +1382,6 @@ export async function GET(request: Request) {
     const finishes = filteredHistory
       .map((row) => row.finishPosition)
       .filter((finish): finish is number => finish !== null);
-
-    const projectionRows = filteredHistory.filter(
-      (
-        row,
-      ): row is RecentHistoryRow & {
-        fantasyPoints: number;
-        projectedFantasyPoints: number;
-        projectionDifference: number;
-      } =>
-        row.fantasyPoints !== null &&
-        row.projectedFantasyPoints !== null &&
-        row.projectionDifference !== null,
-    );
 
     const draftedByCount = new Map<string, number>();
 
@@ -1449,28 +1424,6 @@ export async function GET(request: Request) {
           )
         : null;
 
-    const averageProjectionDifference =
-      projectionRows.length > 0
-        ? round(
-            projectionRows.reduce(
-              (sum, row) => sum + row.projectionDifference,
-              0,
-            ) / projectionRows.length,
-          )
-        : null;
-
-    const exceededProjectionCount = projectionRows.filter(
-      (row) => row.projectionDifference > 0,
-    ).length;
-
-    const missedProjectionCount = projectionRows.filter(
-      (row) => row.projectionDifference < 0,
-    ).length;
-
-    const matchedProjectionCount = projectionRows.filter(
-      (row) => row.projectionDifference === 0,
-    ).length;
-
     const recentHistory = [...filteredHistory]
       .sort((a, b) => b.slateStartDate.localeCompare(a.slateStartDate))
       .slice(0, 8)
@@ -1478,6 +1431,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
+
+      sport,
+      scope: { groupId: activeLeague.context.group.id, leagueId: activeLeague.league.id },
 
       selectedSeason: isAllTime ? "all" : selectedSeason,
 
@@ -1514,12 +1470,13 @@ export async function GET(request: Request) {
             : null,
 
         averageFinish,
+        projectionSampleSize: 0,
+        averageProjectionDifference: null,
+        exceededProjectionCount: 0,
+        missedProjectionCount: 0,
+        matchedProjectionCount: 0,
 
-        projectionSampleSize: projectionRows.length,
-        averageProjectionDifference,
-        exceededProjectionCount,
-        missedProjectionCount,
-        matchedProjectionCount,
+
       },
 
       recentHistory,

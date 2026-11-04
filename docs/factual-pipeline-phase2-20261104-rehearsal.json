@@ -1,0 +1,222 @@
+{
+  "fixtureOnly": true,
+  "productionConnections": 0,
+  "productionWrites": 0,
+  "results": [
+    {
+      "name": "confirmed trade and two trades retain bounded half-open intervals",
+      "passed": true
+    },
+    {
+      "name": "release and re-sign preserve an unrostered gap",
+      "passed": true
+    },
+    {
+      "name": "season rollover, zero appearances and historical-only membership are independent",
+      "passed": true
+    },
+    {
+      "name": "snapshots never invent transaction dates; conflicts and uncertain evidence remain unresolved",
+      "passed": true
+    },
+    {
+      "name": "receipt replay, supersession and actual database knowledge cutoffs preserve old evidence",
+      "passed": true
+    },
+    {
+      "name": "game-level historical team evidence is unchanged by later roster transactions",
+      "passed": true
+    },
+    {
+      "name": "frozen unlocked and locked pools retain all members, positions, teams and optional On Slate",
+      "passed": true
+    },
+    {
+      "name": "On Slate false does not remove otherwise eligible players",
+      "passed": true
+    },
+    {
+      "name": "legacy locked or populated slates are explicit review cases, never reconstructed",
+      "passed": true
+    },
+    {
+      "name": "incomplete catalogs, wrong Group and a late failure leave no partial header/membership",
+      "passed": true
+    },
+    {
+      "name": "concurrent roster writes replay once and frozen-pool writers serialize under the slate lock",
+      "passed": true
+    },
+    {
+      "name": "NFL K limits and synthetic team defenses use existing IDs and frozen canonical slots",
+      "passed": true
+    },
+    {
+      "name": "RLS, grants, restrictive identity FKs and caller permissions fail closed",
+      "passed": true
+    },
+    {
+      "name": "Allgeier documented -1 and all three signed yard categories persist; counts stay nonnegative",
+      "passed": true
+    },
+    {
+      "name": "NFL A to B to A preserves three transitions with original fact hashes and correct latest/as-of reads",
+      "passed": true
+    },
+    {
+      "name": "repeated identical NFL facts append zero; receipt replay is immutable and exact",
+      "passed": true
+    },
+    {
+      "name": "out-of-order, tied conflicting and invalid late rows reject atomically including receipt and head",
+      "passed": true
+    },
+    {
+      "name": "NFL unknown, explicit zero and positive fumbles remain distinct immutable facts",
+      "passed": true
+    },
+    {
+      "name": "concurrent NFL same-receipt replay and overlapping workers produce one transition each",
+      "passed": true
+    },
+    {
+      "name": "legacy positive/zero rows and IDs survive new corrections without rewriting history",
+      "passed": true
+    },
+    {
+      "name": "rollback after new usage refuses without deleting any historical record",
+      "passed": true
+    },
+    {
+      "name": "bounded 600 NBA / 1000 NFL fixture catalogs freeze complete pools without appearance or active-flag inference",
+      "passed": true
+    }
+  ],
+  "environment": {
+    "transport": "private Unix socket",
+    "tcp": false,
+    "fixtureOnly": true,
+    "sanitizedRestore": false,
+    "version": "postgres (PostgreSQL) 15.19 (Debian 15.19-0+deb12u1)"
+  },
+  "signedMigration": {
+    "removedChecks": 3,
+    "unrelatedConstraintsUnchanged": true,
+    "grantsUnchanged": true,
+    "viewUnchanged": true,
+    "historyUnchanged": true
+  },
+  "unusedRollback": {
+    "restoredConstraintsAndGrants": true,
+    "legacyIdsAndRecordsPreserved": true
+  },
+  "scale": {
+    "fixtureOnly": true,
+    "nbaCatalog": 600,
+    "nflCatalog": 1000,
+    "nbaPool": 599,
+    "nflPool": 998,
+    "admissionWallMilliseconds": {
+      "nba": 380,
+      "nfl": 824
+    },
+    "includesPsqlOverhead": true,
+    "tables": [
+      {
+        "rows": 1600,
+        "table": "professional_player_roster_evidence",
+        "indexBytes": 360448,
+        "totalBytes": 1089536,
+        "averageTupleBytes": 418
+      },
+      {
+        "rows": 2,
+        "table": "slate_player_pool_snapshots",
+        "indexBytes": 32768,
+        "totalBytes": 49152,
+        "averageTupleBytes": 614
+      },
+      {
+        "rows": 1597,
+        "table": "slate_player_eligibility",
+        "indexBytes": 73728,
+        "totalBytes": 286720,
+        "averageTupleBytes": 100.6
+      }
+    ]
+  },
+  "preservation": {
+    "existingPlayersDraftsScoresNbaVersionsAndCurrentUnchanged": true,
+    "existingNflRowsAndIdsUnchanged": true,
+    "existingDraftRpcDefinitionsUnchanged": true,
+    "nbaAppendFingerprint": "9308a04b52fecc6993b7730490cf686a"
+  },
+  "storage": [
+    {
+      "rows": 17,
+      "table": "nfl_player_game_observation_versions",
+      "heapBytes": 8192,
+      "indexBytes": 98304,
+      "totalBytes": 114688,
+      "averageTupleBytes": 319.3
+    },
+    {
+      "rows": 25,
+      "table": "nfl_observation_append_receipts",
+      "heapBytes": 8192,
+      "indexBytes": 16384,
+      "totalBytes": 32768,
+      "averageTupleBytes": 127.9
+    },
+    {
+      "rows": 8,
+      "table": "nfl_observation_append_heads",
+      "heapBytes": 8192,
+      "indexBytes": 16384,
+      "totalBytes": 32768,
+      "averageTupleBytes": 79.6
+    },
+    {
+      "rows": 0,
+      "table": "professional_player_roster_evidence",
+      "heapBytes": 0,
+      "indexBytes": 32768,
+      "totalBytes": 40960,
+      "averageTupleBytes": null
+    },
+    {
+      "rows": 0,
+      "table": "slate_player_pool_snapshots",
+      "heapBytes": 0,
+      "indexBytes": 16384,
+      "totalBytes": 24576,
+      "averageTupleBytes": null
+    },
+    {
+      "rows": 0,
+      "table": "slate_player_eligibility",
+      "heapBytes": 0,
+      "indexBytes": 8192,
+      "totalBytes": 16384,
+      "averageTupleBytes": null
+    }
+  ],
+  "receiptVersion": 1,
+  "savedAt": "2026-11-04T14:57:24.052Z",
+  "sourceTest": "tests/factual-pipeline-phase2-postgres.test.cjs",
+  "testSummary": {
+    "total": 23,
+    "postgresScenarios": 22,
+    "repositoryContractScenarios": 1,
+    "passed": 23,
+    "failed": 0,
+    "skipped": 0
+  },
+  "limitations": [
+    "Fixture-only PostgreSQL 15.19; no sanitized production restoration",
+    "Production is known from the dated audit to use PostgreSQL 17.6; exact-schema rehearsal still required",
+    "Representative parent tables do not reproduce every production policy, trigger, dependency or load condition",
+    "Performance includes psql overhead and is not a production SLA",
+    "productionConnections/productionWrites describe this verified private-socket rehearsal"
+  ]
+}

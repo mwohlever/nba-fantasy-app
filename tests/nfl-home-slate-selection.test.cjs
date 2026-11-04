@@ -5,7 +5,21 @@ const ts = require('typescript');
 
 // Execute the actual route's selection block without auth, database or provider access.
 const source = fs.readFileSync('app/api/home-summary/route.ts', 'utf8');
-const block = source.slice(source.indexOf('    const normalizedSlates ='), source.indexOf('    const latestProjectionSeason ='));
+const parsed = ts.createSourceFile('home-summary.ts', source, ts.ScriptTarget.ES2022, true);
+const selectionStatements = [];
+function findSelection(node) {
+  if (ts.isVariableStatement(node)) {
+    for (const declaration of node.declarationList.declarations) {
+      if (ts.isIdentifier(declaration.name) && ['normalizedSlates', 'latestSlate'].includes(declaration.name.text)) {
+        selectionStatements.push({ name: declaration.name.text, start: node.getStart(parsed), end: node.end });
+      }
+    }
+  }
+  ts.forEachChild(node, findSelection);
+}
+findSelection(parsed);
+assert.deepEqual(selectionStatements.map(statement => statement.name), ['normalizedSlates', 'latestSlate']);
+const block = source.slice(selectionStatements[0].start, selectionStatements[1].end);
 assert.ok(block.includes('const latestSlate ='));
 const compiled = ts.transpileModule(block + '\nreturn latestSlate;', {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },

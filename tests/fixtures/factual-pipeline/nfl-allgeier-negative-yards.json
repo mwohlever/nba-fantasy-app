@@ -1,0 +1,506 @@
+{
+  "filters": [
+    {
+      "displayName": "League",
+      "name": "league",
+      "value": "nfl",
+      "options": [
+        {
+          "value": "college-football",
+          "displayValue": "NCAA - Football",
+          "shortDisplayName": "NCAAF"
+        },
+        {
+          "value": "nfl",
+          "displayValue": "National Football League",
+          "shortDisplayName": "NFL"
+        }
+      ]
+    },
+    {
+      "displayName": "Season",
+      "name": "season",
+      "value": "2026",
+      "options": [
+        {
+          "value": "2026",
+          "displayValue": "2026"
+        },
+        {
+          "value": "2025",
+          "displayValue": "2025"
+        },
+        {
+          "value": "2024",
+          "displayValue": "2024"
+        },
+        {
+          "value": "2023",
+          "displayValue": "2023"
+        },
+        {
+          "value": "2022",
+          "displayValue": "2022"
+        }
+      ]
+    }
+  ],
+  "names": [
+    "rushingAttempts",
+    "rushingYards",
+    "yardsPerRushAttempt",
+    "rushingTouchdowns",
+    "longRushing",
+    "receptions",
+    "receivingTargets",
+    "receivingYards",
+    "yardsPerReception",
+    "receivingTouchdowns",
+    "longReception",
+    "fumbles",
+    "fumblesLost",
+    "fumblesForced",
+    "kicksBlocked"
+  ],
+  "events": {
+    "401872958": {
+      "id": "401872958",
+      "week": 3,
+      "gameDate": "2026-09-27T20:05:00.000+00:00",
+      "gameResult": "L",
+      "homeTeamId": "25",
+      "awayTeamId": "22",
+      "team": {
+        "id": "22",
+        "uid": "s:20~l:28~t:22",
+        "abbreviation": "ARI",
+        "links": [
+          {
+            "language": "en",
+            "rel": [
+              "clubhouse",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/_/name/ari/arizona-cardinals",
+            "text": "Clubhouse",
+            "shortText": "Clubhouse",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "roster",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/roster/_/name/ari/arizona-cardinals",
+            "text": "Roster",
+            "shortText": "Roster",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "roster",
+              "sportscenter",
+              "app",
+              "team"
+            ],
+            "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:28~t:22&section=roster",
+            "text": "Roster",
+            "shortText": "Roster",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "stats",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/stats/_/name/ari/arizona-cardinals",
+            "text": "Statistics",
+            "shortText": "Statistics",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "stats",
+              "sportscenter",
+              "app",
+              "team"
+            ],
+            "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:28~t:22&section=stats",
+            "text": "Statistics",
+            "shortText": "Statistics",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "schedule",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/schedule/_/name/ari",
+            "text": "Schedule",
+            "shortText": "Schedule",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "schedule",
+              "sportscenter",
+              "app",
+              "team"
+            ],
+            "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:28~t:22&section=scores",
+            "text": "Schedule",
+            "shortText": "Schedule",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "photos",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/photos/_/name/ari",
+            "text": "photos",
+            "shortText": "photos",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "tickets",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.vividseats.com/arizona-cardinals-tickets--sports-nfl-football/performer/40?wsUser=717",
+            "text": "Tickets",
+            "shortText": "Tickets",
+            "isExternal": true,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "draftpicks",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/draft/teams/_/name/ari/arizona-cardinals",
+            "text": "Draft Picks",
+            "shortText": "Draft Picks",
+            "isExternal": false,
+            "isPremium": true
+          },
+          {
+            "language": "en",
+            "rel": [
+              "transactions",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/transactions/_/name/ari",
+            "text": "Transactions",
+            "shortText": "Transactions",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "injuries",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/injuries/_/name/ari",
+            "text": "Injuries",
+            "shortText": "Injuries",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "depthchart",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/depth/_/name/ari",
+            "text": "Depth Chart",
+            "shortText": "Depth Chart",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "depthchart",
+              "sportscenter",
+              "app",
+              "team"
+            ],
+            "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:28~t:22&section=depthchart",
+            "text": "Depth Chart",
+            "shortText": "Depth Chart",
+            "isExternal": false,
+            "isPremium": false
+          }
+        ],
+        "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png",
+        "isAllStar": false
+      },
+      "opponent": {
+        "id": "25",
+        "uid": "s:20~l:28~t:25",
+        "displayName": "San Francisco 49ers",
+        "abbreviation": "SF",
+        "links": [
+          {
+            "language": "en",
+            "rel": [
+              "clubhouse",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/_/name/sf/san-francisco-49ers",
+            "text": "Clubhouse",
+            "shortText": "Clubhouse",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "roster",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/roster/_/name/sf/san-francisco-49ers",
+            "text": "Roster",
+            "shortText": "Roster",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "roster",
+              "sportscenter",
+              "app",
+              "team"
+            ],
+            "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:28~t:25&section=roster",
+            "text": "Roster",
+            "shortText": "Roster",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "stats",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/stats/_/name/sf/san-francisco-49ers",
+            "text": "Statistics",
+            "shortText": "Statistics",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "stats",
+              "sportscenter",
+              "app",
+              "team"
+            ],
+            "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:28~t:25&section=stats",
+            "text": "Statistics",
+            "shortText": "Statistics",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "schedule",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/schedule/_/name/sf",
+            "text": "Schedule",
+            "shortText": "Schedule",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "schedule",
+              "sportscenter",
+              "app",
+              "team"
+            ],
+            "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:28~t:25&section=scores",
+            "text": "Schedule",
+            "shortText": "Schedule",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "photos",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/photos/_/name/sf",
+            "text": "photos",
+            "shortText": "photos",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "tickets",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.vividseats.com/san-francisco-49ers-tickets--sports-nfl-football/performer/758?wsUser=717",
+            "text": "Tickets",
+            "shortText": "Tickets",
+            "isExternal": true,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "draftpicks",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/draft/teams/_/name/sf/san-francisco-49ers",
+            "text": "Draft Picks",
+            "shortText": "Draft Picks",
+            "isExternal": false,
+            "isPremium": true
+          },
+          {
+            "language": "en",
+            "rel": [
+              "transactions",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/transactions/_/name/sf",
+            "text": "Transactions",
+            "shortText": "Transactions",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "injuries",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/injuries/_/name/sf",
+            "text": "Injuries",
+            "shortText": "Injuries",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "depthchart",
+              "desktop",
+              "team"
+            ],
+            "href": "https://www.espn.com/nfl/team/depth/_/name/sf",
+            "text": "Depth Chart",
+            "shortText": "Depth Chart",
+            "isExternal": false,
+            "isPremium": false
+          },
+          {
+            "language": "en",
+            "rel": [
+              "depthchart",
+              "sportscenter",
+              "app",
+              "team"
+            ],
+            "href": "sportscenter://x-callback-url/showClubhouse?uid=s:20~l:28~t:25&section=depthchart",
+            "text": "Depth Chart",
+            "shortText": "Depth Chart",
+            "isExternal": false,
+            "isPremium": false
+          }
+        ],
+        "logo": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png",
+        "logoDark": "https://a.espncdn.com/i/teamlogos/nfl/500-dark/sf.png"
+      }
+    }
+  },
+  "seasonTypes": [
+    {
+      "displayName": "2026 Regular Season",
+      "categories": [
+        {
+          "type": "event",
+          "displayName": "Regular Season Stats",
+          "splitType": "2",
+          "events": [
+            {
+              "eventId": "401872958",
+              "stats": [
+                "2",
+                "-1",
+                "-0.5",
+                "0",
+                "2",
+                "4",
+                "4",
+                "10",
+                "2.5",
+                "0",
+                "5",
+                "0",
+                "0",
+                "-",
+                "-"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "_evidence": {
+    "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4373626/gamelog?season=2026",
+    "fetchedAt": "2026-11-03T18:34:03.472Z",
+    "rawSha256": "0c23f10e8df2d2d5ba0d55cbdccbd4585ff35cf4cbb2c49a13fdaafe1e18737e",
+    "reduction": "Retained exact event 401872958 and its complete stat cells; no value edits"
+  }
+}

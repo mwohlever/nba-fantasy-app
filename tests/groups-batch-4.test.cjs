@@ -13,7 +13,11 @@ function load(file, mocks = {}, extra = '') {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText, { module: loaded, exports: loaded.exports, URL, Request, console,
     process: { env: { GOLF_CRON_SECRET: 'test-secret' } },
-    require(id) { if (id in mocks) return mocks[id]; throw Error(`Unexpected import: ${id}`); },
+    require(id) {
+      if (id in mocks) return mocks[id];
+      if (id === '@/lib/nfl/slateAvailability.server') return { loadNflSlateAvailability: () => assert.fail('Golf authorization must not enter NFL availability') };
+      throw Error(`Unexpected import: ${id}`);
+    },
   });
   return loaded.exports;
 }
