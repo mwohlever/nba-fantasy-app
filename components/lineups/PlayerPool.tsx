@@ -2145,7 +2145,7 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
                 researchMode ===
                   "season" ? (
                 <>
-                  {nflPositionStats(positionFilter).map(key => <option key={key} value={key}>{nflStatFields[key][1]}</option>)}
+                  {nflPositionStats(positionFilter).filter(key => !["nfl_int", "nfl_fumbles", "nfl_fumbles_lost"].includes(key)).map(key => <option key={key} value={key}>{nflStatFields[key][1]}</option>)}
                   <option value="name">Player Name</option>
                 </>
               ) : isNba &&
@@ -2176,9 +2176,6 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
                     Blocks
                   </option>
 
-                  <option value="season_to">
-                    Turnovers
-                  </option>
 
                   <option value="name">
                     Player Name

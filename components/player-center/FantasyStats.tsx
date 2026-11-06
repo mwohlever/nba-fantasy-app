@@ -26,6 +26,7 @@ export default function FantasyStats({ profile, position, basis }: { profile: Ce
     setSelected(trend.points[index].game.eventId);
   };
   return <section className="pc-fantasy pc-trend" aria-label="Fantasy performance trends">
+    {profile.windows.season.basis === "published_season" && <p className="pc-footnote" aria-label="Published season fantasy summary">Published season: {formatStat(profile.windows.season.totals.fantasy_points, 2)} FP · {formatStat(profile.windows.season.observedAverages.fantasy_points, 2)} FP/game · {profile.windows.season.expectedGames ?? "Unknown"} GP · {profile.windows.season.freshness}. {basis}.</p>}
     <div className="pc-trend-heading"><h3>Fantasy trends</h3><div className="pc-window" aria-label="Fantasy chart period">
       {([["last5", "Last 5"], ["last10", "Last 10"], ["season", "Season"]] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={period === value} onClick={() => { setPeriod(value); setSelected(null); }}>{label}</button>)}
     </div></div>

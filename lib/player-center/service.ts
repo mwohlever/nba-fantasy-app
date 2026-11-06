@@ -1,12 +1,13 @@
 import { BoundedReadCache, ReadBudget } from "./cache";
 import { comparisonStats, compareHistories } from "./comparison";
 import { presentProfile, type PresentableHistory } from "./presentation";
+import { seasonReadFacts } from "./seasonFacts";
 import { CenterEspnReader } from "./espn";
 import { cacheIsStale } from "./durableCache";
 import type { CenterCatalog, CenterRepository } from "./repository.server";
 import { type CenterHistory, type CenterPhase, type CenterScoringContext, type CenterSport, type CenterWindow } from "./types";
 
-/** Read-only orchestration with injectable reads: provider profiles and stored-only draft comparisons. */
+/** Read-only orchestration with injectable reads: provider profiles, bulk season comparisons and stored recent windows. */
 export class PlayerCenterService {
   // Public raw facts only. Scores are always recalculated for the authorized Group/slate.
   private profileFacts = new Map<string, { history: PresentableHistory; at: number }>();
@@ -57,17 +58,56 @@ export class PlayerCenterService {
     const catalog = await this.catalog(input.sport), player = catalog.players.find(row => row.playerId === input.playerId);
     if (!player) return null;
     const snapshot = input.phase === "regular" ? await this.repository.profileSnapshot?.(player, input.season) : null;
-    if (snapshot?.coverage.freshness === "fresh") return presentProfile(this.remember(snapshot), input.scoring, snapshot.coverage.cache!.asOf);
-    const history = await this.espn.history(player, input.season, input.phase);
-    if (snapshot && history.coverage.freshness !== "fresh") return presentProfile(this.remember(snapshot), input.scoring, snapshot.coverage.cache!.asOf);
+    let snapshotProviderRequests = 0;
+    if (snapshot?.coverage.freshness === "fresh") {
+      const budget = new ReadBudget(1, this.now() + 5000);
+      const read = player.identity === "resolved" && player.providerPlayerId && player.position !== "D/ST" ? await this.espn.season?.(input.sport, player.providerPlayerId, input.season, input.phase, budget) : null;
+      snapshotProviderRequests = budget.used;
+      snapshot.providerRequests = budget.used;
+      if (read) snapshot.seasonFacts = seasonReadFacts(read);
+      if (!snapshot.seasonFacts || snapshot.seasonFacts.gamesPlayed === snapshot.games.filter(g => g.status === "final" && g.participation === "played").length) return presentProfile(this.remember(snapshot), input.scoring, snapshot.seasonFacts ? new Date(this.now()).toISOString() : snapshot.coverage.cache!.asOf);
+    }
+    const [history, storedHistory] = await Promise.all([
+      this.espn.history(player, input.season, input.phase),
+      input.phase === "regular" ? this.repository.profileHistory?.(player, input.season).catch(() => null) : null,
+    ]);
+    history.providerRequests += snapshotProviderRequests;
+    // Retain historical facts; current provider facts take precedence for the same
+    // event only when they are completed, otherwise keep the validated stored row.
+    const older = storedHistory?.games.length ? storedHistory : snapshot ?? storedHistory;
+    if (older && older.player.providerPlayerId === player.providerPlayerId) {
+      const games = new Map([snapshot, storedHistory].flatMap(source => source && source.player.providerPlayerId === player.providerPlayerId ? source.games : [])
+        .filter(game => game.providerPlayerId === player.providerPlayerId && game.season === input.season && game.phase === input.phase)
+        .map(game => [game.eventId, game]));
+      for (const game of history.games) {
+        const previous = games.get(game.eventId);
+        games.set(game.eventId, previous?.status === "final" && game.status === "unknown" && !game.issues.length ? previous : game);
+      }
+      history.games = [...games.values()];
+      if (history.coverage.kind === "unavailable" && older.games.length) {
+        history.source = "stored";
+        history.coverage = { ...older.coverage, recentVerified: false,
+          expectedGames: history.seasonFacts?.gamesPlayed ?? older.coverage.expectedGames,
+          issues: [...new Set([...older.coverage.issues, ...history.coverage.issues])] };
+      }
+    }
+    if (snapshot && history.coverage.freshness !== "fresh") {
+      snapshot.seasonFacts = history.seasonFacts;
+      snapshot.providerRequests = history.providerRequests;
+      return presentProfile(this.remember(snapshot), input.scoring, new Date(this.now()).toISOString());
+    }
     const asOf = new Date(this.now()).toISOString();
     if (input.phase === "regular" && history.coverage.freshness === "fresh") this.remember(history);
     return presentProfile(history, input.scoring, asOf);
   }
-  async comparisons(input: { sport: CenterSport; season: number; window: CenterWindow; metric: string; position?: string; ascending: boolean; scoring: CenterScoringContext; playerIds?: number[] }) {
+  async comparisons(input: { sport: CenterSport; season: number; window: CenterWindow; metric: string; position?: string; ascending: boolean; scoring: CenterScoringContext; playerIds?: number[]; eligiblePlayerIds?: number[] }) {
     const allowed = input.sport === "nba" ? comparisonStats.nba : Object.entries(comparisonStats).filter(([key]) => key !== "nba").flatMap(([, stats]) => [...stats]);
     if (!(allowed as readonly string[]).includes(input.metric)) throw new Error("Unsupported comparison metric");
-    const catalog = await this.catalog(input.sport), stored = await this.stored(input.sport, input.season, catalog);
+    const catalog = await this.catalog(input.sport);
+    const [stored, bulk] = await Promise.all([
+      this.stored(input.sport, input.season, catalog),
+      input.window === "season" && input.eligiblePlayerIds?.length !== 0 ? this.espn.bulkSeason?.(input.sport, input.season) : null,
+    ]);
     if (input.playerIds && (input.playerIds.length > 3 || input.playerIds.some(id => !Number.isSafeInteger(id) || id <= 0))) throw new Error("Invalid profile batch");
     // Explicit, bounded research reads; never fan out across the full catalog.
     let providerRequests = 0;
@@ -75,12 +115,26 @@ export class PlayerCenterService {
       try { const profile = await this.profile({ ...input, playerId, phase: "regular" }); providerRequests += profile?.providerRequests ?? 0; } catch { /* Existing stored facts remain available. */ }
     }));
     let profilesUsed = 0;
-    const histories = stored.histories.map(history => {
+    const providerIds = new Map<string, number>();
+    for (const player of catalog.players) if (player.providerPlayerId) providerIds.set(player.providerPlayerId, (providerIds.get(player.providerPlayerId) ?? 0) + 1);
+    const seasonByProvider = new Map(bulk?.value?.map(facts => [facts.providerPlayerId, facts]) ?? []);
+    const histories = stored.histories.filter(history => !input.eligiblePlayerIds || input.eligiblePlayerIds.includes(history.player.playerId)).map(original => {
+      const history = structuredClone(original), providerId = history.player.providerPlayerId;
+      if (providerId && providerIds.get(providerId)! > 1) {
+        history.player = { ...history.player, identity: "conflict", providerPlayerId: null };
+        history.games = []; history.seasonFacts = null;
+        history.coverage.issues.push("conflicting_provider_identity");
+        return history;
+      }
+      const season = providerId && providerIds.get(providerId) === 1 && history.player.identity === "resolved" ? seasonByProvider.get(providerId) : null;
+      if (season && bulk) history.seasonFacts = { ...structuredClone(season), freshness: bulk.freshness, issues: [...season.issues, ...(bulk.error ? [bulk.error] : [])] };
       const facts = this.profileFacts.get(`${input.sport}:${input.season}:${history.player.playerId}`);
       if (!facts || this.now() - facts.at > 15 * 60_000 || facts.history.player.providerPlayerId !== history.player.providerPlayerId || facts.history.player.nativePlayerId !== history.player.nativePlayerId || history.player.identity !== "resolved") return history;
       profilesUsed++;
-      return { ...structuredClone(facts.history), player: history.player };
+      return { ...structuredClone(facts.history), player: history.player, seasonFacts: facts.history.seasonFacts?.freshness === "fresh" ? facts.history.seasonFacts : history.seasonFacts ?? facts.history.seasonFacts };
     });
-    return { ...compareHistories(input, histories, stored.asOf, stored.readAt), source: profilesUsed ? "stored_and_provider" as const : "stored" as const, providerRequests, profilesUsed };
+    const asOf = histories.some(history => history.seasonFacts) ? new Date(this.now()).toISOString() : stored.asOf;
+    return { ...compareHistories(input, histories, asOf, stored.readAt), source: bulk?.value ? "bulk_provider" as const : profilesUsed ? "stored_and_provider" as const : "stored" as const,
+      bulkFetchedAt: bulk?.fetchedAt ?? null, bulkFreshness: bulk?.freshness ?? null, providerRequests, profilesUsed };
   }
 }

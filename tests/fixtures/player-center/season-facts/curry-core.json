@@ -1,0 +1,479 @@
+{
+  "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/types/2/athletes/3975/statistics/0?lang=en&region=us",
+  "season": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027?lang=en&region=us"
+  },
+  "athlete": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/athletes/3975?lang=en&region=us"
+  },
+  "splits": {
+    "id": "0",
+    "name": "All Splits",
+    "abbreviation": "Total",
+    "type": "total",
+    "categories": [
+      {
+        "name": "defensive",
+        "displayName": "Defensive",
+        "shortDisplayName": "Defensive",
+        "abbreviation": "def",
+        "summary": "",
+        "stats": [
+          {
+            "name": "blocks",
+            "value": 1
+          },
+          {
+            "name": "defensiveRebounds",
+            "value": 23
+          },
+          {
+            "name": "steals",
+            "value": 9
+          },
+          {
+            "name": "defReboundRate",
+            "value": 0
+          },
+          {
+            "name": "avgDefensiveRebounds",
+            "value": 3.2857144
+          },
+          {
+            "name": "avgBlocks",
+            "value": 0.14285715
+          },
+          {
+            "name": "avgSteals",
+            "value": 1.2857143
+          },
+          {
+            "name": "avg48DefensiveRebounds",
+            "value": 5.492537
+          },
+          {
+            "name": "avg48Blocks",
+            "value": 0.23880596
+          },
+          {
+            "name": "avg48Steals",
+            "value": 2.1492538
+          }
+        ]
+      },
+      {
+        "name": "general",
+        "displayName": "General",
+        "shortDisplayName": "General",
+        "abbreviation": "gen",
+        "summary": "",
+        "stats": [
+          {
+            "name": "disqualifications",
+            "value": 0
+          },
+          {
+            "name": "flagrantFouls",
+            "value": 0
+          },
+          {
+            "name": "fouls",
+            "value": 10
+          },
+          {
+            "name": "PER",
+            "value": 34.925
+          },
+          {
+            "name": "reboundRate",
+            "value": 0
+          },
+          {
+            "name": "ejections",
+            "value": 0
+          },
+          {
+            "name": "technicalFouls",
+            "value": 0
+          },
+          {
+            "name": "rebounds",
+            "value": 26
+          },
+          {
+            "name": "VORP",
+            "value": 0
+          },
+          {
+            "name": "minutes",
+            "value": 201
+          },
+          {
+            "name": "avgMinutes",
+            "value": 28.714285
+          },
+          {
+            "name": "NBARating",
+            "value": 45.100002
+          },
+          {
+            "name": "plusMinus",
+            "value": 48
+          },
+          {
+            "name": "avgRebounds",
+            "value": 3.7142856
+          },
+          {
+            "name": "avgFouls",
+            "value": 1.4285715
+          },
+          {
+            "name": "avgFlagrantFouls",
+            "value": 0
+          },
+          {
+            "name": "avgTechnicalFouls",
+            "value": 0
+          },
+          {
+            "name": "avgEjections",
+            "value": 0
+          },
+          {
+            "name": "avgDisqualifications",
+            "value": 0
+          },
+          {
+            "name": "assistTurnoverRatio",
+            "value": 2.5833333
+          },
+          {
+            "name": "stealFoulRatio",
+            "value": 0.9
+          },
+          {
+            "name": "blockFoulRatio",
+            "value": 0.1
+          },
+          {
+            "name": "avgTeamRebounds",
+            "value": 0
+          },
+          {
+            "name": "totalRebounds",
+            "value": 26
+          },
+          {
+            "name": "totalTechnicalFouls",
+            "value": 0
+          },
+          {
+            "name": "teamAssistTurnoverRatio",
+            "value": 0
+          },
+          {
+            "name": "stealTurnoverRatio",
+            "value": 0.75
+          },
+          {
+            "name": "avg48Rebounds",
+            "value": 6.208956
+          },
+          {
+            "name": "avg48Fouls",
+            "value": 2.3880596
+          },
+          {
+            "name": "avg48FlagrantFouls",
+            "value": 0
+          },
+          {
+            "name": "avg48TechnicalFouls",
+            "value": 0
+          },
+          {
+            "name": "avg48Ejections",
+            "value": 0
+          },
+          {
+            "name": "avg48Disqualifications",
+            "value": 0
+          },
+          {
+            "name": "r40",
+            "value": 5.17412935323383
+          },
+          {
+            "name": "gamesPlayed",
+            "value": 7
+          },
+          {
+            "name": "gamesStarted",
+            "value": 7
+          },
+          {
+            "name": "doubleDouble",
+            "value": 0
+          },
+          {
+            "name": "tripleDouble",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "name": "offensive",
+        "displayName": "Offensive",
+        "shortDisplayName": "Offensive",
+        "abbreviation": "off",
+        "summary": "",
+        "stats": [
+          {
+            "name": "assists",
+            "value": 31
+          },
+          {
+            "name": "effectiveFGPct",
+            "value": 59.766
+          },
+          {
+            "name": "fieldGoals",
+            "value": 0.46875
+          },
+          {
+            "name": "fieldGoalsAttempted",
+            "value": 128
+          },
+          {
+            "name": "fieldGoalsMade",
+            "value": 60
+          },
+          {
+            "name": "fieldGoalPct",
+            "value": 46.875
+          },
+          {
+            "name": "freeThrows",
+            "value": 0.982456
+          },
+          {
+            "name": "freeThrowPct",
+            "value": 98.24600219726562
+          },
+          {
+            "name": "freeThrowsAttempted",
+            "value": 57
+          },
+          {
+            "name": "freeThrowsMade",
+            "value": 56
+          },
+          {
+            "name": "offensiveRebounds",
+            "value": 3
+          },
+          {
+            "name": "points",
+            "value": 209
+          },
+          {
+            "name": "turnovers",
+            "value": 12
+          },
+          {
+            "name": "threePointPct",
+            "value": 44
+          },
+          {
+            "name": "threePointFieldGoalsAttempted",
+            "value": 75
+          },
+          {
+            "name": "threePointFieldGoalsMade",
+            "value": 33
+          },
+          {
+            "name": "trueShootingPct",
+            "value": 68.265
+          },
+          {
+            "name": "totalTurnovers",
+            "value": 12
+          },
+          {
+            "name": "assistRatio",
+            "value": 15.81
+          },
+          {
+            "name": "pointsInPaint",
+            "value": 0
+          },
+          {
+            "name": "offReboundRate",
+            "value": 0
+          },
+          {
+            "name": "turnoverRatio",
+            "value": 6.12
+          },
+          {
+            "name": "brickIndex",
+            "value": 0
+          },
+          {
+            "name": "usageRate",
+            "value": 0
+          },
+          {
+            "name": "avgFieldGoalsMade",
+            "value": 8.571428
+          },
+          {
+            "name": "avgFieldGoalsAttempted",
+            "value": 18.285715
+          },
+          {
+            "name": "avgThreePointFieldGoalsMade",
+            "value": 4.714286
+          },
+          {
+            "name": "avgThreePointFieldGoalsAttempted",
+            "value": 10.714286
+          },
+          {
+            "name": "avgFreeThrowsMade",
+            "value": 8
+          },
+          {
+            "name": "avgFreeThrowsAttempted",
+            "value": 8.142858
+          },
+          {
+            "name": "avgPoints",
+            "value": 29.857143
+          },
+          {
+            "name": "avgOffensiveRebounds",
+            "value": 0.42857143
+          },
+          {
+            "name": "avgAssists",
+            "value": 4.428571
+          },
+          {
+            "name": "avgTurnovers",
+            "value": 1.7142857
+          },
+          {
+            "name": "offensiveReboundPct",
+            "value": 0.04411765
+          },
+          {
+            "name": "estimatedPossessions",
+            "value": 159.8
+          },
+          {
+            "name": "avgEstimatedPossessions",
+            "value": 22.828571
+          },
+          {
+            "name": "pointsPerEstimatedPossessions",
+            "value": 1.3078848
+          },
+          {
+            "name": "avgTeamTurnovers",
+            "value": 0
+          },
+          {
+            "name": "avgTotalTurnovers",
+            "value": 1.7142857313156128
+          },
+          {
+            "name": "threePointFieldGoalPct",
+            "value": 43.99999976158142
+          },
+          {
+            "name": "twoPointFieldGoalsMade",
+            "value": 27
+          },
+          {
+            "name": "twoPointFieldGoalsAttempted",
+            "value": 53
+          },
+          {
+            "name": "avgTwoPointFieldGoalsMade",
+            "value": 3.857143
+          },
+          {
+            "name": "avgTwoPointFieldGoalsAttempted",
+            "value": 7.571429
+          },
+          {
+            "name": "twoPointFieldGoalPct",
+            "value": 50.94339847564697
+          },
+          {
+            "name": "shootingEfficiency",
+            "value": 0.59765625
+          },
+          {
+            "name": "scoringEfficiency",
+            "value": 1.6328125
+          },
+          {
+            "name": "avg48FieldGoalsMade",
+            "value": 14.328358
+          },
+          {
+            "name": "avg48FieldGoalsAttempted",
+            "value": 30.567163
+          },
+          {
+            "name": "avg48ThreePointFieldGoalsMade",
+            "value": 7.880597
+          },
+          {
+            "name": "avg48ThreePointFieldGoalsAttempted",
+            "value": 17.910446
+          },
+          {
+            "name": "avg48FreeThrowsMade",
+            "value": 13.373134
+          },
+          {
+            "name": "avg48FreeThrowsAttempted",
+            "value": 13.61194
+          },
+          {
+            "name": "avg48Points",
+            "value": 49.910446
+          },
+          {
+            "name": "avg48OffensiveRebounds",
+            "value": 0.7164179
+          },
+          {
+            "name": "avg48Assists",
+            "value": 7.4029846
+          },
+          {
+            "name": "avg48Turnovers",
+            "value": 2.8656716
+          },
+          {
+            "name": "p40",
+            "value": 41.592039800995025
+          },
+          {
+            "name": "a40",
+            "value": 6.169154228855721
+          }
+        ]
+      }
+    ]
+  },
+  "seasonType": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/seasons/2027/types/2?lang=en&region=us"
+  }
+}

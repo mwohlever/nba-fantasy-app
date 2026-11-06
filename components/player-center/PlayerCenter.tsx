@@ -55,7 +55,7 @@ function PlayerCenterBody({ identity, sport, season: initialSeason, slateId, loa
   const years = [...new Set([current, current - 1, current - 2, initialSeason ?? current])].sort((a, b) => b - a);
   const coverage = data?.coverage;
   const nativeId = data?.player.nativePlayerId ? Number(data.player.nativePlayerId) : null;
-  const seasonSummary = data?.windows.season, lastFive = data ? lastFiveFantasySummary(data) : null;
+  const seasonSummary = data?.windows.season, published = seasonSummary?.basis === "published_season", lastFive = data ? lastFiveFantasySummary(data) : null;
   const metrics = sport === "nba" ? ["points", "rebounds", "assists", "minutes"] : position === "K" ? ["field_goals_made", "field_goals_attempted", "extra_points_made", "kicking_points"]
     : position === "D/ST" ? ["sacks", "interceptions", "pointsAllowed", "yardsAllowed"] : position === "QB" ? ["passing_yards", "passing_tds", "rushing_yards", "fumbles_lost"] : ["receptions", "receiving_yards", "rushing_yards", "receiving_tds"];
   const reason = fixture && coverage?.issues.includes("season_not_in_fixture_capture") ? "This season was not included in the fixture capture. Choose a captured season to inspect its verified statistics."
@@ -79,7 +79,7 @@ function PlayerCenterBody({ identity, sport, season: initialSeason, slateId, loa
     </header>
     <div className="pc-summary" aria-label="Actual performance summary">
       <div><span>Last game FP</span><strong>{latest && data ? formatStat(data.gameFantasyPoints[latest.eventId]) : "—"}</strong><small>{latest ? `${date(latest.gameAt)} ${venueLabel(latest)} ${latest.opponent ?? "Opponent unavailable"}` : "Completed games only"}</small></div>
-      <div><span>Season FP/game</span><strong>{data ? formatStat(average(data, "season", "fantasy_points")) : "—"}</strong><small>{seasonSummary ? `${seasonSummary.metricSamples.fantasy_points ?? 0} scored / ${seasonSummary.sampleSize} observed · ${seasonSummary.expectedGames == null ? "missing-game count unknown" : `${Math.max(0, seasonSummary.expectedGames - seasonSummary.availableGames)} missing games`} · ${position === "K" ? "Scoring not configured" : seasonSummary.metricComparable.fantasy_points ? "verified average" : "Observed average · incomplete coverage"}` : "Actual fantasy scoring"}</small></div>
+      <div><span>Season FP/game</span><strong>{data ? formatStat(average(data, "season", "fantasy_points")) : "—"}</strong><small>{seasonSummary ? published ? `${seasonSummary.expectedGames ?? "Unknown"} provider GP · ${seasonSummary.freshness === "stale" ? "Stale published totals" : "Published season totals"}${seasonSummary.totals.fantasy_points === null ? " · scoring inputs incomplete" : seasonSummary.metricComparable.fantasy_points ? " · verified average" : " · unverified average"}` : `${seasonSummary.metricSamples.fantasy_points ?? 0} scored / ${seasonSummary.sampleSize} observed · ${seasonSummary.expectedGames == null ? "missing-game count unknown" : `${Math.max(0, seasonSummary.expectedGames - seasonSummary.availableGames)} missing games`} · ${position === "K" ? "Scoring not configured" : seasonSummary.metricComparable.fantasy_points ? "verified average" : "Observed average · incomplete coverage"}` : "Actual fantasy scoring"}</small></div>
       <div><span>Last 5 FP/game</span><strong>{formatStat(lastFive?.average)}</strong><small>{position === "K" ? "Scoring not configured" : lastFive?.scoredGames ? `${lastFive.scoredGames} scored games${lastFive.unavailable ? ` · ${lastFive.unavailable} unavailable` : lastFive.scoredGames < 5 ? " · Short sample" : lastFive.incomplete ? " · Observed only" : ""}` : "No actual scores"}</small></div>
     </div>
     <div className="pc-tabs" role="tablist" aria-label="Player statistics sections">
@@ -94,6 +94,7 @@ function PlayerCenterBody({ identity, sport, season: initialSeason, slateId, loa
         <div className="pc-source"><span className={`pc-dot pc-dot-${coverage?.freshness}`} />{fixture ? "Captured ESPN fixture" : "ESPN"} · {seasonLabel(sport, season)} · {coverage?.freshness === "fresh" ? "Fetched" : coverage?.freshness === "stale" ? "Stale data · fetched" : "Source unavailable"} {coverage?.fetchedAt ? new Date(coverage.fetchedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "time unknown"}
           <span>· {completed.length}{coverage?.expectedGames != null ? ` / ${coverage.expectedGames}` : ""} games observed · {coverage?.expectedGames == null ? "Season GP unverified" : coverage.kind === "team_schedule" ? "Final team games" : "Independent provider GP"}</span>
         </div>
+        {data.seasonFacts && <p className="pc-footnote">Season source: <a href={data.seasonFacts.source} target="_blank" rel="noreferrer">ESPN published totals</a> · {data.seasonFacts.freshness} · {new Date(data.seasonFacts.fetchedAt).toLocaleString("en-US")}. Game-log coverage is independent.</p>}
         {(coverage?.freshness !== "fresh" || !data.windows.season.seasonVerified || data.coverage.issues.length > 0) && <CoverageNotice summary={coverage?.freshness === "unavailable" ? "Statistics unavailable" : coverage?.freshness === "stale" ? "Statistics stale" : !data.windows.season.seasonVerified ? "Season coverage unverified" : "Some game statistics incomplete"}>
           <p>Only verified values are shown. Observed averages use available values only; incomplete coverage is not a verified full-season average. Missing statistics stay unavailable.</p>
           <p>Last 5 FP/game uses the latest five completed appearances. Unavailable scores are excluded and flagged; this observed average does not certify a complete window.</p>
@@ -102,7 +103,7 @@ function PlayerCenterBody({ identity, sport, season: initialSeason, slateId, loa
         {tab === "log" && <>
           <WindowControl value={window} onChange={setWindow} />
           <p className="pc-footnote" aria-label="Summary sample and coverage" aria-live="polite">
-            {windowLabel[window]} averages · {summary?.sampleSize ?? 0} observed games · {metrics.every(metric => summary?.metricComparable[metric]) ? "Verified window" : "Observed values · partial coverage"}.
+            {windowLabel[window]} averages · {summary?.sampleSize ?? 0} {summary?.basis === "published_season" ? "provider GP · published season totals" : "observed games"} · {metrics.every(metric => summary?.metricComparable[metric]) ? "Verified window" : "Observed values · partial coverage"}.
             {new Set(metrics.map(metric => summary?.metricSamples[metric] ?? 0)).size === 1
               ? ` Sample: n=${summary?.metricSamples[metrics[0]] ?? 0} per statistic.`
               : ` Available samples: ${metrics.map(metric => `${statLabels[metric]} n=${summary?.metricSamples[metric] ?? 0}`).join("; ")}.`}
@@ -119,7 +120,7 @@ function PlayerCenterBody({ identity, sport, season: initialSeason, slateId, loa
           {data.byeWeeks && <p className="pc-footnote">Verified bye {data.byeWeeks.length > 1 ? "weeks" : "week"}: {data.byeWeeks.join(", ")}. Bye weeks have no player-game fantasy score.</p>}
           <p className="pc-footnote">DNP appears only with explicit provider evidence. Missing appearances may be inactive, unavailable, or absent provider data.</p>
         </>}
-        {tab === "season" && <SeasonStats stats={data.seasonStats} sport={sport} position={position} season={season} />}
+        {tab === "season" && <SeasonStats stats={data.seasonStats} facts={data.seasonFacts} sport={sport} position={position} season={season} />}
         {tab === "fantasy" && <FantasyStats key={`${scope}:${sport}:${identity.id}:${season}`} profile={data} position={position} basis={basis} />}
       </> : null}
     </div>

@@ -187,7 +187,7 @@ test('single-profile reads cache public raw stats, then score separately for eac
   const input = { sport: 'nba', playerId: 1, season: 2027, phase: 'regular', scoring: rules('nba') };
   const a = await service.profile(input);
   const b = await service.profile({ ...input, scoring: { sport: 'nba', basis: 'slate_snapshot', settings: { sport: 'nba', scoring: { points: 2 } } } });
-  assert.equal(requests, 2);
+  assert.equal(requests, 3); // Log, display statistics and independently cached published totals.
   const id = a.games[0].eventId;
   assert.equal(b.gameFantasyPoints[id] - a.gameFantasyPoints[id], a.games[0].stats.points);
 });
@@ -243,11 +243,12 @@ test('a long NFL log uses at most eight cold provider reads and reports incomple
     return new Response(JSON.stringify(body));
   }, () => now);
   const first = await reader.history(player('nfl'), 2026, 'regular');
-  assert.equal(reads, 8); assert.equal(first.providerRequests, 8); assert.ok(first.coverage.issues.includes('summary_coverage_budget_limited'));
+  assert.equal(reads, 8); assert.equal(first.providerRequests, 8); assert.ok(first.coverage.issues.includes('recent_enrichment_limited_to_five'));
   assert.equal(summarizeHistory(first, 'last5', rules('nfl'), fetchedAt).comparable, true);
   assert.equal(summarizeHistory(first, 'season', rules('nfl'), fetchedAt).comparable, false);
   const second = await reader.history(player('nfl'), 2026, 'regular');
-  assert.equal(second.providerRequests, 4); assert.equal(summarizeHistory(second, 'season', rules('nfl'), fetchedAt).comparable, true);
+  assert.equal(second.providerRequests, 0); assert.equal(summarizeHistory(second, 'season', rules('nfl'), fetchedAt).comparable, false);
+  assert.equal(second.games.length, 10, 'historical rows are retained without enriching the rest on repeat opens');
 });
 test('postponed/cancelled statuses cannot masquerade as final even if provider completed is true', () => {
   const p = fixture('nfl-summary'); p.header.competitions[0].status.type.name = 'STATUS_POSTPONED';
@@ -316,7 +317,7 @@ test('an explicit log/summary conflict withholds scoring instead of silently pre
   assert.equal(result.stats.fumbles_lost, null); assert.ok(result.issues.includes('conflicting_log_summary_stat:fumbles_lost'));
   assert.equal(actualFantasyPoints(result, 'QB', rules('nfl')), null);
 });
-test('exactly six available NFL summaries at the eight-read cap are complete, not budget-limited', async () => {
+test('six NFL appearances retain history while enrichment stops at five', async () => {
   const log = fixture('nfl-qb-log'), baseRow = log.seasonTypes[0].categories[0].events[0], baseEvent = log.events[baseRow.eventId];
   log.events = {}; log.seasonTypes = [{ displayName: '2026 Regular Season', categories: [{ type: 'event', splitType: '2', events: [] }] }];
   for (let i = 0; i < 6; i++) { const id = String(6000 + i); log.events[id] = { ...baseEvent, id, gameDate: `2026-10-${i + 10}T20:00:00Z` }; log.seasonTypes[0].categories[0].events.push({ ...baseRow, eventId: id }); }
@@ -329,7 +330,8 @@ test('exactly six available NFL summaries at the eight-read cap are complete, no
   }, () => now);
   const result = await reader.history(player('nfl'), 2026, 'regular');
   assert.equal(result.providerRequests, 8); assert.ok(!result.coverage.issues.includes('summary_coverage_budget_limited'));
-  assert.ok(result.games.every(game => game.sources.some(source => source.includes('/summary?'))));
+  assert.equal(result.games.filter(game => game.sources.some(source => source.includes('/summary?'))).length,5);
+  assert.equal(result.games.length,6);
 });
 
  test('Player Center owns exact NBA phase classification without changing the ingestion parser', () => {

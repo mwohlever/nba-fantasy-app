@@ -62,7 +62,7 @@ export default function ObservedComparisonRows({ sport, season, window, slateId,
   const stale = players.some(player => byId.get(player.id)?.coverage.freshness === "stale");
   return <>
     <p className="px-3 py-2 text-xs text-slate-400" role={error ? "alert" : "status"}>
-      {error || (loading ? "Loading selected-window statistics…" : `Actual observed game averages · ${data?.scoringBasis === "slate_snapshot" ? "Frozen slate scoring" : data?.scoringBasis === "legacy_defaults" ? "Legacy default scoring" : "Current Group scoring"}. Missing scores remain unavailable; partial samples are qualified. ✓ marks the best available value.`)}
+      {error || (loading ? "Loading selected-window statistics…" : `${data?.players.some(row => row.summary.basis === "published_season") ? "Published season totals / provider GP" : "Actual observed game averages"} · ${data?.scoringBasis === "slate_snapshot" ? "Frozen slate scoring" : data?.scoringBasis === "legacy_defaults" ? "Legacy default scoring" : "Current Group scoring"}. Missing scores remain unavailable; partial samples are qualified. ✓ marks the best available value.`)}
       {stale && " Source data is stale."}
     </p>
     {metricsFor(sport, players).map(metric => {

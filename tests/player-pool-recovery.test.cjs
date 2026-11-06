@@ -142,7 +142,8 @@ for (const sport of ['nba', 'nfl']) for (const enabled of [true, false, undefine
       const center = find(s.render(), Center), h = host(Center), browser = find(h.render(center.props), Browser), b = host(Browser);
       const tree = b.render(browser.props), select = nodes(tree).find(n => n.props?.['aria-label'] === 'Stat sort');
       const keys = nodes(select).filter(n => n.type === 'option').map(n => n.props.value);
-      for (const metric of ['fantasy_points', 'points', 'rebounds', 'assists', 'steals', 'blocks', 'turnovers']) assert.ok(keys.includes(metric));
+      for (const metric of ['fantasy_points', 'points', 'rebounds', 'assists', 'steals', 'blocks']) assert.ok(keys.includes(metric));
+      assert.ok(!keys.includes('turnovers'));
       assert.equal(browser.props.season, 2027); assert.deepEqual(s.actions, []);
       b.unmount(); h.unmount();
       nodes(s.render()).find(n => n.props?.['aria-label'] === 'Game Stats source').props.onChange({ target: { value: 'averages' } }); s.h.render(s.props, true);
@@ -160,7 +161,8 @@ for (const sport of ['nba', 'nfl']) for (const enabled of [true, false, undefine
       assert.match(content(s.render()), /2025 regular-season stats · Totals/);
       const first = cards(s.render())[0]; assert.match(content(first), /300/); assert.doesNotMatch(content(first), /999/);
     } else {
-      for (const metric of ['season_fp', 'season_pts', 'season_reb', 'season_ast', 'season_stl', 'season_blk', 'season_to']) assert.ok(keys.includes(metric));
+      for (const metric of ['season_fp', 'season_pts', 'season_reb', 'season_ast', 'season_stl', 'season_blk']) assert.ok(keys.includes(metric));
+      assert.ok(!keys.includes('season_to'));
       select.props.onChange({ target: { value: 'season_pts' } }); assert.equal(cards(s.render())[0].props['aria-label'], 'Select Beta');
     }
     nodes(s.render()).find(n => n.props?.['aria-label'] === 'Info about Alpha').props.onClick();

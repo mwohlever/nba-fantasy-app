@@ -1,0 +1,1411 @@
+{
+  "league": {
+    "id": "28",
+    "uid": "s:20~l:28",
+    "name": "National Football League",
+    "abbreviation": "NFL",
+    "slug": "nfl",
+    "shortName": "NFL"
+  },
+  "requestedSeason": {
+    "year": 2026,
+    "displayName": "2026",
+    "startDate": "2026-08-06T07:00:00.000+00:00",
+    "endDate": "2027-02-16T07:59:00.000+00:00",
+    "type": {
+      "id": "2",
+      "type": 2,
+      "name": "Regular Season",
+      "startDate": "2026-09-06T07:00:00.000+00:00",
+      "endDate": "2027-01-13T07:59:00.000+00:00",
+      "week": {
+        "number": 9,
+        "startDate": "2026-11-04T08:00:00.000+00:00",
+        "endDate": "2026-11-11T07:59:00.000+00:00",
+        "text": "Week 9"
+      }
+    }
+  },
+  "categories": [
+    {
+      "name": "general",
+      "displayName": "Own General",
+      "labels": [
+        "GP",
+        "FF",
+        "FR",
+        "FTD"
+      ],
+      "names": [
+        "gamesPlayed",
+        "fumblesForced",
+        "fumblesRecovered",
+        "fumblesTouchdowns"
+      ],
+      "displayNames": [
+        "Games Played",
+        "Forced Fumbles",
+        "Fumbles Recovered",
+        "Fumbles Touchdowns"
+      ],
+      "descriptions": [
+        "Games Played",
+        "The total number of forced fumbles.",
+        "The number of fumbles recovered.",
+        "The number of times a fumbles is recovered and returned for a touchdown."
+      ]
+    },
+    {
+      "name": "passing",
+      "displayName": "Own Passing",
+      "labels": [
+        "CMP",
+        "ATT",
+        "CMP%",
+        "YDS",
+        "AVG",
+        "YDS/G",
+        "LNG",
+        "TD",
+        "INT",
+        "SACK",
+        "SYL",
+        "QBR",
+        "RTG",
+        "QBR"
+      ],
+      "names": [
+        "completions",
+        "passingAttempts",
+        "completionPct",
+        "passingYards",
+        "yardsPerPassAttempt",
+        "passingYardsPerGame",
+        "longPassing",
+        "passingTouchdowns",
+        "interceptions",
+        "sacks",
+        "sackYardsLost",
+        "QBR",
+        "QBRating",
+        "adjQBR"
+      ],
+      "displayNames": [
+        "Completions",
+        "Passing Attempts",
+        "Completion Percentage",
+        "Passing Yards",
+        "Yards Per Pass Attempt",
+        "Passing Yards Per Game",
+        "Longest Pass",
+        "Passing Touchdowns",
+        "Interceptions",
+        "Total Sacks",
+        "Sack Yards Lost",
+        "Total QBR",
+        "Passer Rating",
+        "Adjusted QBR"
+      ],
+      "descriptions": [
+        "The times a player completes a pass to another player who is eligible to catch a pass.",
+        "The number of times a pass is attempted.",
+        "The percentage of completed passes.",
+        "The total passing yards.",
+        "The average number yards per pass attempt.",
+        "The number of passing yards per game.",
+        "The longest pass play completed in terms of yards.",
+        "The total number of passing touchdowns.",
+        "The number of passes thrown that were intercepted by the opposing team.",
+        "The total number of sacks.",
+        "The amount of yards lost due to sacks.",
+        "Total Quarterback Rating, which values quarterback on all play types on a 0-to-100 scale.",
+        "Passer Rating",
+        "Adjusted Quarterback Rating."
+      ]
+    },
+    {
+      "name": "rushing",
+      "displayName": "Own Rushing",
+      "labels": [
+        "CAR",
+        "YDS",
+        "AVG",
+        "LNG",
+        "BIG",
+        "TD",
+        "YDS/G",
+        "FUM",
+        "LST",
+        "FD"
+      ],
+      "names": [
+        "rushingAttempts",
+        "rushingYards",
+        "yardsPerRushAttempt",
+        "longRushing",
+        "rushingBigPlays",
+        "rushingTouchdowns",
+        "rushingYardsPerGame",
+        "rushingFumbles",
+        "rushingFumblesLost",
+        "rushingFirstDowns"
+      ],
+      "displayNames": [
+        "Rushing Attempts",
+        "Rushing Yards",
+        "Yards Per Rush Attempt",
+        "Long Rushing",
+        "20+ Yard Rushing Plays",
+        "Rushing Touchdowns",
+        "Rushing Yards Per Game",
+        "Rushing Fumbles",
+        "Rushing Fumbles Lost",
+        "Rushing 1st downs"
+      ],
+      "descriptions": [
+        "The total number of attempted rushes.",
+        "The total rushing yards.",
+        "The average number of yards per rush attempt.",
+        "The amount of yards for the longest run.",
+        "The number of rushing big plays gained.",
+        "The total number of rushing touchdowns.",
+        "The average number of rushing yards per game.",
+        "The number of times there is a run and then the ball is fumbled.",
+        "The number of times there is a run and then the ball is fumbled.",
+        "The number of times a first down is picked up by a run."
+      ]
+    },
+    {
+      "name": "receiving",
+      "displayName": "Own Receiving",
+      "labels": [
+        "REC",
+        "TGTS",
+        "YDS",
+        "AVG",
+        "TD",
+        "LNG",
+        "BIG",
+        "YDS/G",
+        "FUM",
+        "LST",
+        "YAC",
+        "FD"
+      ],
+      "names": [
+        "receptions",
+        "receivingTargets",
+        "receivingYards",
+        "yardsPerReception",
+        "receivingTouchdowns",
+        "longReception",
+        "receivingBigPlays",
+        "receivingYardsPerGame",
+        "receivingFumbles",
+        "receivingFumblesLost",
+        "receivingYardsAfterCatch",
+        "receivingFirstDowns"
+      ],
+      "displayNames": [
+        "Receptions",
+        "Receiving Targets",
+        "Receiving Yards",
+        "Yards Per Reception",
+        "Receiving Touchdowns",
+        "Long Reception",
+        "20+ Yard Receiving Plays",
+        "Receiving Yards Per Game",
+        "Receiving Fumbles",
+        "Receiving Fumbles Lost",
+        "Receiving Yards After Catch",
+        "Receiving First Downs"
+      ],
+      "descriptions": [
+        "The total number of receptions.",
+        "The number of times a receiver is thrown to.",
+        "The total receiving yards.",
+        "The average number of yards per reception.",
+        "The total number of receiving touchdowns.",
+        "The amount of yards for the longest reception.",
+        "The number of receiving big plays gained.",
+        "The average number of receiving yards per game.",
+        "The number of times a reception is made and then the ball is fumbled.",
+        "The number of times a reception is made and the balled is fumbled and recovered by the opposing team.",
+        "The number of yards gained after the catch has been made.",
+        "The number of times a first down is picked up by a reception."
+      ]
+    },
+    {
+      "name": "defensive",
+      "displayName": "Own Defense",
+      "labels": [
+        "SOLO",
+        "AST",
+        "TOT",
+        "SACK",
+        "SCKYDS",
+        "TFL",
+        "PD",
+        "LNG"
+      ],
+      "names": [
+        "soloTackles",
+        "assistTackles",
+        "totalTackles",
+        "sacks",
+        "sackYards",
+        "tacklesForLoss",
+        "passesDefended",
+        "longInterception"
+      ],
+      "displayNames": [
+        "Solo Tackles",
+        "Assist Tackles",
+        "Total Tackles",
+        "Sacks",
+        "Sack Yards",
+        "Tackles For Loss",
+        "Passes Defended",
+        "Long Interception"
+      ],
+      "descriptions": [
+        "The number of times a tackle was made unassisted.",
+        "The number of assists on tackles.",
+        "The total number of tackles.",
+        "The total number of sacks.",
+        "The number of yards lost from sacks.",
+        "The number of tackles that result in a loss of yardage.",
+        "The total number of passes defended.",
+        "The amount of yards of the longest interception return."
+      ]
+    },
+    {
+      "name": "defensiveinterceptions",
+      "displayName": "Own Defensive Interceptions",
+      "labels": [
+        "INT",
+        "YDS",
+        "TD"
+      ],
+      "names": [
+        "interceptions",
+        "interceptionYards",
+        "interceptionTouchdowns"
+      ],
+      "displayNames": [
+        "Interceptions",
+        "Interception Yards",
+        "Interception Touchdowns"
+      ],
+      "descriptions": [
+        "The total number of interceptions.",
+        "The number of yards gained after an interception.",
+        "The number of times an interception is returned for a touchdown."
+      ]
+    },
+    {
+      "name": "scoring",
+      "displayName": "Own Scoring",
+      "labels": [
+        "RUSH",
+        "REC",
+        "RET",
+        "TD",
+        "FG",
+        "PAT",
+        "2PT",
+        "PTS",
+        "TP/G"
+      ],
+      "names": [
+        "rushingTouchdowns",
+        "receivingTouchdowns",
+        "returnTouchdowns",
+        "totalTouchdowns",
+        "fieldGoals",
+        "kickExtraPoints",
+        "totalTwoPointConvs",
+        "totalPoints",
+        "totalPointsPerGame"
+      ],
+      "displayNames": [
+        "Rushing Touchdowns",
+        "Receiving Touchdowns",
+        "Return Touchdowns",
+        "Total Touchdowns",
+        "Field Goals",
+        "Kick Extra Points",
+        "Total Two Point Conversions",
+        "Total Points",
+        "Total Points Per Game"
+      ],
+      "descriptions": [
+        "The total number of rushing touchdowns.",
+        "The total number of receiving touchdowns.",
+        "The total number of return touchdowns.",
+        "The number of touchdowns scored in total.",
+        "The number of field goals made.",
+        "The number of extra points made.",
+        "The number of times a 2-point conversion is successful.",
+        "The number of total points scored.",
+        "The number of points scored per game."
+      ]
+    },
+    {
+      "name": "returning",
+      "displayName": "Own Returning",
+      "labels": [
+        "ATT",
+        "YDS",
+        "AVG",
+        "LNG",
+        "TD",
+        "ATT",
+        "YDS",
+        "AVG",
+        "LNG",
+        "TD",
+        "FC"
+      ],
+      "names": [
+        "kickReturns",
+        "kickReturnYards",
+        "yardsPerKickReturn",
+        "longKickReturn",
+        "kickReturnTouchdowns",
+        "puntReturns",
+        "puntReturnYards",
+        "yardsPerPuntReturn",
+        "longPuntReturn",
+        "puntReturnTouchdowns",
+        "puntReturnFairCatches"
+      ],
+      "displayNames": [
+        "Kick Returns",
+        "Kick Return Yards",
+        "Yards Per Kick Return",
+        "Long Kick Return",
+        "Kick Return Touchdowns",
+        "Punt Returns",
+        "Punt Return Yards",
+        "Yards Per Punt Return",
+        "Long Punt Return",
+        "Punt Return Touchdowns",
+        "Punt Return Fair Catches"
+      ],
+      "descriptions": [
+        "The number of kick returns.",
+        "The total yardage of kick returns.",
+        "The average number of yards per kick return.",
+        "The longest kick return in yards.",
+        "The number of kick return touchdowns.",
+        "The number of punt returns.",
+        "The total yardage of punt returns.",
+        "The average number of yards per punt return.",
+        "The longest punt return in yards.",
+        "The number of punt return touchdowns.",
+        "The number of punt return fair catches."
+      ]
+    },
+    {
+      "name": "kicking",
+      "displayName": "Own Kicking",
+      "labels": [
+        "FGM",
+        "FGA",
+        "FG%",
+        "LNG",
+        "FGM 1-19",
+        "FGM 20-29",
+        "FGM 30-39",
+        "FGM 40-49",
+        "50+",
+        "FGA 1-19",
+        "FGA 20-29",
+        "FGA 30-39",
+        "FGA 40-49",
+        "FGA 50+",
+        "XPM",
+        "XPA",
+        "XP%"
+      ],
+      "names": [
+        "fieldGoalsMade",
+        "fieldGoalAttempts",
+        "fieldGoalPct",
+        "longFieldGoalMade",
+        "fieldGoalsMade1_19",
+        "fieldGoalsMade20_29",
+        "fieldGoalsMade30_39",
+        "fieldGoalsMade40_49",
+        "fieldGoalsMade50",
+        "fieldGoalAttempts1_19",
+        "fieldGoalAttempts20_29",
+        "fieldGoalAttempts30_39",
+        "fieldGoalAttempts40_49",
+        "fieldGoalAttempts50",
+        "extraPointsMade",
+        "extraPointAttempts",
+        "extraPointPct"
+      ],
+      "displayNames": [
+        "Field Goal Made",
+        "Field Goal Attempts",
+        "Field Goal Percentage",
+        "Long Field Goal Made",
+        "Field Goals Made 1-19",
+        "Field Goals Made 20-29",
+        "Field Goals Made 30-39",
+        "Field Goals Made 40-49",
+        "Field Goals Made 50+",
+        "Field Goal Attempts 1-19",
+        "Field Goal Attempts 20-29",
+        "Field Goal Attempts 30-39",
+        "Field Goal Attempts 40-49",
+        "Field Goal Attempts 50+",
+        "Extra Points Made",
+        "Extra Point Attempts",
+        "Extra Point Percentage"
+      ],
+      "descriptions": [
+        "The number of times a field goal is made.",
+        "The number of times a field goal is attempted.",
+        "The percentage of field goals attempted that are made.",
+        "The distance of the longest field goal made.",
+        "The number of field goals made from 1-19 yards.",
+        "The number of field goals made from 20-29 yards.",
+        "The number of field goals made from 30-39 yards.",
+        "The number of field goals made from 40-49 yards.",
+        "The number of field goals made from 50+ yards.",
+        "The number of field goals attempted from 1-19 yards.",
+        "The number of field goals attempted from 20-29 yards.",
+        "The number of field goals attempted from 30-39 yards.",
+        "The number of field goals attempted from 40-49 yards.",
+        "The number of field goals attempted from 50+ yards.",
+        "The number of extra point attempts made.",
+        "The number of extra point attempts.",
+        "The percentage of extra point attempts that are converted."
+      ]
+    },
+    {
+      "name": "punting",
+      "displayName": "Own Punting",
+      "labels": [
+        "PUNTS",
+        "YDS",
+        "LNG",
+        "AVG",
+        "NET",
+        "PBLK",
+        "IN20",
+        "TB",
+        "FC",
+        "ATT",
+        "YDS",
+        "AVG"
+      ],
+      "names": [
+        "punts",
+        "puntYards",
+        "longPunt",
+        "grossAvgPuntYards",
+        "netAvgPuntYards",
+        "puntsBlocked",
+        "puntsInside20",
+        "touchbacks",
+        "fairCatches",
+        "puntReturns",
+        "puntReturnYards",
+        "avgPuntReturnYards"
+      ],
+      "displayNames": [
+        "Punts",
+        "Punt Yards",
+        "Long Punt",
+        "Gross Average Punt Yards",
+        "Net Average Punt Yards",
+        "Punts Blocked",
+        "Punts Inside 20",
+        "Touchbacks",
+        "Fair Catches",
+        "Punt Returns",
+        "Punt Return Yards",
+        "Average Punt Return Yards"
+      ],
+      "descriptions": [
+        "The number of punts taken.",
+        "The total amount of yardage of punts.",
+        "The distance of the longest punt.",
+        "The average gross number of yards per punt.",
+        "The average net number of yards per punt.",
+        "The number of times a punt was blocked.",
+        "The number of times a punt is downed inside the 20.",
+        "The number of kickoffs that result in touchbacks.",
+        "The number of fair catches.",
+        "The number of times a punt was returned.",
+        "The total amount of yardage of punt returns.",
+        "The average number of yards per punt return."
+      ]
+    }
+  ],
+  "athletes": [
+    {
+      "athlete": {
+        "id": "3915511",
+        "displayName": "Joe Burrow",
+        "position": {
+          "id": "8",
+          "name": "Quarterback",
+          "displayName": "Quarterback",
+          "abbreviation": "QB",
+          "leaf": true,
+          "parent": {
+            "leaf": false
+          },
+          "slug": "quarterback"
+        }
+      },
+      "categories": [
+        {
+          "name": "general",
+          "displayName": "Own General",
+          "splitId": "0",
+          "totals": [
+            "7",
+            "-",
+            "-",
+            "0"
+          ],
+          "values": [
+            7,
+            null,
+            null,
+            0
+          ],
+          "ranks": [
+            "14",
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "passing",
+          "displayName": "Own Passing",
+          "splitId": "0",
+          "totals": [
+            "195",
+            "267",
+            "73.0",
+            "2,115",
+            "7.9",
+            "302.1",
+            "45",
+            "20",
+            "6",
+            "13",
+            "96",
+            "77.5",
+            "111.6",
+            "77.3"
+          ],
+          "values": [
+            195,
+            267,
+            73.03399658203125,
+            2115,
+            7.921000003814697,
+            302.1428527832031,
+            45,
+            20,
+            6,
+            13,
+            96,
+            77.47,
+            111.55599975585938,
+            77.3
+          ],
+          "ranks": [
+            "3",
+            "10",
+            "1",
+            "4",
+            "7",
+            "0",
+            "25",
+            "1",
+            "22",
+            "17",
+            "17",
+            "-",
+            "2",
+            "-"
+          ]
+        },
+        {
+          "name": "rushing",
+          "displayName": "Own Rushing",
+          "splitId": "0",
+          "totals": [
+            "20",
+            "70",
+            "3.5",
+            "12",
+            "0",
+            "2",
+            "10.0",
+            "1",
+            "0",
+            "11"
+          ],
+          "values": [
+            20,
+            70,
+            3.5,
+            12,
+            0,
+            2,
+            10,
+            1,
+            0,
+            11
+          ],
+          "ranks": [
+            "20",
+            "21",
+            "20",
+            "23",
+            "14",
+            "4",
+            "1",
+            "3",
+            "4",
+            "8"
+          ]
+        },
+        {
+          "name": "receiving",
+          "displayName": "Own Receiving",
+          "splitId": "0",
+          "totals": [
+            "0",
+            "0",
+            "0",
+            "0.0",
+            "0",
+            "0",
+            "0",
+            "0.0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ],
+          "values": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "ranks": [
+            "3",
+            "5",
+            "3",
+            "3",
+            "1",
+            "3",
+            "1",
+            "0",
+            "1",
+            "1",
+            "3",
+            "2"
+          ]
+        },
+        {
+          "name": "defensive",
+          "displayName": "Own Defense",
+          "splitId": "0",
+          "totals": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ],
+          "values": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "defensiveinterceptions",
+          "displayName": "Own Defensive Interceptions",
+          "splitId": "0",
+          "totals": [
+            "-",
+            "-",
+            "-"
+          ],
+          "values": [
+            null,
+            null,
+            null
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "scoring",
+          "displayName": "Own Scoring",
+          "splitId": "0",
+          "totals": [
+            "2",
+            "0",
+            "0",
+            "2",
+            "0",
+            "0",
+            "0",
+            "12",
+            "1.7"
+          ],
+          "values": [
+            2,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            12,
+            1.7139999866485596
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "returning",
+          "displayName": "Own Returning",
+          "splitId": "0",
+          "totals": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ],
+          "values": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "kicking",
+          "displayName": "Own Kicking",
+          "splitId": "0",
+          "totals": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ],
+          "values": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "punting",
+          "displayName": "Own Punting",
+          "splitId": "0",
+          "totals": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ],
+          "values": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ]
+        }
+      ]
+    },
+    {
+      "athlete": {
+        "id": "3139477",
+        "displayName": "Patrick Mahomes",
+        "position": {
+          "id": "8",
+          "name": "Quarterback",
+          "displayName": "Quarterback",
+          "abbreviation": "QB",
+          "leaf": true,
+          "parent": {
+            "leaf": false
+          },
+          "slug": "quarterback"
+        }
+      },
+      "categories": [
+        {
+          "name": "general",
+          "displayName": "Own General",
+          "splitId": "0",
+          "totals": [
+            "7",
+            "0",
+            "7",
+            "0"
+          ],
+          "values": [
+            7,
+            0,
+            7,
+            0
+          ],
+          "ranks": [
+            "14",
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "passing",
+          "displayName": "Own Passing",
+          "splitId": "0",
+          "totals": [
+            "154",
+            "232",
+            "66.4",
+            "1,795",
+            "7.7",
+            "256.4",
+            "73",
+            "12",
+            "4",
+            "9",
+            "52",
+            "65.5",
+            "99.7",
+            "67.3"
+          ],
+          "values": [
+            154,
+            232,
+            66.37899780273438,
+            1795,
+            7.736999988555908,
+            256.4285583496094,
+            73,
+            12,
+            4,
+            9,
+            52,
+            65.45,
+            99.69499969482422,
+            67.3
+          ],
+          "ranks": [
+            "17",
+            "18",
+            "9",
+            "14",
+            "9",
+            "1",
+            "6",
+            "13",
+            "11",
+            "29",
+            "3",
+            "-",
+            "11",
+            "-"
+          ]
+        },
+        {
+          "name": "rushing",
+          "displayName": "Own Rushing",
+          "splitId": "0",
+          "totals": [
+            "21",
+            "77",
+            "3.7",
+            "15",
+            "0",
+            "1",
+            "11.0",
+            "0",
+            "0",
+            "7"
+          ],
+          "values": [
+            21,
+            77,
+            3.6670000553131104,
+            15,
+            0,
+            1,
+            11,
+            0,
+            0,
+            7
+          ],
+          "ranks": [
+            "18",
+            "18",
+            "18",
+            "18",
+            "14",
+            "10",
+            "1",
+            "8",
+            "4",
+            "19"
+          ]
+        },
+        {
+          "name": "receiving",
+          "displayName": "Own Receiving",
+          "splitId": "0",
+          "totals": [
+            "0",
+            "0",
+            "0",
+            "0.0",
+            "0",
+            "0",
+            "0",
+            "0.0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ],
+          "values": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "ranks": [
+            "3",
+            "5",
+            "3",
+            "3",
+            "1",
+            "3",
+            "1",
+            "0",
+            "1",
+            "1",
+            "3",
+            "2"
+          ]
+        },
+        {
+          "name": "defensive",
+          "displayName": "Own Defense",
+          "splitId": "0",
+          "totals": [
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ],
+          "values": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "defensiveinterceptions",
+          "displayName": "Own Defensive Interceptions",
+          "splitId": "0",
+          "totals": [
+            "0",
+            "0",
+            "0"
+          ],
+          "values": [
+            0,
+            0,
+            0
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "scoring",
+          "displayName": "Own Scoring",
+          "splitId": "0",
+          "totals": [
+            "1",
+            "0",
+            "0",
+            "1",
+            "0",
+            "0",
+            "0",
+            "6",
+            "0.9"
+          ],
+          "values": [
+            1,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            6,
+            0.8569999933242798
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "returning",
+          "displayName": "Own Returning",
+          "splitId": "0",
+          "totals": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ],
+          "values": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "kicking",
+          "displayName": "Own Kicking",
+          "splitId": "0",
+          "totals": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ],
+          "values": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ]
+        },
+        {
+          "name": "punting",
+          "displayName": "Own Punting",
+          "splitId": "0",
+          "totals": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ],
+          "values": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "ranks": [
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-"
+          ]
+        }
+      ]
+    }
+  ]
+}

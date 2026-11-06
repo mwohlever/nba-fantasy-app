@@ -16,7 +16,13 @@ export type CenterGame = {
   stats: CenterStats;
   sources: string[]; fetchedAt: string; issues: string[];
 };
+export type SeasonFacts = {
+  sport: CenterSport; providerPlayerId: string; season: number; phase: CenterPhase;
+  gamesPlayed: number | null; stats: CenterStats; source: string; fetchedAt: string;
+  freshness: "fresh" | "stale" | "unavailable"; issues: string[];
+};
 export type CenterHistory = {
+  seasonFacts?: SeasonFacts | null;
   player: CenterPlayer; season: number; phase: CenterPhase;
   source: "provider" | "stored";
   games: CenterGame[];
@@ -28,6 +34,7 @@ export type CenterHistory = {
     freshness: "fresh" | "stale" | "unavailable";
     issues: string[];
     comparisonEligible?: boolean;
+    recentVerified?: boolean;
     cache?: { asOf: string; checkedAt: string; complete: boolean; batchId: string; contentHash: string };
   };
 };
