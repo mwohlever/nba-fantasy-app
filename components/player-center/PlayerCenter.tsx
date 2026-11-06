@@ -18,7 +18,7 @@ export type PlayerCenterProps = { identity: CenterIdentity; sport: CenterSport; 
 const date = (value: string) => new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" });
 function average(profile: CenterProfile, window: CenterWindow, key: string) {
   const summary = profile.windows[window];
-  return summary?.metricComparable[key] ? summary.averages[key] : null;
+  return profile.player.identity === "resolved" ? summary?.observedAverages[key] ?? null : null;
 }
 
 export default function PlayerCenter(props: PlayerCenterProps) {
@@ -79,7 +79,7 @@ function PlayerCenterBody({ identity, sport, season: initialSeason, slateId, loa
     </header>
     <div className="pc-summary" aria-label="Actual performance summary">
       <div><span>Last game FP</span><strong>{latest && data ? formatStat(data.gameFantasyPoints[latest.eventId]) : "—"}</strong><small>{latest ? `${date(latest.gameAt)} ${venueLabel(latest)} ${latest.opponent ?? "Opponent unavailable"}` : "Completed games only"}</small></div>
-      <div><span>Season FP/game</span><strong>{data ? formatStat(average(data, "season", "fantasy_points")) : "—"}</strong><small>{seasonSummary ? `${seasonSummary.sampleSize} completed · ${position === "K" ? "Scoring not configured" : seasonSummary.metricComparable.fantasy_points ? "verified average" : "Coverage incomplete"}` : "Actual fantasy scoring"}</small></div>
+      <div><span>Season FP/game</span><strong>{data ? formatStat(average(data, "season", "fantasy_points")) : "—"}</strong><small>{seasonSummary ? `${seasonSummary.metricSamples.fantasy_points ?? 0} scored / ${seasonSummary.sampleSize} observed · ${seasonSummary.expectedGames == null ? "missing-game count unknown" : `${Math.max(0, seasonSummary.expectedGames - seasonSummary.availableGames)} missing games`} · ${position === "K" ? "Scoring not configured" : seasonSummary.metricComparable.fantasy_points ? "verified average" : "Observed average · incomplete coverage"}` : "Actual fantasy scoring"}</small></div>
       <div><span>Last 5 FP/game</span><strong>{formatStat(lastFive?.average)}</strong><small>{position === "K" ? "Scoring not configured" : lastFive?.scoredGames ? `${lastFive.scoredGames} scored games${lastFive.unavailable ? ` · ${lastFive.unavailable} unavailable` : lastFive.scoredGames < 5 ? " · Short sample" : lastFive.incomplete ? " · Observed only" : ""}` : "No actual scores"}</small></div>
     </div>
     <div className="pc-tabs" role="tablist" aria-label="Player statistics sections">
@@ -95,13 +95,19 @@ function PlayerCenterBody({ identity, sport, season: initialSeason, slateId, loa
           <span>· {completed.length}{coverage?.expectedGames != null ? ` / ${coverage.expectedGames}` : ""} games observed · {coverage?.expectedGames == null ? "Season GP unverified" : coverage.kind === "team_schedule" ? "Final team games" : "Independent provider GP"}</span>
         </div>
         {(coverage?.freshness !== "fresh" || !data.windows.season.seasonVerified || data.coverage.issues.length > 0) && <CoverageNotice summary={coverage?.freshness === "unavailable" ? "Statistics unavailable" : coverage?.freshness === "stale" ? "Statistics stale" : !data.windows.season.seasonVerified ? "Season coverage unverified" : "Some game statistics incomplete"}>
-          <p>Only verified values are shown. Incomplete windows have no comparison average; missing statistics stay unavailable.</p>
-          <p>Last 5 FP/game uses up to five latest scored appearances. Unavailable scores are excluded and flagged; this observed average does not certify a complete window.</p>
+          <p>Only verified values are shown. Observed averages use available values only; incomplete coverage is not a verified full-season average. Missing statistics stay unavailable.</p>
+          <p>Last 5 FP/game uses the latest five completed appearances. Unavailable scores are excluded and flagged; this observed average does not certify a complete window.</p>
           {data.coverage.issues.length > 0 && <ul>{data.coverage.issues.map(issue => <li key={issue}>{issue.replaceAll("_", " ")}</li>)}</ul>}
         </CoverageNotice>}
         {tab === "log" && <>
           <WindowControl value={window} onChange={setWindow} />
-          <div className="pc-metrics">{metrics.map(metric => <div key={metric}><span>{statLabels[metric]}</span><strong>{formatStat(average(data, window, metric))}</strong><small>{windowLabel[window]} / game · n={summary?.metricSamples[metric] ?? 0}</small></div>)}</div>
+          <p className="pc-footnote" aria-label="Summary sample and coverage" aria-live="polite">
+            {windowLabel[window]} averages · {summary?.sampleSize ?? 0} observed games · {metrics.every(metric => summary?.metricComparable[metric]) ? "Verified window" : "Observed values · partial coverage"}.
+            {new Set(metrics.map(metric => summary?.metricSamples[metric] ?? 0)).size === 1
+              ? ` Sample: n=${summary?.metricSamples[metrics[0]] ?? 0} per statistic.`
+              : ` Available samples: ${metrics.map(metric => `${statLabels[metric]} n=${summary?.metricSamples[metric] ?? 0}`).join("; ")}.`}
+          </p>
+          <div className="pc-metrics">{metrics.map(metric => <div key={metric}><span>{statLabels[metric]}/game</span><strong>{formatStat(average(data, window, metric))}</strong></div>)}</div>
           <div className="pc-section-title"><h3>Game log</h3><span>{completed.length} completed · recent games first</span></div>
           {games.length ? <div className="pc-table-scroll" tabIndex={0} role="region" aria-label="Player game log; scroll horizontally for all statistics"><table className="pc-table pc-game-log"><thead><tr><th className="pc-sticky">Game / opponent</th><th>Status</th><th>FP</th>{columns.map(key => <th key={key}>{statLabels[key] ?? key}</th>)}</tr></thead><tbody>
             {(showAll ? games : games.slice(0, 10)).map(game => <tr key={game.eventId} data-game-status={gameStatus(game)}><th scope="row" className="pc-sticky"><span className="pc-game-identifier">{gameIdentifier(game, sport)}</span></th>

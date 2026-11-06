@@ -20,12 +20,12 @@ export default function SeasonStats({ stats, sport, position, season }: { stats:
   const verified = stats?.season === season && stats.phase === "regular" ? stats : null;
   const tables = verified ? seasonTables(verified, sport, position) : [];
   const primary = tables.filter(table => !table.secondary), secondary = tables.filter(table => table.secondary);
-  return <>
+  return <div className={`pc-season-panel pc-season-panel-${sport}`}>
     <div className="pc-section-title"><h3>{seasonLabel(sport, season)} season statistics</h3><span>Regular season · {verified?.expectedGames != null ? `${verified.expectedGames} provider GP` : "GP unverified"}</span></div>
     {tables.length ? <>
       {primary.map(table => <StatTable key={table.key} table={table} />)}
       {secondary.length > 0 && <details className="pc-expand pc-season-details" open={primary.length ? undefined : true}><summary>Season totals, shooting &amp; more</summary><div>{secondary.map(table => <StatTable key={table.key} table={table} />)}</div></details>}
       <p className="pc-footnote">Provider values for this season; units are labeled per column. Team splits stay separate. — means unavailable.</p>
     </> : <div className="pc-empty"><strong>Season totals unavailable</strong><p>No verified season statistics were returned for this position. The game log remains available where supported.</p></div>}
-  </>;
+  </div>;
 }

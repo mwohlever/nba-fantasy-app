@@ -110,10 +110,10 @@ export function compareHistories(input: { sport: CenterScoringContext["sport"]; 
         row.summary.metricSamples[input.metric] === row.summary.sampleSize);
     const cutoffs = new Set(relevant.map(row => row.coverage.cache?.asOf).filter(Boolean));
     const canSort = relevant.some(row => row.rankableAverage !== null) && cutoffs.size <= 1 && relevant.every(row => row.rankableAverage !== null || knownShortSample(row));
-    players.sort((a, b) => (canSort ? compareActualStats(a.rankableAverage, b.rankableAverage, input.ascending) : 0) || a.player.name.localeCompare(b.player.name));
+    players.sort((a, b) => compareActualStats(canSort ? a.rankableAverage : a.observedAverage, canSort ? b.rankableAverage : b.observedAverage, input.ascending) || a.player.name.localeCompare(b.player.name));
     return { sport: input.sport, season: input.season, seasonLabel: seasonLabel(input.sport, input.season), phase: "regular" as const,
       window: input.window, metric: input.metric, direction: input.ascending ? "asc" : "desc", scoringBasis: input.scoring.basis,
-      source: "stored" as const, providerRequests: 0, readAt: readAt, asOf: cutoffs.size === 1 ? [...cutoffs][0]! : asOf,
+      source: "stored" as const, profilesUsed: 0, providerRequests: 0, readAt: readAt, asOf: cutoffs.size === 1 ? [...cutoffs][0]! : asOf,
       coverage: { poolPlayers: players.length, relevantPlayers: relevant.length,
         mappedPlayers: players.filter(row => row.player.identity === "resolved").length,
         playersWithGames: players.filter(row => row.summary.availableGames > 0).length,

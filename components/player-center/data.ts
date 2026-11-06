@@ -3,7 +3,7 @@ import type { PlayerCenterService } from "@/lib/player-center/service";
 import type { CenterPhase, CenterSport, CenterWindow } from "@/lib/player-center/types";
 export type ComparisonData = Awaited<ReturnType<PlayerCenterService["comparisons"]>>;
 export type ProfileRequest = { sport: CenterSport; playerId: number; season: number; slateId?: number | null; phase?: CenterPhase };
-export type ComparisonRequest = { sport: CenterSport; season: number; window: CenterWindow; metric: string; ascending: boolean; position?: string; slateId?: number | null };
+export type ComparisonRequest = { sport: CenterSport; season: number; window: CenterWindow; metric: string; ascending: boolean; position?: string; slateId?: number | null; playerIds?: string };
 export type CenterLoader = {
   profile: (request: ProfileRequest, signal: AbortSignal) => Promise<CenterProfile>;
   comparisons: (request: ComparisonRequest, signal: AbortSignal) => Promise<ComparisonData>;

@@ -31,7 +31,7 @@ for (const sport of ['nba', 'nfl']) {
     for (const [scores, average, count, unavailable] of [
       [[], null, 0, 0], [[0], 0, 1, 0], [[-4, 0, 10], 2, 3, 0],
       [[1, 2, 3, 4, 5], 3, 5, 0], [[100, 1, 2, 3, 4, 5], 3, 5, 0],
-      [[100, 1, null, 3, 4, 5], 22.6, 5, 1], [[null, null], null, 0, 2],
+      [[100, 1, null, 3, 4, 5], 3.25, 4, 1], [[null, null], null, 0, 2],
       [[1, NaN, Infinity, null], 1, 1, 3],
     ]) {
       const p = profile(sport, scores), before = structuredClone(p);
@@ -41,7 +41,7 @@ for (const sport of ['nba', 'nfl']) {
       assert.deepEqual(p, before, 'summary never changes facts, scoring or certification');
     }
     const p = profile(sport, [100, 1, null, 3, 4, 5]);
-    assert.equal(lastFiveFantasySummary(p).average, 22.6);
+    assert.equal(lastFiveFantasySummary(p).average, 3.25);
     assert.equal(fantasyTrend(p, 'last5').average, 3.25, 'existing chart keeps its five chronological appearances and gap');
     p.coverage.freshness = 'stale'; p.windows.season.metricComparable.fantasy_points = false;
     assert.equal(lastFiveFantasySummary(p).incomplete, true);
@@ -64,15 +64,15 @@ for (const sport of ['nba', 'nfl']) {
 
   test(`${sport}: three stable KPIs replace games observed, with partial score and source metadata retained`, async () => {
     context.group = 'a'; const p = profile(sport, [100, 1, null, 3, 4, 5]);
-    p.windows.season.averages.fantasy_points = 11; p.windows.season.metricComparable.fantasy_points = true;
+    p.windows.season.observedAverages.fantasy_points = 11; p.windows.season.averages.fantasy_points = 11; p.windows.season.metricComparable.fantasy_points = true;
     p.windows.last1.averages.fantasy_points = 99; p.windows.last1.metricComparable.fantasy_points = true;
     const props = { sport, season: p.season, identity: { id: p.player.playerId, name: p.player.name }, loader: { profile: async () => ({ ...p, groupId: 'a' }) } };
     const h = host(Profile(props).type); h.render(props, true); await tick(); let tree = h.render(props, true);
     const summary = t => nodes(t).find(n => n.props?.['aria-label'] === 'Actual performance summary');
     const cells = summary(tree).props.children;
     assert.deepEqual(cells.map(c => text(find(c, 'span'))), ['Last game FP', 'Season FP/game', 'Last 5 FP/game']);
-    assert.equal(text(find(cells[0], 'strong')), '5'); assert.equal(text(find(cells[1], 'strong')), '11'); assert.equal(text(find(cells[2], 'strong')), '22.6');
-    assert.match(text(cells[2]), /5 scored games.*1 unavailable/);
+    assert.equal(text(find(cells[0], 'strong')), '5'); assert.equal(text(find(cells[1], 'strong')), '11'); assert.equal(text(find(cells[2], 'strong')), '3.3');
+    assert.match(text(cells[2]), /4 scored games.*1 unavailable/);
     assert.doesNotMatch(text(summary(tree)), /Games observed/);
     assert.match(text(tree), /6\s*\/\s*6\s+games observed/); assert.match(text(tree), /Independent provider GP/);
     find(tree, WindowControl).props.onChange('last1'); tree = h.render(props);

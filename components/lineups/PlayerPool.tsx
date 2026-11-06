@@ -340,6 +340,7 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
   } = props;
   const { selectedSport: contextSport } = useSelectedSport();
   const selectedSport = props.sport ?? contextSport;
+  const [professionalResearchSeason, setProfessionalResearchSeason] = useState(props.centerSeason ?? professionalSeason(selectedSport === "nfl" ? "nfl" : "nba"));
   const centerEnabled = playerCenterEnabled() && selectedSport !== "golf";
   const { groupContext } = useGroupContext();
   const isGolf = selectedSport === "golf";
@@ -1549,7 +1550,7 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
   const comparisonSport = isNfl ? "nfl" : "nba";
   const useObservedComparison = centerEnabled && !isGolf;
   const storedSeason = isNfl ? nflStatsSeason : selectedSeason === "all" ? null : Number(selectedSeason);
-  const requestedSeason = researchMode === "season" || !centerEnabled ? storedSeason : props.centerSeason ?? professionalSeason(comparisonSport);
+  const requestedSeason = researchMode === "season" || !centerEnabled ? storedSeason : professionalResearchSeason;
   const comparisonSeason = requestedSeason !== null && validCenterSeason(requestedSeason, comparisonSport) ? requestedSeason : null;
   const comparisonWindow = useObservedComparison && researchMode !== "season" ? gameStatsWindow : "season";
 
@@ -1810,6 +1811,7 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
             </select>
           </label>}
 
+          {centerEnabled && researchMode === "actual" && <label className="text-xs text-slate-400">Professional season <select aria-label="Draft research season" value={professionalResearchSeason} onChange={event => { setProfessionalResearchSeason(Number(event.target.value)); setCompareOpen(false); }}>{[...new Set([professionalSeason(isNfl ? "nfl" : "nba"), professionalSeason(isNfl ? "nfl" : "nba") - 1, professionalSeason(isNfl ? "nfl" : "nba") - 2, professionalResearchSeason])].map(year => <option key={year} value={year}>{seasonLabel(isNfl ? "nfl" : "nba", year)}</option>)}</select></label>}
           {compareMode ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -1910,7 +1912,7 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
         </div>
       ) : null}
 
-      {researchMode === "actual" && centerEnabled ? <DraftPlayerCenter {...props} sport={isNfl ? "nfl" : "nba"}
+      {researchMode === "actual" && centerEnabled ? <DraftPlayerCenter {...props} centerSeason={professionalResearchSeason} sport={isNfl ? "nfl" : "nba"}
         researchWindow={gameStatsWindow} onResearchWindowChange={setGameStatsWindow}
         comparison={compareMode ? { selectedIds: comparePlayerIds, onToggle: toggleComparePlayer } : undefined} /> : <>
       {isNfl && researchMode === "season" && <div className="mb-2 flex items-center justify-between gap-2 text-xs text-slate-500">

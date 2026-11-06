@@ -8581,3 +8581,13 @@ html
 .pc-game-log .pc-sticky { min-width:0; width:1%; }
 .pc-game-identifier { white-space:nowrap; }
 .pc-game-log .pc-fp small { display:inline; margin-left:6px; }
+
+/* Keep essential NBA season averages compact; detailed provider fields remain expandable. */
+@media (max-width: 600px) {
+ .pc-season-panel-nba .pc-section-title { margin: 8px 0; gap: 4px; }
+ .pc-season-panel-nba .pc-section-title h3 { font-size: 13px; }
+ .pc-season-panel-nba .pc-season-section { margin: 8px 0; }
+ .pc-season-panel-nba .pc-season-section h4 { margin: 4px 0; font-size: 11px; }
+ .pc-season-panel-nba .pc-season-table th,.pc-season-panel-nba .pc-season-table td { padding: 6px 8px; font-size: 11px; }
+ .pc-season-panel-nba .pc-season-details > summary { padding: 9px 0; font-size: 12px; }
+}

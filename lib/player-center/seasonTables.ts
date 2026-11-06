@@ -50,7 +50,9 @@ export function seasonTables(stats: CenterSeasonStats, sport: CenterSport, posit
     : allowed.indexOf(a.name) - allowed.indexOf(b.name));
   for (const category of categories) {
     if (sport === "nba") {
-      const main = category.fields.filter(field => !shots.has(field.label.trim()));
+      const essential = new Set(["GP", "MIN", "PTS", "REB", "AST", "STL", "BLK", "TO"]);
+      const main = category.fields.filter(field => !shots.has(field.label.trim()) && (category.name !== "averages" || essential.has(field.label.trim())));
+      if (category.name === "averages") add(category, "More per-game statistics", category.fields.filter(field => !shots.has(field.label.trim()) && !essential.has(field.label.trim())), true, "Per game");
       if (category.name === "averages" || category.name === "totals") {
         main.sort((a, b) => {
           const rank = (label: string) => nbaOrder.includes(label.trim()) ? nbaOrder.indexOf(label.trim()) : nbaOrder.length;
