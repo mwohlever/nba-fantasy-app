@@ -657,43 +657,36 @@ test('Draft always sends expected sport and atomically rejects successful respon
   }
 });
 
-test('projections reject wrong sport/Group/slate and late responses after a context switch', async () => {
-  for (const field of ['groupId', 'sport', 'slateId', 'late']) {
-    const { h, props, respond } = await setup('nfl');
-    let resolveProjection;
-    global.fetch = async url => url.startsWith('/api/draft-projections')
-      ? new Promise(resolve => { resolveProjection = () => {
-        const body = { ...respond(url), projections: { 10: { projection: 999 } } };
-        if (field !== 'late') body[field] = field === 'sport' ? 'nba' : field === 'slateId' ? 999 : 'other';
-        resolve(reply(body));
-      }; }) : reply(respond(url));
-    context.group = 'b'; h.render(props, true);
-    if (field === 'late') { context.group = 'a'; h.render(props); }
-    resolveProjection(); await tick();
-    assert.deepEqual(find(h.render(props), Pool).props.playerProjections, {});
-    h.unmount();
-  }
+test('draft context switches never request retired projections or substitute historical averages as predictions', async () => {
+  const {h,props,respond}=await setup('nfl');const requests=[];
+  global.fetch=async url=>{requests.push(url);if(url.includes('projections'))throw Error('Retired forecast request');return reply(respond(url));};
+  context.group='b';h.render(props,true);await tick();
+  assert.ok(!requests.some(url=>url.includes('projections')));assert.deepEqual(find(h.render(props),Pool).props.playerProjections,{});h.unmount();
 });
 
-test('NBA/NFL Projection cards select fixed targets; Info researches; normal pool opens the Draft flow',async()=>{
+test('NBA/NFL Player Center opens parent fixed-target research and normal Draft callbacks without submitting a pick',async(t)=>{
+  const prior=process.env.NEXT_PUBLIC_PLAYER_CENTER_ENABLED;process.env.NEXT_PUBLIC_PLAYER_CENTER_ENABLED='true';t.after(()=>{if(prior===undefined)delete process.env.NEXT_PUBLIC_PLAYER_CENTER_ENABLED;else process.env.NEXT_PUBLIC_PLAYER_CENTER_ENABLED=prior;});
+  const Center=require('../components/player-center/DraftPlayerCenter.tsx').default;
+  const Browser=require('../components/player-center/ResearchBrowser.tsx').default;
+  const CenterModal=require('../components/player-center/PlayerCenterModal.tsx').default;
   for(const sport of ['nba','nfl']) {
     const {h,props,tree}=await setup(sport,{role:'admin'});
     const poolProps=find(tree,Pool).props;
+    const shell=host(host(Pool).render(poolProps).type);
+    assert.ok(find(shell.render(poolProps),Center),'shared shell retains factual research');shell.unmount();
     let selected=null,researched=null;
-    const p=host(Pool);
-    const speedProps={...poolProps,speedEntry:{onSelect:async player=>{selected=player;return true;},onResearch:player=>{researched=player;}}};
-    let pool=p.render(speedProps);
-    const card=nodes(pool).find(n=>n.type==='button' && n.props.className?.startsWith('draft-player-card '));
-    assert.ok(card); card.props.onClick();
-    assert.equal(selected.id,10);
-    assert.equal(find(p.render(speedProps),Research).props.player,null);
-    nodes(pool).find(n=>n.props?.['aria-label']==='Info about Player Ten').props.onClick();
-    assert.equal(researched.id,10);
-    pool=p.render(poolProps);
-    assert.ok(!nodes(pool).some(n=>n.props?.['aria-label']==='Info about Player Ten'));
-    nodes(pool).find(n=>n.type==='button' && n.props.className?.startsWith('draft-player-card ')).props.onClick();
-    assert.equal(find(p.render(poolProps),Research).props.player,null);
-    assert.equal(find(h.render(props),Modal).props.draftingPlayer.id,10);
+    const p=host(Center);
+    const speedProps={...poolProps,sport,speedEntry:{onSelect:async player=>{selected=player;return true;},onResearch:player=>{researched=player;}}};
+    let pool=p.render(speedProps),browser=find(pool,Browser),identity=browser.props.entries[0].identity;
+    browser.props.onSelect(identity);assert.equal(researched.id,10);assert.equal(selected,null,'fixed-target pick requires the explicit parent research action');
+    browser.props.onInspect(identity);assert.equal(researched.id,10);
+    assert.equal(find(p.render(speedProps),CenterModal),undefined,'fixed-target research stays in existing parent workflow');
+    pool=p.render({...poolProps,sport});browser=find(pool,Browser);browser.props.onSelect(identity);
+    assert.equal(find(h.render(props),Modal).props.draftingPlayer.id,10,'normal selection immediately opens the existing Draft flow');
+    assert.equal(find(p.render({...poolProps,sport}),CenterModal),undefined);
+    browser.props.onInspect(identity);
+    assert.equal(find(h.render(props),Modal).props.draftingPlayer.id,10,'research uses the same parent Draft profile and roster actions');
+    assert.equal(find(p.render({...poolProps,sport}),CenterModal),undefined,'no duplicate modal layered over the parent');
     p.unmount();h.unmount();
   }
 });
@@ -714,4 +707,50 @@ test('a rejected player draft reveals the backend conflict and refreshes without
   assert.equal(calls.filter(([,options])=>options?.method==='POST').length,1);
   assert.ok(calls.some(([url,options])=>url.startsWith('/api/lineups?') && !options?.method));
   h.unmount();
+});
+
+test('NBA/NFL Draft Order research retains context and submits only its explicit authorized action', async () => {
+  for (const sport of ['nba', 'nfl']) {
+    const { h, props, tree, setHistory, respond, calls } = await setup(sport, { role: 'admin' });
+    const history = { available: true, initialized: true, picks: [], corrections: [], turn: { state: 'active', overallPick: 7, round: 2, pickInRound: 3, teamId: 3 } };
+    setHistory(history); await context.pullOptions.onRefresh();
+    nodes(tree).find(n => n.type === 'button' && n.props.children?.props?.children === 'Draft Order').props.onClick();
+    find(h.render(props), DraftOrder).props.onMakePick();
+    let next = h.render(props); find(next, Pool).props.setSearchTerm('retained');
+    const candidate = { id: 11, name: 'Research pick', position_group: sport === 'nba' ? 'G' : 'RB', is_active: true };
+    find(next, Pool).props.speedEntry.onResearch(candidate); next = h.render(props);
+    let research = find(next, Research); assert.equal(research.props.player.id, 11); assert.equal(research.props.sport, sport);
+    assert.equal(research.props.slateId, 1); assert.equal(research.props.defaultMode, 'season'); assert.equal(typeof research.props.onAction, 'function');
+    assert.ok(!calls.some(([, options]) => options?.method === 'POST'));
+    research.props.onClose(); assert.equal(find(h.render(props), Pool).props.searchTerm, 'retained');
+    find(h.render(props), Pool).props.speedEntry.onResearch(candidate); research = find(h.render(props), Research);
+    window.confirm = () => true;
+    global.fetch = async (url, options) => { calls.push([url, options]); if (options?.method === 'POST') { setHistory({ ...history, turn: { ...history.turn, overallPick: 8, teamId: 4 } }); return reply({ success: true }); } return reply(respond(url)); };
+    await research.props.onAction(); await tick();
+    const writes = calls.filter(([, options]) => options?.method === 'POST'); assert.equal(writes.length, 1); assert.equal(JSON.parse(writes[0][1].body).teamId, 3);
+    assert.equal(find(h.render(props), Research).props.player, null);
+    // Opponent roster inspection stays read-only even after a draft-intent research modal.
+    nodes(h.render(props)).find(n => n.type === 'button' && n.props.children?.[0] === 'Josh').props.onClick();
+    next = h.render(props); find(next, Court).props.setDraftingPlayer(props.players[0]);
+    research = find(h.render(props), Research); assert.equal(research.props.actionLabel, undefined); assert.equal(research.props.onAction, undefined);
+    h.unmount();
+  }
+});
+test('NBA/NFL correction research delegates replacement to the existing correction handler', async () => {
+  for (const sport of ['nba', 'nfl']) {
+    const { h, props, tree, setHistory, respond, calls } = await setup(sport, { role: 'player', systemRole: 'super_admin' });
+    const pick = { id: 6, overall_pick: 6, round_number: 2, pick_in_round: 2, team_id: 2, team_name: 'Josh', player_id: 10, player_name: 'Player Ten', status: 'active' };
+    const history = { available: true, initialized: true, picks: [pick], corrections: [], turn: { state: 'complete' } };
+    setHistory(history); await context.pullOptions.onRefresh();
+    nodes(tree).find(n => n.type === 'button' && n.props.children?.props?.children === 'Draft Order').props.onClick();
+    find(h.render(props), DraftOrder).props.onToggleEdit(); find(h.render(props), DraftOrder).props.onEdit(pick);
+    const candidate = { id: 11, name: 'Replacement', position_group: sport === 'nba' ? 'G' : 'QB', is_active: true };
+    find(h.render(props), Pool).props.speedEntry.onResearch(candidate);
+    const research = find(h.render(props), Research); assert.equal(research.props.actionLabel, 'Replace Pick #6'); assert.ok(!calls.some(([, o]) => o?.method === 'POST'));
+    window.confirm = () => true;
+    global.fetch = async (url, options) => { calls.push([url, options]); if (options?.method === 'POST') return reply({ success: true }); return reply(respond(url)); };
+    await research.props.onAction();
+    const writes = calls.filter(([, o]) => o?.method === 'POST'); assert.equal(writes.length, 1); assert.equal(writes[0][0], '/api/admin/lineup-correction');
+    assert.equal(JSON.parse(writes[0][1].body).newPlayerId, 11); assert.equal(find(h.render(props), Research).props.player, null); h.unmount();
+  }
 });

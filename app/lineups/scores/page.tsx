@@ -43,7 +43,6 @@ type Slate = {
 type SavedLineup = {
   team_id: number;
   player_ids: number[];
-  pregame_projected_points: number | null;
 };
 
 type SlateTeamConfig = {
@@ -478,16 +477,7 @@ export default async function ScoresLineupsPage({
   if (selectedSlateId) {
     const { data: lineupsData } = await supabaseAdmin
       .from("lineups")
-      .select(
-        `
-        id,
-        team_id,
-        lineup_players (
-          player_id,
-          projected_fantasy_points
-        )
-        `
-      )
+      .select(sport === "golf" ? "id,team_id,lineup_players(player_id,projected_fantasy_points)" : "id,team_id,lineup_players(player_id)")
       .eq("slate_id", selectedSlateId);
 
     savedLineupsForInitialSlate =
@@ -496,32 +486,15 @@ export default async function ScoresLineupsPage({
           lineup.lineup_players?.map(
             (lp: {
               player_id: number;
-              projected_fantasy_points: number | null;
+              projected_fantasy_points?: number | null;
             }) => lp
           ) ?? [];
-
-        const hasCompleteProjectionSnapshot =
-          lineupPlayerRows.length > 0 &&
-          lineupPlayerRows.every(
-            (lp) =>
-              lp.projected_fantasy_points !== null &&
-              Number.isFinite(Number(lp.projected_fantasy_points))
-          );
 
         return {
           team_id: lineup.team_id,
           player_ids: lineupPlayerRows.map((lp) => lp.player_id),
-          pregame_projected_points: hasCompleteProjectionSnapshot
-            ? Number(
-                lineupPlayerRows
-                  .reduce(
-                    (sum, lp) =>
-                      sum + Number(lp.projected_fantasy_points ?? 0),
-                    0
-                  )
-                  .toFixed(1)
-              )
-            : null,
+          ...(sport === "golf" ? { pregame_projected_points: lineupPlayerRows.length > 0 && lineupPlayerRows.every(lp => lp.projected_fantasy_points != null && Number.isFinite(Number(lp.projected_fantasy_points)))
+            ? Number(lineupPlayerRows.reduce((sum,lp) => sum + Number(lp.projected_fantasy_points),0).toFixed(1)) : null } : {}),
         };
       }) ?? [];
 

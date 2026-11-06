@@ -12,6 +12,7 @@ import { createRefreshScope } from "@/lib/client/refreshScope";
 import type { RefreshOutcome } from "@/lib/client/refreshOutcome";
 import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 import ScoresRefreshButton from "@/components/ui/ScoresRefreshButton";
+import { professionalSeason } from "@/lib/player-center/types";
 import { nflSeasonForSlate } from "@/lib/lineups/nflDraftStats";
 
 import type { LiveScoreGame } from "@/components/live-scores/LiveScoreCard";
@@ -184,6 +185,7 @@ export default function LineupBuilder({
   const [golfScorecardFocus, setGolfScorecardFocus] = useState<GolfScorecardFocus | null>(null);
   const [leagueResearchPlayer, setLeagueResearchPlayer] =
     useState<Player | null>(null);
+  const [leagueResearchIntent, setLeagueResearchIntent] = useState<"inspect" | "draft">("inspect");
   const [targetDraftSlot, setTargetDraftSlot] =
     useState<TargetDraftSlot | null>(null);
 
@@ -544,32 +546,7 @@ export default function LineupBuilder({
     return map;
   }, [playerStatsState]);
 
-  const [playerProjections, setPlayerProjections] = useState<Record<number, DraftProjection>>({});
-
-  useEffect(() => {
-    if (!isDraftPage || !scopeReady || !selectedSlateIdNumber || draftSport === "golf") {
-      setPlayerProjections({});
-      return;
-    }
-    let cancelled = false;
-    const isCurrent = refreshScopeRef.current.capture();
-    setPlayerProjections({});
-    fetch(`/api/draft-projections?slateId=${selectedSlateIdNumber}&sport=${draftSport}`, { cache: "no-store" })
-      .then(async (response) => ({ response, body: await response.json() }))
-      .then(({ response, body }) => {
-        if (cancelled || !isCurrent()) return;
-        if (!response.ok) throw new Error(body?.error || "Failed to load Draft projections");
-        if (!matchesDraftResponse(body, { groupId: draftGroupId!, sport: draftSport, slateId: selectedSlateIdNumber })) {
-          throw new Error("Draft projection context does not match the selected slate.");
-        }
-        setPlayerProjections(body.projections || {});
-      })
-      .catch((error) => {
-        console.error("Failed to load Draft projections", error);
-        if (!cancelled && isCurrent()) setPlayerProjections({});
-      });
-    return () => { cancelled = true; };
-  }, [isDraftPage, selectedSlateIdNumber, draftSport, scopeReady, refreshScopeKey, draftGroupId]);
+  const playerProjections: Record<number, DraftProjection> = {}; // Compatibility prop for Golf/legacy types only.
 
   const playerAverageMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -578,27 +555,6 @@ export default function LineupBuilder({
     });
     return map;
   }, [playerAverages]);
-
-  const getPlayerProjectionScore = (playerId: number) => {
-    const projected = playerProjections?.[playerId]?.projection;
-    const fallback = playerAverageMap.get(playerId);
-    const value = projected ?? fallback ?? 0;
-    return Number.isFinite(Number(value)) ? Number(value) : 0;
-  };
-
-  const getPregameProjectedTeamTotal = (teamId: number) => {
-    const lineup = lineupsState.find(
-      (item) => item.team_id === teamId
-    );
-
-    const value = lineup?.pregame_projected_points;
-
-    return value !== null &&
-      value !== undefined &&
-      Number.isFinite(Number(value))
-      ? Number(value)
-      : null;
-  };
 
   const teamResultsMap = useMemo(() => {
     const map = new Map<number, TeamResult>();
@@ -938,151 +894,6 @@ export default function LineupBuilder({
   }
 
   // ===== LIVE WIN % HELPERS =====
-
-  function parseNbaIsoClockMinutes(gameClock?: string | null) {
-    if (!gameClock) return null;
-
-    const match = gameClock.match(/^PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/);
-    if (!match) return null;
-
-    const minutes = Number(match[1] ?? 0);
-    const seconds = Number(match[2] ?? 0);
-
-    return minutes + seconds / 60;
-  }
-
-  function parseStatusTextMinutesRemaining(statusText?: string | null) {
-    if (!statusText) return null;
-
-    const trimmed = statusText.trim();
-
-    if (/final/i.test(trimmed)) return 0;
-
-    const match = trimmed.match(/^Q(\d+)\s+(?:(\d*)?:)?(\d+(?:\.\d+)?)$/i);
-    if (!match) return null;
-
-    const period = Number(match[1]);
-    const minutes = Number(match[2] || 0);
-    const seconds = Number(match[3] ?? 0);
-
-    if (!Number.isFinite(period)) return null;
-
-    const clockMinutes = minutes + seconds / 60;
-    const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
-
-    return periodsRemainingAfterCurrent * 12 + clockMinutes;
-  }
-
-  function getMinutesRemainingForPlayer(stat?: PlayerStat) {
-    const gameStatus = stat?.game_status ?? null;
-
-    if (gameStatus === 3) return 0;
-
-    const period = stat?.period ?? null;
-    const clockMinutes = parseNbaIsoClockMinutes(stat?.game_clock);
-
-    if (gameStatus === 2 && period && clockMinutes !== null) {
-      const regulationPeriods = 4;
-      const periodsRemainingAfterCurrent = Math.max(
-        regulationPeriods - period,
-        0
-      );
-
-      return periodsRemainingAfterCurrent * 12 + clockMinutes;
-    }
-
-    const statusTextMinutes = parseStatusTextMinutesRemaining(
-      stat?.game_status_text
-    );
-
-    if (statusTextMinutes !== null) return statusTextMinutes;
-
-    return 48;
-  }
-
-  function getLiveProjectedTeamTotal(teamId: number) {
-    const stats = getTeamStats(teamId);
-
-    if ((selectedSlate?.sport ?? selectedSport) === "golf") {
-      return Number(stats.total ?? 0);
-    }
-
-    if (selectedSlate?.is_locked) {
-      return Number(stats.total ?? 0);
-    }
-
-    const teamPlayers = getPlayersForTeam(teamId);
-
-    return teamPlayers.reduce((sum, player) => {
-      const stat = playerStatsMap.get(player.id);
-
-      const current = Number(stat?.fantasy_points ?? 0);
-
-      const projection =
-        playerProjections?.[player.id]?.projection ??
-        playerAverageMap.get(player.id) ??
-        0;
-
-      const minutesRemaining = getMinutesRemainingForPlayer(stat);
-      const remainingFactor = minutesRemaining / 48;
-
-      const projected =
-        minutesRemaining <= 0
-          ? current
-          : current + projection * remainingFactor;
-
-      return sum + projected;
-    }, 0);
-  }
-
-  function computeWinPctMap() {
-    const map = new Map<number, number>();
-
-    if ((selectedSlate?.sport ?? selectedSport) === "golf") {
-      return map;
-    }
-
-    if (selectedSlate?.is_locked) {
-      const rows = orderedTeamsForSlate
-        .map((team) => ({
-          teamId: team.id,
-          total: Number(getTeamStats(team.id).total ?? 0),
-        }))
-        .sort((a, b) => b.total - a.total);
-
-      const winnerTeamId = rows[0]?.teamId ?? null;
-
-      rows.forEach((row) => {
-        map.set(row.teamId, row.teamId === winnerTeamId ? 100 : 0);
-      });
-
-      return map;
-    }
-
-    const k = 20;
-
-    const teams = orderedTeamsForSlate.map((team) => ({
-      teamId: team.id,
-      projected: getLiveProjectedTeamTotal(team.id),
-    }));
-
-    const weights = teams.map((t) => ({
-      ...t,
-      weight: Math.exp(t.projected / k),
-    }));
-
-    const totalWeight = weights.reduce((sum, t) => sum + t.weight, 0);
-
-    weights.forEach((t) => {
-      let pct = (t.weight / totalWeight) * 100;
-      pct = Math.max(5, Math.min(95, pct));
-      map.set(t.teamId, pct);
-    });
-
-    return map;
-  }
-
-  const liveWinPctMap = computeWinPctMap();
 
   function getEffectiveRosterSlots() {
     return effectiveRosterSlots;
@@ -2256,6 +2067,9 @@ export default function LineupBuilder({
     ? "border-b border-slate-200 px-0 py-0 font-semibold"
     : "border-b border-slate-200 px-3 py-2 font-semibold";
 
+  const modalSport = isFantasySport(selectedSlate?.sport) ? selectedSlate.sport : isFantasySport(draftSport) ? draftSport : "nba";
+  const modalCenterSeason = modalSport === "golf" ? undefined : professionalSeason(modalSport);
+
   const ownerTeamForDraftingPlayer = draftingPlayer
     ? getOwnerTeamForPlayer(draftingPlayer.id)
     : null;
@@ -2668,7 +2482,7 @@ export default function LineupBuilder({
 
                 if (player) {
                   if (viewedTeam?.id === currentTeamId) inspectPlayerFromSlot(player);
-                  else setLeagueResearchPlayer(player);
+                  else { setLeagueResearchIntent("inspect"); setLeagueResearchPlayer(player); }
                 }
               }}
               setTargetDraftSlot={setTargetDraftSlot}
@@ -2684,6 +2498,9 @@ export default function LineupBuilder({
               <button type="button" disabled={isSaving || isAssigningPlayer} onClick={() => { setOrderPickTarget(null); setDraftingPlayer(null); setPendingRosterSlotChoice(null); }}>Cancel</button>
             </div>}
             <PlayerPool
+              sport={modalSport}
+              slateId={selectedSlateIdNumber}
+              centerSeason={modalCenterSeason}
               players={players}
               filteredPlayers={filteredPlayers}
               searchTerm={searchTerm}
@@ -2703,7 +2520,7 @@ export default function LineupBuilder({
                 onSelect: player => activeCorrection
                   ? replaceOrderPick(player, activeCorrection.pick.team_id)
                   : handleAssignPlayerToTeam(player, activeOrderTarget!.teamId),
-                onResearch: setLeagueResearchPlayer,
+                onResearch: player => { setLeagueResearchIntent("draft"); setLeagueResearchPlayer(player); },
               } : undefined}
               isAssigningPlayer={isAssigningPlayer || isSaving || isSlateLoading}
               pillBase={pillBase}
@@ -2728,14 +2545,6 @@ export default function LineupBuilder({
           getTeamStats={getTeamStats}
           getPlayerStat={getPlayerStat}
           getRawPlayerStat={getRawPlayerStat}
-          getLiveProjectedTeamTotal={
-            getLiveProjectedTeamTotal
-          }
-          getPregameProjectedTeamTotal={
-            getPregameProjectedTeamTotal
-          }
-          liveWinPctMap={liveWinPctMap}
-          playerProjections={playerProjections}
           controls={
             (selectedSlate?.sport ??
               selectedSport) === "golf"
@@ -2835,6 +2644,9 @@ export default function LineupBuilder({
 
 
       <SlotDraftModal
+        sport={modalSport}
+        slateId={selectedSlateIdNumber}
+        centerSeason={modalCenterSeason}
         targetDraftSlot={targetDraftSlot}
         setTargetDraftSlot={setTargetDraftSlot}
         players={players}
@@ -2854,6 +2666,10 @@ export default function LineupBuilder({
       />
 
       <ReadOnlyPlayerModal
+        sport={modalSport}
+        leagueSeason={Number(selectedSeason)}
+        slateId={selectedSlateIdNumber}
+        centerSeason={modalCenterSeason}
         player={profilePlayer}
         setPlayer={(player) => { if (!player) setGolfScorecardFocus(null); setProfilePlayer(player); }}
         playerAverageMap={playerAverageMap}
@@ -2872,6 +2688,8 @@ export default function LineupBuilder({
       />
 
       <PlayerResearchModal
+        slateId={selectedSlateIdNumber}
+        centerSeason={modalCenterSeason}
         player={
           leagueResearchPlayer
             ? {
@@ -2907,12 +2725,24 @@ export default function LineupBuilder({
         }
         season={Number(selectedSeason)}
         defaultMode="season"
+        actionDisabled={!scopeReady || isSlateLoading || isSaving || isAssigningPlayer}
+        actionLabel={leagueResearchIntent !== "draft" ? undefined : activeCorrection ? `Replace Pick #${activeCorrection.pick.overall_pick}` : activeOrderTarget ? "Make this pick" : undefined}
+        onAction={leagueResearchIntent === "draft" && leagueResearchPlayer && (activeCorrection || activeOrderTarget) ? async () => {
+          const player = leagueResearchPlayer;
+          const saved = activeCorrection ? await replaceOrderPick(player, activeCorrection.pick.team_id)
+            : await handleAssignPlayerToTeam(player, activeOrderTarget!.teamId);
+          if (saved) setLeagueResearchPlayer(null);
+        } : undefined}
         onClose={() =>
           setLeagueResearchPlayer(null)
         }
       />
 
       <DraftPlayerModal
+        sport={modalSport}
+        leagueSeason={Number(selectedSeason)}
+        slateId={selectedSlateIdNumber}
+        centerSeason={modalCenterSeason}
         draftingPlayer={draftingPlayer}
         setDraftingPlayer={
           setDraftingPlayerWithSlotRestore

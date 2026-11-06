@@ -1,0 +1,4009 @@
+{
+  "sourceRun": 40789028481,
+  "capturedAt": "2026-10-29T00:02:27.286671+00:00",
+  "reduction": "Retains actual league/phase filters, exact-season rows and GP; drops unrelated statistics and display options. Public ESPN data only.",
+  "cases": [
+    {
+      "providerPlayerId": "2991230",
+      "season": 2026,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2017,
+                  "displayName": "2016-17"
+                },
+                "teamId": "28",
+                "stats": [
+                  "37"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2018,
+                  "displayName": "2017-18"
+                },
+                "teamId": "28",
+                "stats": [
+                  "76"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": "28",
+                "stats": [
+                  "64"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "28",
+                "stats": [
+                  "54"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "28",
+                "stats": [
+                  "52"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "28",
+                "stats": [
+                  "65"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "28",
+                "stats": [
+                  "69"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "10",
+                "stats": [
+                  "73"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "10",
+                "stats": [
+                  "60"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2027,
+                  "displayName": "2026-27"
+                },
+                "teamId": "10",
+                "stats": [
+                  "3"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4396993",
+      "season": 2026,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "23",
+                "stats": [
+                  "58"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "23",
+                "stats": [
+                  "51"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "11",
+                "stats": [
+                  "26"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": null,
+                "stats": [
+                  "77"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "11",
+                "stats": [
+                  "56"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "11",
+                "stats": [
+                  "69"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "11",
+                "stats": [
+                  "73"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2027,
+                  "displayName": "2026-27"
+                },
+                "teamId": "11",
+                "stats": [
+                  "4"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "5061603",
+      "season": 2026,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "6442",
+      "season": 2026,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2012,
+                  "displayName": "2011-12"
+                },
+                "teamId": "5",
+                "stats": [
+                  "51"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2013,
+                  "displayName": "2012-13"
+                },
+                "teamId": "5",
+                "stats": [
+                  "59"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2014,
+                  "displayName": "2013-14"
+                },
+                "teamId": "5",
+                "stats": [
+                  "71"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2015,
+                  "displayName": "2014-15"
+                },
+                "teamId": "5",
+                "stats": [
+                  "75"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2016,
+                  "displayName": "2015-16"
+                },
+                "teamId": "5",
+                "stats": [
+                  "53"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2017,
+                  "displayName": "2016-17"
+                },
+                "teamId": "5",
+                "stats": [
+                  "72"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2018,
+                  "displayName": "2017-18"
+                },
+                "teamId": "2",
+                "stats": [
+                  "60"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": "2",
+                "stats": [
+                  "67"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "17",
+                "stats": [
+                  "20"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "17",
+                "stats": [
+                  "54"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "17",
+                "stats": [
+                  "29"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "17",
+                "stats": [
+                  "40"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "6",
+                "stats": [
+                  "20"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": null,
+                "stats": [
+                  "60"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "6",
+                "stats": [
+                  "58"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "6",
+                "stats": [
+                  "50"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2027,
+                  "displayName": "2026-27"
+                },
+                "teamId": "6",
+                "stats": [
+                  "3"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "6606",
+      "season": 2026,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2013,
+                  "displayName": "2012-13"
+                },
+                "teamId": "22",
+                "stats": [
+                  "82"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2014,
+                  "displayName": "2013-14"
+                },
+                "teamId": "22",
+                "stats": [
+                  "82"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2015,
+                  "displayName": "2014-15"
+                },
+                "teamId": "22",
+                "stats": [
+                  "82"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2016,
+                  "displayName": "2015-16"
+                },
+                "teamId": "22",
+                "stats": [
+                  "75"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2017,
+                  "displayName": "2016-17"
+                },
+                "teamId": "22",
+                "stats": [
+                  "75"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2018,
+                  "displayName": "2017-18"
+                },
+                "teamId": "22",
+                "stats": [
+                  "73"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": "22",
+                "stats": [
+                  "80"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "22",
+                "stats": [
+                  "66"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "22",
+                "stats": [
+                  "67"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "22",
+                "stats": [
+                  "29"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "22",
+                "stats": [
+                  "58"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "15",
+                "stats": [
+                  "73"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "15",
+                "stats": [
+                  "58"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2027,
+                  "displayName": "2026-27"
+                },
+                "teamId": "22",
+                "stats": [
+                  "3"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "2530530",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2016,
+                  "displayName": "2015-16"
+                },
+                "teamId": "20",
+                "stats": [
+                  "81"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2017,
+                  "displayName": "2016-17"
+                },
+                "teamId": "20",
+                "stats": [
+                  "81"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2018,
+                  "displayName": "2017-18"
+                },
+                "teamId": "20",
+                "stats": [
+                  "76"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": "20",
+                "stats": [
+                  "76"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "11",
+                "stats": [
+                  "71"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "11",
+                "stats": [
+                  "69"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "11",
+                "stats": [
+                  "27"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "11",
+                "stats": [
+                  "75"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "11",
+                "stats": [
+                  "71"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "11",
+                "stats": [
+                  "79"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "11",
+                "stats": [
+                  "56"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "3102531",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2016,
+                  "displayName": "2015-16"
+                },
+                "teamId": "18",
+                "stats": [
+                  "72"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2017,
+                  "displayName": "2016-17"
+                },
+                "teamId": "18",
+                "stats": [
+                  "66"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2018,
+                  "displayName": "2017-18"
+                },
+                "teamId": "18",
+                "stats": [
+                  "48"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "6",
+                "stats": [
+                  "57"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "6",
+                "stats": [
+                  "43"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "6",
+                "stats": [
+                  "34"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "27",
+                "stats": [
+                  "17"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": null,
+                "stats": [
+                  "51"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "27",
+                "stats": [
+                  "65"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "2",
+                "stats": [
+                  "57"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "2",
+                "stats": [
+                  "42"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "1",
+                "stats": [
+                  "17"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "9",
+                "stats": [
+                  "15"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": null,
+                "stats": [
+                  "32"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "3934673",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": "15",
+                "stats": [
+                  "27"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "15",
+                "stats": [
+                  "66"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "15",
+                "stats": [
+                  "66"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "15",
+                "stats": [
+                  "17"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "23",
+                "stats": [
+                  "25"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": null,
+                "stats": [
+                  "42"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "9",
+                "stats": [
+                  "72"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "18",
+                "stats": [
+                  "81"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "16",
+                "stats": [
+                  "62"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "16",
+                "stats": [
+                  "82"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4017844",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2018,
+                  "displayName": "2017-18"
+                },
+                "teamId": "2",
+                "stats": [
+                  "33"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": "2",
+                "stats": [
+                  "41"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "20",
+                "stats": [
+                  "70"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "18",
+                "stats": [
+                  "41"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "4",
+                "stats": [
+                  "26"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": null,
+                "stats": [
+                  "67"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4065654",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2018,
+                  "displayName": "2017-18"
+                },
+                "teamId": "19",
+                "stats": [
+                  "27"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": "19",
+                "stats": [
+                  "75"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "19",
+                "stats": [
+                  "34"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "19",
+                "stats": [
+                  "11"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "19",
+                "stats": [
+                  "58"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "19",
+                "stats": [
+                  "71"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "19",
+                "stats": [
+                  "52"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4066218",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "2",
+                "stats": [
+                  "69"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "2",
+                "stats": [
+                  "63"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "2",
+                "stats": [
+                  "77"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "2",
+                "stats": [
+                  "79"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "6",
+                "stats": [
+                  "47"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "30",
+                "stats": [
+                  "29"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": null,
+                "stats": [
+                  "76"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "30",
+                "stats": [
+                  "16"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "30",
+                "stats": [
+                  "36"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4067017",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "16",
+                "stats": [
+                  "1"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "6",
+                "stats": [
+                  "14"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": null,
+                "stats": [
+                  "15"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "6",
+                "stats": [
+                  "42"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "28",
+                "stats": [
+                  "26"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "28",
+                "stats": [
+                  "24"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4277957",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "8",
+                "stats": [
+                  "19"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "8",
+                "stats": [
+                  "52"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "8",
+                "stats": [
+                  "23"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "21",
+                "stats": [
+                  "36"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4278046",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "25",
+                "stats": [
+                  "22"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "25",
+                "stats": [
+                  "9"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "25",
+                "stats": [
+                  "15"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "5",
+                "stats": [
+                  "4"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4395651",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "4",
+                "stats": [
+                  "65"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "4",
+                "stats": [
+                  "69"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "4",
+                "stats": [
+                  "61"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "4",
+                "stats": [
+                  "74"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "4",
+                "stats": [
+                  "79"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "4",
+                "stats": [
+                  "74"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "4",
+                "stats": [
+                  "29"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "30",
+                "stats": [
+                  "21"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": null,
+                "stats": [
+                  "50"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4396818",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "12",
+                "stats": [
+                  "8"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "12",
+                "stats": [
+                  "37"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "12",
+                "stats": [
+                  "60"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4397071",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "13",
+                "stats": [
+                  "1"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "4",
+                "stats": [
+                  "1"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": null,
+                "stats": [
+                  "2"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "20",
+                "stats": [
+                  "2"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "19",
+                "stats": [
+                  "2"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "11",
+                "stats": [
+                  "3"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "4",
+                "stats": [
+                  "8"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": null,
+                "stats": [
+                  "11"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4397821",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "22",
+                "stats": [
+                  "5"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "10",
+                "stats": [
+                  "22"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "10",
+                "stats": [
+                  "20"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "9",
+                "stats": [
+                  "14"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4432068",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "3",
+                "stats": [
+                  "3"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4432171",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "9",
+                "stats": [
+                  "52"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "9",
+                "stats": [
+                  "63"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "9",
+                "stats": [
+                  "66"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "9",
+                "stats": [
+                  "74"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "9",
+                "stats": [
+                  "60"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4432173",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "1",
+                "stats": [
+                  "13"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "27",
+                "stats": [
+                  "41"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4432821",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "3",
+                "stats": [
+                  "8"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "4",
+                "stats": [
+                  "12"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "17",
+                "stats": [
+                  "26"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4432887",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "17",
+                "stats": [
+                  "7"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "17",
+                "stats": [
+                  "24"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4433133",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "4",
+                "stats": [
+                  "6"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "14",
+                "stats": [
+                  "14"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4592187",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "16",
+                "stats": [
+                  "29"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "16",
+                "stats": [
+                  "25"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "8",
+                "stats": [
+                  "20"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "30",
+                "stats": [
+                  "16"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": null,
+                "stats": [
+                  "36"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "8",
+                "stats": [
+                  "6"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4592427",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "7",
+                "stats": [
+                  "20"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "7",
+                "stats": [
+                  "64"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4593041",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "29",
+                "stats": [
+                  "70"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "29",
+                "stats": [
+                  "48"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "21",
+                "stats": [
+                  "17"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": null,
+                "stats": [
+                  "65"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "1",
+                "stats": [
+                  "27"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "20",
+                "stats": [
+                  "3"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "10",
+                "stats": [
+                  "3"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": null,
+                "stats": [
+                  "33"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "7",
+                "stats": [
+                  "5"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4606840",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "27",
+                "stats": [
+                  "50"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4683688",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "6",
+                "stats": [
+                  "55"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "6",
+                "stats": [
+                  "36"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "6",
+                "stats": [
+                  "7"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4683749",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "10",
+                "stats": [
+                  "31"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "15",
+                "stats": [
+                  "11"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "21",
+                "stats": [
+                  "16"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "12",
+                "stats": [
+                  "16"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4683834",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "30",
+                "stats": [
+                  "36"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "30",
+                "stats": [
+                  "14"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "7",
+                "stats": [
+                  "6"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": null,
+                "stats": [
+                  "20"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4684275",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "16",
+                "stats": [
+                  "49"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "16",
+                "stats": [
+                  "35"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "4",
+                "stats": [
+                  "30"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": null,
+                "stats": [
+                  "65"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4701232",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "30",
+                "stats": [
+                  "43"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "30",
+                "stats": [
+                  "19"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "30",
+                "stats": [
+                  "44"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "21",
+                "stats": [
+                  "60"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4712863",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "1",
+                "stats": [
+                  "6"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "1",
+                "stats": [
+                  "33"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "1",
+                "stats": [
+                  "77"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4870562",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "24",
+                "stats": [
+                  "28"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "24",
+                "stats": [
+                  "33"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "1",
+                "stats": [
+                  "35"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "20",
+                "stats": [
+                  "71"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4914336",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "22",
+                "stats": [
+                  "80"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "22",
+                "stats": [
+                  "32"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "22",
+                "stats": [
+                  "72"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "22",
+                "stats": [
+                  "50"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "4997537",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "27",
+                "stats": [
+                  "10"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "27",
+                "stats": [
+                  "35"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "27",
+                "stats": [
+                  "49"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "5061575",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "30",
+                "stats": [
+                  "81"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "5061603",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "5106268",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "5",
+                "stats": [
+                  "5"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "5",
+                "stats": [
+                  "64"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "5108024",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "12",
+                "stats": [
+                  "41"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "5157066",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "11",
+                "stats": [
+                  "50"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "11",
+                "stats": [
+                  "35"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "5159925",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "25",
+                "stats": [
+                  "10"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "6430",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2012,
+                  "displayName": "2011-12"
+                },
+                "teamId": "4",
+                "stats": [
+                  "42"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2013,
+                  "displayName": "2012-13"
+                },
+                "teamId": "4",
+                "stats": [
+                  "82"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2014,
+                  "displayName": "2013-14"
+                },
+                "teamId": "4",
+                "stats": [
+                  "67"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2015,
+                  "displayName": "2014-15"
+                },
+                "teamId": "4",
+                "stats": [
+                  "65"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2016,
+                  "displayName": "2015-16"
+                },
+                "teamId": "4",
+                "stats": [
+                  "67"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2017,
+                  "displayName": "2016-17"
+                },
+                "teamId": "4",
+                "stats": [
+                  "76"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2018,
+                  "displayName": "2017-18"
+                },
+                "teamId": "16",
+                "stats": [
+                  "59"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": "16",
+                "stats": [
+                  "10"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": "20",
+                "stats": [
+                  "55"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": null,
+                "stats": [
+                  "65"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "14",
+                "stats": [
+                  "58"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "14",
+                "stats": [
+                  "52"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "14",
+                "stats": [
+                  "57"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "14",
+                "stats": [
+                  "64"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "14",
+                "stats": [
+                  "60"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "14",
+                "stats": [
+                  "25"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "9",
+                "stats": [
+                  "30"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": null,
+                "stats": [
+                  "55"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "9",
+                "stats": [
+                  "38"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "providerPlayerId": "6580",
+      "season": 2027,
+      "log": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          }
+        ]
+      },
+      "summary": {
+        "filters": [
+          {
+            "name": "league",
+            "value": "nba"
+          },
+          {
+            "name": "seasontype",
+            "value": "2"
+          }
+        ],
+        "categories": [
+          {
+            "name": "averages",
+            "labels": [
+              "GP"
+            ],
+            "statistics": [
+              {
+                "season": {
+                  "year": 2013,
+                  "displayName": "2012-13"
+                },
+                "teamId": "27",
+                "stats": [
+                  "56"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2014,
+                  "displayName": "2013-14"
+                },
+                "teamId": "27",
+                "stats": [
+                  "73"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2015,
+                  "displayName": "2014-15"
+                },
+                "teamId": "27",
+                "stats": [
+                  "63"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2016,
+                  "displayName": "2015-16"
+                },
+                "teamId": "27",
+                "stats": [
+                  "55"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2017,
+                  "displayName": "2016-17"
+                },
+                "teamId": "27",
+                "stats": [
+                  "77"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2018,
+                  "displayName": "2017-18"
+                },
+                "teamId": "27",
+                "stats": [
+                  "82"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2019,
+                  "displayName": "2018-19"
+                },
+                "teamId": "27",
+                "stats": [
+                  "82"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2020,
+                  "displayName": "2019-20"
+                },
+                "teamId": "27",
+                "stats": [
+                  "57"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2021,
+                  "displayName": "2020-21"
+                },
+                "teamId": "27",
+                "stats": [
+                  "60"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2022,
+                  "displayName": "2021-22"
+                },
+                "teamId": "27",
+                "stats": [
+                  "40"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2023,
+                  "displayName": "2022-23"
+                },
+                "teamId": "27",
+                "stats": [
+                  "50"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2024,
+                  "displayName": "2023-24"
+                },
+                "teamId": "21",
+                "stats": [
+                  "53"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2025,
+                  "displayName": "2024-25"
+                },
+                "teamId": "21",
+                "stats": [
+                  "53"
+                ]
+              },
+              {
+                "season": {
+                  "year": 2026,
+                  "displayName": "2025-26"
+                },
+                "teamId": "12",
+                "stats": [
+                  "6"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

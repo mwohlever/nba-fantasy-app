@@ -1,4 +1,5 @@
 "use client";
+import { playerCenterReadOnlyLocal } from "@/lib/player-center/feature";
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -22,6 +23,8 @@ export default function NotificationReminder() {
   useEffect(() => {
     let cancelled = false;
     async function inspect() {
+      // The preferences GET can create a default row; never run it in the isolated fixture preview.
+      if (playerCenterReadOnlyLocal() || process.env.NODE_ENV === "development" && pathname === "/player-center-preview") return;
       if (pathname === "/login" || pathname.startsWith("/auth")) {
         assessed.current = false;
         setVisible(false);
