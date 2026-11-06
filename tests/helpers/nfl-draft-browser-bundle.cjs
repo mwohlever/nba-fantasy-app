@@ -23,8 +23,9 @@ module.exports=function(sport='nfl',playerCenterEnabled=true){
   try{
     const builder=add(path.join(root,'components/lineups/LineupBuilder.tsx')),nav=add(path.join(root,'components/AppNav.tsx'));
     const react=add(require.resolve('react')),client=add(require.resolve('react-dom/client'));
+    const profile=add(path.join(root,'components/player-center/PlayerCenter.tsx')),research=add(path.join(root,'components/player-center/ResearchBrowser.tsx'));
     return `const process={env:{NODE_ENV:'production',NEXT_PUBLIC_PLAYER_CENTER_ENABLED:${JSON.stringify(String(playerCenterEnabled))}}},global=globalThis;const sources=${JSON.stringify(sources)},maps=${JSON.stringify(maps)},cache={};
       function load(id){if(cache[id])return cache[id].exports;const m=cache[id]={exports:{}};new Function('require','module','exports',sources[id])(name=>load(maps[id][name]),m,m.exports);return m.exports;}
-      window.React=load(${JSON.stringify(react)});window.ReactDOMClient=load(${JSON.stringify(client)});window.DraftBuilder=load(${JSON.stringify(builder)}).default;window.AppNav=load(${JSON.stringify(nav)}).default;`;
+      window.React=load(${JSON.stringify(react)});window.ReactDOMClient=load(${JSON.stringify(client)});window.DraftBuilder=load(${JSON.stringify(builder)}).default;window.AppNav=load(${JSON.stringify(nav)}).default;window.PlayerCenter=load(${JSON.stringify(profile)}).default;window.ResearchBrowser=load(${JSON.stringify(research)}).default;`;
   }finally{for(const [i,ext]of ['.ts','.tsx'].entries()){if(previous[i])require.extensions[ext]=previous[i];else delete require.extensions[ext];}}
 };

@@ -33,7 +33,7 @@ export function lastFiveFantasySummary(profile: CenterProfile) {
     average: scored.length ? scored.reduce((sum, point) => sum + point.points, 0) / scored.length : null,
     scoredGames: scored.length,
     unavailable,
-    incomplete: scored.length < 5 || unavailable > 0 || profile.windows.season.metricComparable.fantasy_points !== true,
+    incomplete: scored.length < 5 || unavailable > 0 || profile.windows.last5.metricComparable.fantasy_points !== true,
   };
 }
 
@@ -43,7 +43,7 @@ export function fantasyTrend(profile: CenterProfile, period: TrendPeriod) {
   const verified = points.flatMap(point => point.points === null ? [] : [point.points]);
   const average = verified.length ? verified.reduce((sum, value) => sum + value, 0) / verified.length : null;
   // This observed average is research only. It never opens comparison/ranking gates.
-  const complete = profile.windows.season.metricComparable.fantasy_points === true &&
+  const complete = (period === "last5" ? profile.windows.last5.metricComparable.fantasy_points === true : profile.windows.season.metricComparable.fantasy_points === true && all.length === profile.windows.season.expectedGames) &&
     verified.length === points.length && points.length > 0 &&
     (period === "season" || points.length === (period === "last5" ? 5 : 10));
   return { points, verified: verified.length, average, complete,

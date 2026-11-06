@@ -5,6 +5,7 @@ import { reconcileNflFumbleEvidence } from "../analytics/providers/nflFumbleEvid
 import { instant } from "../analytics/nba/types";
 import { aggregateEspnDstBoxscore } from "../aggregateEspnBoxscore";
 import type { EspnGameSummary } from "../providers/nfl";
+import { SeasonFactsReader, seasonReadFacts } from "./seasonFacts";
 import { BoundedReadCache, ReadBudget } from "./cache";
 import { finiteStat, professionalSeason, type CenterGame, type CenterHistory, type CenterPhase, type CenterPlayer, type CenterStats } from "./types";
 
@@ -297,8 +298,12 @@ export function normalizeCenterNflSchedule(payload: unknown, teamId: string, sea
 type ProviderValue = ReturnType<typeof normalizeCenterLog> | ReturnType<typeof normalizeCenterNflSchedule> | CenterSeasonStats | CenterNflSummary;
 export class CenterEspnReader {
   private cache: BoundedReadCache<ProviderValue>;
+  private facts: SeasonFactsReader;
+  season(sport: "nba" | "nfl", id: string, season: number, phase: CenterPhase, budget?: ReadBudget) { return this.facts.profile(sport, id, season, phase, budget); }
+  bulkSeason(sport: "nba" | "nfl", season: number) { return this.facts.bulk(sport, season); }
   constructor(private readonly fetcher: typeof fetch = fetch, private readonly now: () => number = Date.now) {
     this.cache = new BoundedReadCache<ProviderValue>(128, now);
+    this.facts = new SeasonFactsReader(fetcher, now);
   }
   private async json(url: string) {
     const response = await this.fetcher(url, { cache: "no-store", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(5000) });
@@ -323,7 +328,7 @@ export class CenterEspnReader {
   }
   async history(player: CenterPlayer, season: number, phase: CenterPhase, budget?: ReadBudget) {
     budget ??= new ReadBudget(8, this.now() + 18_000);
-    const result: CenterHistory & { seasonStats: CenterSeasonStats | null; byeWeeks: number[] | null; providerRequests: number } = {
+    const result: CenterHistory & { seasonFacts?: import("./types").SeasonFacts | null; seasonStats: CenterSeasonStats | null; byeWeeks: number[] | null; providerRequests: number } = {
       player, season, phase, source: "provider", games: [], seasonStats: null, byeWeeks: null, providerRequests: 0,
       coverage: { kind: "unavailable", expectedGames: null, fetchedAt: null, freshness: "unavailable", issues: [] },
     };
@@ -334,9 +339,14 @@ export class CenterEspnReader {
     const logUrl = dstTeam ? `https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/${dstTeam}/schedule?season=${season}&seasontype=${phaseNumber[phase]}`
       : player.sport === "nba" ? espnNbaGameLogUrl(player.providerPlayerId, season) : espnNflGameLogUrl(player.providerPlayerId, season);
     const request = { sport: player.sport, providerPlayerId: player.providerPlayerId, season, phase, fetchedAt: new Date(this.now()).toISOString() };
-    const log = await this.cache.read(`log:${player.sport}:${player.providerPlayerId}:${season}:${phase}`, async () => dstTeam
-      ? normalizeCenterNflSchedule(await this.json(logUrl), dstTeam, season, phase, new Date(this.now()).toISOString(), logUrl)
-      : normalizeCenterLog(await this.json(logUrl), { ...request, fetchedAt: new Date(this.now()).toISOString() }), ttl, budget);
+    const [seasonFactsRead, log] = await Promise.all([
+      dstTeam ? null : this.season(player.sport, player.providerPlayerId, season, phase, budget),
+      this.cache.read(`log:${player.sport}:${player.providerPlayerId}:${season}:${phase}`, async () => dstTeam
+        ? normalizeCenterNflSchedule(await this.json(logUrl), dstTeam, season, phase, new Date(this.now()).toISOString(), logUrl)
+        : normalizeCenterLog(await this.json(logUrl), { ...request, fetchedAt: new Date(this.now()).toISOString() }), ttl, budget),
+    ]);
+    result.seasonFacts = seasonFactsRead ? seasonReadFacts(seasonFactsRead) : null;
+    if (result.seasonFacts?.gamesPlayed != null) result.coverage.expectedGames = result.seasonFacts.gamesPlayed;
     if (log.error) result.coverage.issues.push(log.error);
     result.coverage.fetchedAt = log.fetchedAt;
     result.coverage.freshness = log.freshness;
@@ -354,10 +364,14 @@ export class CenterEspnReader {
       result.coverage.issues.push(...seasonRead.value.issues);
     }
     if (seasonRead?.error) result.coverage.issues.push(seasonRead.error);
+    if (result.seasonFacts?.gamesPlayed != null) result.coverage.expectedGames = result.seasonFacts.gamesPlayed;
     if (player.sport === "nfl") {
-      // Most recent first. At most six cold summaries after log + season stats.
-      const candidates = [...result.games].filter(game => game.participation !== "dnp" && Date.parse(game.gameAt) <= this.now()).sort((a, b) => b.gameAt.localeCompare(a.gameAt));
-      for (const [index, game] of candidates.entries()) {
+      // Bound enrichment to the latest five appearance candidates. Unknown/live rows
+      // retain their positions and cannot be skipped in favor of older good scores.
+      const appearances = [...result.games].filter(game => game.participation !== "dnp" && game.status !== "scheduled" && game.status !== "live" && Date.parse(game.gameAt) <= this.now()).sort((a, b) => b.gameAt.localeCompare(a.gameAt));
+      const candidates = appearances.slice(0, 5);
+      if (appearances.length > 5) result.coverage.issues.push("recent_enrichment_limited_to_five");
+      const enrich = async (game: CenterGame) => {
         const source = espnNflEventSummaryUrl(game.eventId);
         const summary = await this.cache.read(`summary:${game.eventId}`, async () => normalizeCenterNflSummary(await this.json(source), game.eventId), ttl, budget);
         if (summary.value && "teams" in summary.value) {
@@ -371,10 +385,14 @@ export class CenterEspnReader {
           result.coverage.issues.push(`${summary.error ?? "stale_summary"}:${game.eventId}`);
           if (summary.value) result.coverage.freshness = "stale";
         }
-        // No loop over the remainder once both request/deadline budgets are spent.
-        if ((budget.used >= budget.max || this.now() >= budget.deadline) && index + 1 < candidates.length) { result.coverage.issues.push("summary_coverage_budget_limited"); break; }
-      }
+        if (summary.error === "provider_request_budget") result.coverage.issues.push("summary_coverage_budget_limited");
+      };
+      // Match the existing cache's three-request concurrency bound.
+      for (let offset = 0; offset < candidates.length; offset += 3) await Promise.all(candidates.slice(offset, offset + 3).map(enrich));
     }
+    // The validated appearance log establishes chronological window membership.
+    // GP and season-field completeness are separate evidence for season summaries.
+    result.coverage.recentVerified = log.freshness === "fresh" && log.value.issues.length === 0;
     result.coverage.issues = [...new Set(result.coverage.issues)];
     result.providerRequests = budget.used;
     return result;

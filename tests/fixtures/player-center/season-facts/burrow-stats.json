@@ -1,0 +1,978 @@
+{
+  "filters": [
+    {
+      "displayName": "League",
+      "name": "league",
+      "value": "nfl",
+      "options": [
+        {
+          "value": "college-football",
+          "displayValue": "NCAA - Football",
+          "shortDisplayName": "NCAAF"
+        },
+        {
+          "value": "nfl",
+          "displayValue": "National Football League",
+          "shortDisplayName": "NFL"
+        }
+      ]
+    },
+    {
+      "displayName": "Season",
+      "name": "seasontype",
+      "value": "2",
+      "options": [
+        {
+          "value": "2",
+          "displayValue": "Regular Season"
+        },
+        {
+          "value": "3",
+          "displayValue": "Postseason"
+        }
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "name": "passing",
+      "displayName": "Passing",
+      "labels": [
+        "GP",
+        "CMP",
+        "ATT",
+        "CMP%",
+        "YDS",
+        "AVG",
+        "TD",
+        "INT",
+        "LNG",
+        "SACK",
+        "RTG",
+        "QBR"
+      ],
+      "names": [
+        "gamesPlayed",
+        "completions",
+        "passingAttempts",
+        "completionPct",
+        "passingYards",
+        "yardsPerPassAttempt",
+        "passingTouchdowns",
+        "interceptions",
+        "longPassing",
+        "sacks",
+        "QBRating",
+        "adjQBR"
+      ],
+      "displayNames": [
+        "Games Played",
+        "Completions",
+        "Passing Attempts",
+        "Completion Percentage",
+        "Passing Yards",
+        "Yards Per Pass Attempt",
+        "Passing Touchdowns",
+        "Interceptions",
+        "Longest Pass",
+        "Total Sacks",
+        "Passer Rating",
+        "Adjusted QBR"
+      ],
+      "descriptions": [
+        "Games Played",
+        "The times a player completes a pass to another player who is eligible to catch a pass.",
+        "The number of times a pass is attempted.",
+        "The percentage of completed passes.",
+        "The total passing yards.",
+        "The average number yards per pass attempt.",
+        "The total number of passing touchdowns.",
+        "The number of passes thrown that were intercepted by the opposing team.",
+        "The longest pass play completed in terms of yards.",
+        "The total number of sacks.",
+        "Passer Rating",
+        "Adjusted Quarterback Rating."
+      ],
+      "statistics": [
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2020,
+            "displayName": "2020"
+          },
+          "stats": [
+            "10",
+            "264",
+            "404",
+            "65.3",
+            "2,688",
+            "6.7",
+            "13",
+            "5",
+            "67",
+            "32",
+            "89.8",
+            "48.5"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2021,
+            "displayName": "2021"
+          },
+          "stats": [
+            "16",
+            "366",
+            "520",
+            "70.4",
+            "4,611",
+            "8.9",
+            "34",
+            "14",
+            "82",
+            "51",
+            "108.3",
+            "60.2"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2022,
+            "displayName": "2022"
+          },
+          "stats": [
+            "16",
+            "414",
+            "606",
+            "68.3",
+            "4,475",
+            "7.4",
+            "35",
+            "12",
+            "60",
+            "41",
+            "100.8",
+            "60.8"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2023,
+            "displayName": "2023"
+          },
+          "stats": [
+            "10",
+            "244",
+            "365",
+            "66.8",
+            "2,309",
+            "6.3",
+            "15",
+            "6",
+            "64",
+            "24",
+            "91.0",
+            "52.4"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2024,
+            "displayName": "2024"
+          },
+          "stats": [
+            "17",
+            "460",
+            "652",
+            "70.6",
+            "4,918",
+            "7.5",
+            "43",
+            "9",
+            "70",
+            "48",
+            "108.5",
+            "72.1"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2025,
+            "displayName": "2025"
+          },
+          "stats": [
+            "8",
+            "173",
+            "259",
+            "66.8",
+            "1,809",
+            "7.0",
+            "17",
+            "5",
+            "43",
+            "17",
+            "100.7",
+            "63.0"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2026,
+            "displayName": "2026"
+          },
+          "stats": [
+            "7",
+            "195",
+            "267",
+            "73.0",
+            "2,115",
+            "7.9",
+            "20",
+            "6",
+            "45",
+            "13",
+            "111.6",
+            "77.3"
+          ],
+          "position": "QB"
+        }
+      ],
+      "totals": [
+        "84",
+        "2116",
+        "3073",
+        "68.9",
+        "22,925",
+        "7.5",
+        "177",
+        "57",
+        "82",
+        "226",
+        "102.0",
+        "-"
+      ],
+      "sortKey": "passing"
+    },
+    {
+      "name": "rushing",
+      "displayName": "Rushing",
+      "labels": [
+        "GP",
+        "CAR",
+        "YDS",
+        "AVG",
+        "TD",
+        "LNG",
+        "FD",
+        "FUM",
+        "LST"
+      ],
+      "names": [
+        "gamesPlayed",
+        "rushingAttempts",
+        "rushingYards",
+        "yardsPerRushAttempt",
+        "rushingTouchdowns",
+        "longRushing",
+        "rushingFirstDowns",
+        "rushingFumbles",
+        "rushingFumblesLost"
+      ],
+      "displayNames": [
+        "Games Played",
+        "Rushing Attempts",
+        "Rushing Yards",
+        "Yards Per Rush Attempt",
+        "Rushing Touchdowns",
+        "Long Rushing",
+        "Rushing 1st downs",
+        "Rushing Fumbles",
+        "Rushing Fumbles Lost"
+      ],
+      "descriptions": [
+        "Games Played",
+        "The total number of attempted rushes.",
+        "The total rushing yards.",
+        "The average number of yards per rush attempt.",
+        "The total number of rushing touchdowns.",
+        "The amount of yards for the longest run.",
+        "The number of times a first down is picked up by a run.",
+        "The number of times there is a run and then the ball is fumbled.",
+        "The number of times there is a run and then the ball is fumbled."
+      ],
+      "statistics": [
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2020,
+            "displayName": "2020"
+          },
+          "stats": [
+            "10",
+            "37",
+            "142",
+            "3.8",
+            "3",
+            "23",
+            "14",
+            "4",
+            "1"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2021,
+            "displayName": "2021"
+          },
+          "stats": [
+            "16",
+            "40",
+            "118",
+            "3.0",
+            "2",
+            "12",
+            "14",
+            "1",
+            "0"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2022,
+            "displayName": "2022"
+          },
+          "stats": [
+            "16",
+            "75",
+            "257",
+            "3.4",
+            "5",
+            "23",
+            "27",
+            "0",
+            "0"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2023,
+            "displayName": "2023"
+          },
+          "stats": [
+            "10",
+            "31",
+            "88",
+            "2.8",
+            "0",
+            "20",
+            "9",
+            "0",
+            "0"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2024,
+            "displayName": "2024"
+          },
+          "stats": [
+            "17",
+            "42",
+            "201",
+            "4.8",
+            "2",
+            "47",
+            "16",
+            "2",
+            "0"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2025,
+            "displayName": "2025"
+          },
+          "stats": [
+            "8",
+            "14",
+            "41",
+            "2.9",
+            "0",
+            "9",
+            "5",
+            "0",
+            "0"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2026,
+            "displayName": "2026"
+          },
+          "stats": [
+            "7",
+            "20",
+            "70",
+            "3.5",
+            "2",
+            "12",
+            "11",
+            "1",
+            "0"
+          ],
+          "position": "QB"
+        }
+      ],
+      "totals": [
+        "84",
+        "259",
+        "917",
+        "3.5",
+        "14",
+        "47",
+        "96",
+        "8",
+        "1"
+      ],
+      "sortKey": "rushing"
+    },
+    {
+      "name": "defensive",
+      "displayName": "Defense",
+      "labels": [
+        "GP",
+        "TOT",
+        "SOLO",
+        "AST",
+        "SACK",
+        "FF",
+        "FR",
+        "YDS",
+        "INT",
+        "YDS",
+        "AVG",
+        "TD",
+        "LNG",
+        "PD",
+        "STF",
+        "STFYDS",
+        "KB"
+      ],
+      "names": [
+        "gamesPlayed",
+        "totalTackles",
+        "soloTackles",
+        "assistTackles",
+        "sacks",
+        "fumblesForced",
+        "fumblesRecovered",
+        "fumblesRecoveredYards",
+        "interceptions",
+        "interceptionYards",
+        "avgInterceptionYards",
+        "interceptionTouchdowns",
+        "longInterception",
+        "passesDefended",
+        "stuffs",
+        "stuffYards",
+        "kicksBlocked"
+      ],
+      "displayNames": [
+        "Games Played",
+        "Total Tackles",
+        "Solo Tackles",
+        "Assist Tackles",
+        "Sacks",
+        "Forced Fumbles",
+        "Fumbles Recovered",
+        "Fumbles Recovered Yards",
+        "Interceptions",
+        "Interception Yards",
+        "Average Interception Yards",
+        "Interception Touchdowns",
+        "Long Interception",
+        "Passes Defended",
+        "Stuffs",
+        "Stuff Yards",
+        "Kicks Blocked"
+      ],
+      "descriptions": [
+        "Games Played",
+        "The total number of tackles.",
+        "The number of times a tackle was made unassisted.",
+        "The number of assists on tackles.",
+        "The total number of sacks.",
+        "The total number of forced fumbles.",
+        "The number of fumbles recovered.",
+        "The number of yards gained after a fumble is recovered.",
+        "The total number of interceptions.",
+        "The number of yards gained after an interception.",
+        "The average number of return yards per interception.",
+        "The number of times an interception is returned for a touchdown.",
+        "The amount of yards of the longest interception return.",
+        "The total number of passes defended.",
+        "The number of times that a runner is stuffed at or behind the line of scrimmage.",
+        "The number of yards lost from stuffs.",
+        "The number of times a kick was blocked."
+      ],
+      "statistics": [
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2021,
+            "displayName": "2021"
+          },
+          "stats": [
+            "16",
+            "2",
+            "2",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0.0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2023,
+            "displayName": "2023"
+          },
+          "stats": [
+            "10",
+            "1",
+            "1",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0.0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2024,
+            "displayName": "2024"
+          },
+          "stats": [
+            "17",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "2",
+            "0",
+            "0",
+            "0",
+            "0.0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ],
+          "position": "QB"
+        }
+      ],
+      "totals": [
+        "84",
+        "3",
+        "3",
+        "0",
+        "0",
+        "0",
+        "2",
+        "0",
+        "0",
+        "0",
+        "0.0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "sortKey": "defensive"
+    },
+    {
+      "name": "scoring",
+      "displayName": "Scoring",
+      "labels": [
+        "GP",
+        "PASS",
+        "RUSH",
+        "REC",
+        "RET",
+        "TD",
+        "2PT",
+        "PAT",
+        "FG",
+        "PTS"
+      ],
+      "names": [
+        "gamesPlayed",
+        "passingTouchdowns",
+        "rushingTouchdowns",
+        "receivingTouchdowns",
+        "returnTouchdowns",
+        "totalTouchdowns",
+        "totalTwoPointConvs",
+        "kickExtraPoints",
+        "fieldGoals",
+        "totalPoints"
+      ],
+      "displayNames": [
+        "Games Played",
+        "Passing Touchdowns",
+        "Rushing Touchdowns",
+        "Receiving Touchdowns",
+        "Return Touchdowns",
+        "Total Touchdowns",
+        "Total Two Point Conversions",
+        "Kick Extra Points",
+        "Field Goals",
+        "Total Points"
+      ],
+      "descriptions": [
+        "Games Played",
+        "The total number of passing touchdowns.",
+        "The total number of rushing touchdowns.",
+        "The total number of receiving touchdowns.",
+        "The total number of return touchdowns.",
+        "The number of touchdowns scored in total.",
+        "The number of times a 2-point conversion is successful.",
+        "The number of extra points made.",
+        "The number of field goals made.",
+        "The number of total points scored."
+      ],
+      "statistics": [
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2020,
+            "displayName": "2020"
+          },
+          "stats": [
+            "10",
+            "13",
+            "3",
+            "0",
+            "0",
+            "3",
+            "0",
+            "0",
+            "0",
+            "18"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2021,
+            "displayName": "2021"
+          },
+          "stats": [
+            "16",
+            "34",
+            "2",
+            "0",
+            "0",
+            "2",
+            "0",
+            "0",
+            "0",
+            "12"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2022,
+            "displayName": "2022"
+          },
+          "stats": [
+            "16",
+            "35",
+            "5",
+            "0",
+            "0",
+            "5",
+            "0",
+            "0",
+            "0",
+            "30"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2023,
+            "displayName": "2023"
+          },
+          "stats": [
+            "10",
+            "15",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2024,
+            "displayName": "2024"
+          },
+          "stats": [
+            "17",
+            "43",
+            "2",
+            "0",
+            "0",
+            "2",
+            "0",
+            "0",
+            "0",
+            "12"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2025,
+            "displayName": "2025"
+          },
+          "stats": [
+            "8",
+            "17",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ],
+          "position": "QB"
+        },
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2026,
+            "displayName": "2026"
+          },
+          "stats": [
+            "7",
+            "20",
+            "2",
+            "0",
+            "0",
+            "2",
+            "0",
+            "0",
+            "0",
+            "12"
+          ],
+          "position": "QB"
+        }
+      ],
+      "totals": [
+        "84",
+        "177",
+        "14",
+        "0",
+        "0",
+        "14",
+        "0",
+        "0",
+        "0",
+        "84"
+      ],
+      "sortKey": "scoring"
+    },
+    {
+      "name": "kicking",
+      "displayName": "Kicking",
+      "labels": [
+        "GP",
+        "FG",
+        "FG%",
+        "1-19\t",
+        "20-29\t",
+        "30-39",
+        "40-49\t",
+        "50+",
+        "LNG",
+        "XPM",
+        "XPA",
+        "PTS"
+      ],
+      "names": [
+        "gamesPlayed",
+        "fieldGoalsMade-fieldGoalAttempts",
+        "fieldGoalPct",
+        "fieldGoalsMade1_19-fieldGoalAttempts1_19",
+        "fieldGoalsMade20_29-fieldGoalAttempts20_29",
+        "fieldGoalsMade30_39-fieldGoalAttempts30_39",
+        "fieldGoalsMade40_49-fieldGoalAttempts40_49",
+        "fieldGoalsMade50-fieldGoalAttempts50",
+        "longFieldGoalMade",
+        "extraPointsMade",
+        "extraPointAttempts",
+        "totalKickingPoints"
+      ],
+      "displayNames": [
+        "Games Played",
+        "Field goals made",
+        "Field Goal Percentage",
+        "FGM 1-19 yards",
+        "FGM 20-29 yards",
+        "FGM 30-39 yards",
+        "FGM 40-49 yards",
+        "FGM 50+ yards",
+        "Long Field Goal Made",
+        "Extra Points Made",
+        "Extra Point Attempts",
+        "Total Kicking Points"
+      ],
+      "descriptions": [
+        "Games Played",
+        "fieldGoalsMade-fieldGoalAttempts",
+        "The percentage of field goals attempted that are made.",
+        "fieldGoalsMade1_19-fieldGoalAttempts1_19",
+        "fieldGoalsMade20_29-fieldGoalAttempts20_29",
+        "fieldGoalsMade30_39-fieldGoalAttempts30_39",
+        "fieldGoalsMade40_49-fieldGoalAttempts40_49",
+        "fieldGoalsMade50-fieldGoalAttempts50",
+        "The distance of the longest field goal made.",
+        "The number of extra point attempts made.",
+        "The number of extra point attempts.",
+        "The number of total points earned kicking."
+      ],
+      "statistics": [
+        {
+          "teamId": "4",
+          "teamSlug": "cincinnati-bengals",
+          "season": {
+            "year": 2024,
+            "displayName": "2024"
+          },
+          "stats": [
+            "17",
+            "0-0",
+            "0.0",
+            "0-0",
+            "0-0",
+            "0-0",
+            "0-0",
+            "0-0",
+            "0",
+            "0",
+            "0",
+            "0"
+          ],
+          "position": "QB"
+        }
+      ],
+      "totals": [
+        "84",
+        "0-0",
+        "0.0",
+        "0-0",
+        "0-0",
+        "0-0",
+        "0-0",
+        "0-0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ],
+      "sortKey": "kicking"
+    }
+  ]
+}

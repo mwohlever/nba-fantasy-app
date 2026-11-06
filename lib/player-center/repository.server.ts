@@ -13,7 +13,8 @@ const nullableText = (value: unknown) => typeof value === "string" && value.trim
 export type CenterCatalog = { players: CenterPlayer[]; readAt: string };
 export interface CenterRepository {
   catalog(sport: CenterSport): Promise<CenterCatalog>;
-  histories(sport: CenterSport, season: number, catalog: CenterCatalog, asOf: string): Promise<CenterHistory[]>;
+  histories(sport: CenterSport, season: number, catalog: CenterCatalog, asOf: string, playerId?: number): Promise<CenterHistory[]>;
+  profileHistory?(player: CenterPlayer, season: number): Promise<CenterHistory | null>;
   profileSnapshot?(player: CenterPlayer, season: number): Promise<PresentableHistory | null>;
 }
 
@@ -118,7 +119,11 @@ export class SupabaseCenterRepository implements CenterRepository {
     }
     return catalog.players.map(player => read.snapshots.get(player.playerId) ?? fallback.find(history => history.player.playerId === player.playerId)!);
   }
-  private async storedHistories(sport: CenterSport, season: number, catalog: CenterCatalog, asOf: string): Promise<CenterHistory[]> {
+  async profileHistory(player: CenterPlayer, season: number) {
+    const rows = await this.storedHistories(player.sport, season, { players: [player], readAt: new Date(this.now()).toISOString() }, new Date(this.now()).toISOString(), player.playerId);
+    return rows[0] ?? null;
+  }
+  private async storedHistories(sport: CenterSport, season: number, catalog: CenterCatalog, asOf: string, playerId?: number): Promise<CenterHistory[]> {
     const table = sport === "nba" ? "nba_player_game_current_observations" : "nfl_player_game_observations";
     const fields: string = sport === "nba"
       ? "provider,provider_player_id,provider_event_id,local_player_id,season,phase,game_at,team_provider_id,team_abbreviation,opponent_provider_id,opponent_abbreviation,home_away,minutes,points,rebounds,assists,steals,blocks,turnovers,source_url,provider_fetched_at"
@@ -130,8 +135,9 @@ export class SupabaseCenterRepository implements CenterRepository {
     let finished = false;
     const seen = new Set<string>();
     for (let offset = 0; offset < 30_000; offset += 1000) {
-      const result = await this.db.from(table).select(fields).eq("provider", "espn").eq("season", season).eq("phase", "regular")
-        .lte("game_at", asOf).order("local_player_id").order("provider_event_id").range(offset, offset + 999);
+      let query = this.db.from(table).select(fields).eq("provider", "espn").eq("season", season).eq("phase", "regular");
+      if (playerId !== undefined) query = query.eq("local_player_id", playerId);
+      const result = await query.lte("game_at", asOf).order("local_player_id").order("provider_event_id").range(offset, offset + 999);
       if (result.error) throw new Error(`Player Center observation read failed: ${result.error.message}`);
       const page = result.data as unknown as Row[];
       for (const row of page) {
@@ -161,7 +167,7 @@ export class SupabaseCenterRepository implements CenterRepository {
     if (!finished) throw new Error("Player Center observation row limit exceeded");
     // Exact provider IDs and professional season only. These are independent appearance counts,
     // not a substitute for absent current-season observations or a last-successful-poll marker.
-    const seasonCounts = await this.catalogRows(sport === "nba" ? "player_nba_season_averages" : "player_nfl_season_stats",
+    const seasonCounts = playerId !== undefined ? [] : await this.catalogRows(sport === "nba" ? "player_nba_season_averages" : "player_nfl_season_stats",
       sport === "nba" ? "season,nba_player_id,games_played" : "season,nfl_player_id,games_played", sport === "nba" ? "nba_player_id" : "nfl_player_id",
       sport === "nba" ? `${season - 1}-${String(season).slice(-2)}` : season).catch(() => [] as Row[]);
     for (const history of histories.values()) {
