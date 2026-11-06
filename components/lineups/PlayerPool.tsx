@@ -4,9 +4,15 @@ import { compareNflStats, nflPositionStats, nflStatFields, nflStatValue, type Nf
 import { useEffect, useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+import DraftPlayerCenter from "@/components/player-center/DraftPlayerCenter";
+import ObservedComparisonRows, { comparisonHeading } from "@/components/player-center/ObservedComparisonRows";
 import GolfCompareModal from "@/components/lineups/GolfCompareModal";
 import { useSelectedSport } from "@/components/providers/SportProvider";
-import { compareDraftProjections, type DraftProjection, withHistoricalFantasyAverage } from "@/lib/lineups/draftProjectionTypes";
+import type { DraftProjection } from "@/lib/lineups/draftProjectionTypes";
+import { playerCenterEnabled } from "@/lib/player-center/feature";
+import { compareActualStats } from "@/lib/player-center/comparison";
+import { professionalSeason, seasonLabel, validCenterSeason, type CenterWindow } from "@/lib/player-center/types";
+import { useGroupContext } from "@/components/providers/GroupProvider";
 import type {
   Player,
   PositionFilter,
@@ -15,7 +21,8 @@ import type {
   TargetDraftSlot,
 } from "@/components/lineups/types";
 
-type PlayerPoolProps = {
+export type PlayerPoolProps = {
+  sport?: "nba" | "nfl" | "golf";
   players: Player[];
   filteredPlayers: Player[];
   searchTerm: string;
@@ -47,6 +54,8 @@ type PlayerPoolProps = {
   inactivePill: string;
   rosterSlots?: RosterSlotConfig[];
   selectedSeason: string;
+  centerSeason?: number;
+  slateId?: number | null;
   nflSeason?: string;
   // Only Draft Order supplies this fixed-target interaction.
   speedEntry?: { onSelect: (player: Player) => Promise<boolean>; onResearch: (player: Player) => void };
@@ -68,7 +77,6 @@ type PlayerPoolProps = {
 };
 
 type SortOption =
-  | "projection"
   | "average"
   | "owgr"
   | "name"
@@ -260,7 +268,7 @@ type LeagueHistoryStat = {
 };
 
 type ResearchMode =
-  | "projection"
+  | "actual"
   | "league"
   | "season";
 
@@ -298,6 +306,7 @@ type NbaSeasonStat = {
 };
 
 function formatScore(value: unknown) {
+  if (value === null || value === undefined || value === "") return "—";
   const number = Number(value);
 
   return Number.isFinite(number)
@@ -305,39 +314,34 @@ function formatScore(value: unknown) {
     : "—";
 }
 
-function resolveDraftProjection(
-  playerId: number,
-  playerProjections: Record<number, DraftProjection>,
-  playerAverageMap: Map<number, number>,
-): DraftProjection {
-  return withHistoricalFantasyAverage(playerProjections[playerId], playerAverageMap.get(playerId));
-}
-
-export default function PlayerPool({
-  players,
-  filteredPlayers,
-  searchTerm,
-  setSearchTerm,
-  positionFilter,
-  setPositionFilter,
-  onSlateOnly,
-  setOnSlateOnly,
-  isAvailabilityLoading,
-  availablePlayerIdsForSlate,
-  availablePlayerIdSet,
-  playerAverageMap,
-  playerProjections,
-  getOwnerTeamForPlayer,
-  setDraftingPlayer,
-  isAssigningPlayer,
-  rosterSlots = [],
-  selectedSeason,
-  nflSeason,
-  slotDraftContext,
-  speedEntry,
-  hidePositionFilter = false,
-}: PlayerPoolProps) {
-  const { selectedSport } = useSelectedSport();
+function DraftPlayerBrowser(props: PlayerPoolProps) {
+  const {
+    players,
+    filteredPlayers,
+    searchTerm,
+    setSearchTerm,
+    positionFilter,
+    setPositionFilter,
+    onSlateOnly,
+    setOnSlateOnly,
+    isAvailabilityLoading,
+    availablePlayerIdsForSlate,
+    availablePlayerIdSet,
+    playerAverageMap,
+    getOwnerTeamForPlayer,
+    setDraftingPlayer,
+    isAssigningPlayer,
+    rosterSlots = [],
+    selectedSeason,
+    nflSeason,
+    slotDraftContext,
+    speedEntry,
+    hidePositionFilter = false,
+  } = props;
+  const { selectedSport: contextSport } = useSelectedSport();
+  const selectedSport = props.sport ?? contextSport;
+  const centerEnabled = playerCenterEnabled() && selectedSport !== "golf";
+  const { groupContext } = useGroupContext();
   const isGolf = selectedSport === "golf";
   const isNba = selectedSport === "nba";
   const isNfl = selectedSport === "nfl";
@@ -352,7 +356,7 @@ export default function PlayerPool({
     setResearchMode,
   ] =
   useState<ResearchMode>(
-      selectedSport === "golf" ? "season" : "projection",
+      selectedSport === "golf" ? "season" : centerEnabled ? "actual" : "league",
     );
 
   const [
@@ -441,9 +445,10 @@ export default function PlayerPool({
 
   const [nflStatsSeason, setNflStatsSeason] = useState<number | null>(null);
   const [nflAscending, setNflAscending] = useState(false);
+  const [gameStatsWindow, setGameStatsWindow] = useState<CenterWindow>("last5");
   const [sortBy, setSortBy] =
     useState<SortOption>(
-      selectedSport === "golf" ? "owgr" : "projection",
+      selectedSport === "golf" ? "owgr" : "times_drafted",
     );
 
   useEffect(() => {
@@ -458,7 +463,7 @@ export default function PlayerPool({
 
   useEffect(() => {
     setResearchMode(
-      isGolf ? "season" : "projection",
+      isGolf ? "season" : centerEnabled ? "actual" : "league",
     );
 
     setCompareMode(
@@ -480,12 +485,13 @@ export default function PlayerPool({
     setSortBy(
       isGolf
         ? "golf_scoring_avg"
-        : "projection",
+        : "times_drafted",
     );
   }, [
     selectedSport,
     isGolf,
     isNfl,
+    centerEnabled,
   ]);
 
   useEffect(() => {
@@ -527,6 +533,11 @@ export default function PlayerPool({
           cancelled
         ) {
           return;
+        }
+
+        if (selectedSport !== "golf" && (result.sport !== selectedSport ||
+          result.scope?.groupId !== groupContext?.group.id)) {
+          throw new Error("League history does not match the active Group and sport.");
         }
 
         const rawRows =
@@ -631,6 +642,7 @@ export default function PlayerPool({
   }, [
     selectedSeason,
     selectedSport,
+    groupContext?.group.id,
   ]);
 
   useEffect(() => {
@@ -1040,6 +1052,7 @@ export default function PlayerPool({
 
   const sortedFilteredPlayers = useMemo(() => {
     return [...filteredPlayers].sort((a, b) => {
+      if (sortBy === "average") return compareActualStats(playerAverageMap.get(a.id), playerAverageMap.get(b.id), false) || a.name.localeCompare(b.name);
       if (
         researchMode ===
           "league"
@@ -1176,24 +1189,6 @@ export default function PlayerPool({
           : a.name.localeCompare(
               b.name,
             );
-      }
-
-      if (sortBy === "projection") {
-        const comparison = compareDraftProjections(
-          resolveDraftProjection(a.id, playerProjections, playerAverageMap),
-          resolveDraftProjection(b.id, playerProjections, playerAverageMap),
-        );
-        return comparison !== 0 ? comparison : a.name.localeCompare(b.name);
-      }
-
-      if (sortBy === "average") {
-        const aScore =
-          playerAverageMap.get(a.id) ?? 0;
-
-        const bScore =
-          playerAverageMap.get(b.id) ?? 0;
-
-        return Number(bScore) - Number(aScore);
       }
 
       if (sortBy === "owgr") {
@@ -1479,7 +1474,6 @@ export default function PlayerPool({
   }, [
     filteredPlayers,
     playerAverageMap,
-    playerProjections,
     sortBy,
     researchMode,
     isNba,
@@ -1551,6 +1545,13 @@ export default function PlayerPool({
             player,
           ),
       );
+
+  const comparisonSport = isNfl ? "nfl" : "nba";
+  const useObservedComparison = centerEnabled && !isGolf;
+  const storedSeason = isNfl ? nflStatsSeason : selectedSeason === "all" ? null : Number(selectedSeason);
+  const requestedSeason = researchMode === "season" || !centerEnabled ? storedSeason : props.centerSeason ?? professionalSeason(comparisonSport);
+  const comparisonSeason = requestedSeason !== null && validCenterSeason(requestedSeason, comparisonSport) ? requestedSeason : null;
+  const comparisonWindow = useObservedComparison && researchMode !== "season" ? gameStatsWindow : "season";
 
   const golfSeasonSortLabel =
     sortBy ===
@@ -1712,55 +1713,16 @@ export default function PlayerPool({
     return stat?.fantasy_points;
   }
 
-  useEffect(() => {
-    if (
-      !isNfl
-    ) {
-      return;
-    }
-
-    setResearchMode(
-      "projection",
-    );
-
-    setSortBy("projection");
-
-    setCompareMode(
-      false,
-    );
-
-    setComparePlayerIds(
-      [],
-    );
-  }, [
-    isNfl,
-  ]);
-
   return (
     <section className="draft-player-pool">
       {hasSeasonResearch ? (
         <div className="mb-4 space-y-3 rounded-2xl border border-slate-700 bg-slate-950 p-3 text-white">
-          <div className={`grid gap-1 rounded-xl bg-slate-900 p-1 ${isGolf ? "grid-cols-2" : "grid-cols-3"}`}>
-            {!isGolf ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setResearchMode("projection");
-                  setSortBy("projection");
-                  setCompareMode(false);
-                  setComparePlayerIds([]);
-                }}
-                className={`rounded-lg px-3 py-2 text-sm font-black transition ${
-                  researchMode === "projection"
-                    ? isNfl
-                      ? "bg-sky-600 text-white"
-                      : "bg-orange-600 text-white"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Projection
-              </button>
-            ) : null}
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900 p-1">
+            {!isGolf && <button type="button" aria-pressed={researchMode !== "league"}
+              onClick={() => { setResearchMode(centerEnabled ? "actual" : "season"); if (!centerEnabled) setSortBy(isNfl ? nflPositionStats(positionFilter)[0] ?? "name" : "season_fp"); setCompareMode(false); setComparePlayerIds([]); }}
+              className={`rounded-lg px-3 py-2 text-sm font-black transition ${researchMode !== "league" ? isNfl ? "bg-sky-600 text-white" : "bg-orange-600 text-white" : "text-slate-400 hover:text-white"}`}>
+              Game Stats
+            </button>}
             <button
               type="button"
               onClick={() => {
@@ -1794,7 +1756,7 @@ export default function PlayerPool({
               League History
             </button>
 
-            <button
+            {isGolf && <button
               type="button"
               onClick={() => {
                 setResearchMode(
@@ -1829,8 +1791,24 @@ export default function PlayerPool({
               }`}
             >
               Season Stats
-            </button>
+            </button>}
           </div>
+
+          {centerEnabled && researchMode !== "league" && <label className="flex items-center gap-2 text-xs text-slate-400">
+            Data source
+            <select aria-label="Game Stats source" value={researchMode === "season" ? isNfl ? "totals" : "averages" : "games"}
+              className="rounded-lg border border-slate-600 bg-slate-900 px-2 py-2 text-slate-100"
+              onChange={event => {
+                const stored = event.target.value !== "games";
+                setResearchMode(stored ? "season" : "actual");
+                if (stored) setSortBy(isNfl ? nflPositionStats(positionFilter)[0] ?? "name" : "season_fp");
+                setCompareMode(false); setComparePlayerIds([]);
+              }}>
+              <option value="games">Observed game logs</option>
+              {isNfl ? <option value="totals">{nflStatsSeason ?? "Stored"} season totals</option>
+                : <option value="averages">{selectedSeason === "all" ? "Stored" : seasonLabel("nba", Number(selectedSeason))} season averages</option>}
+            </select>
+          </label>}
 
           {compareMode ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1932,6 +1910,9 @@ export default function PlayerPool({
         </div>
       ) : null}
 
+      {researchMode === "actual" && centerEnabled ? <DraftPlayerCenter {...props} sport={isNfl ? "nfl" : "nba"}
+        researchWindow={gameStatsWindow} onResearchWindowChange={setGameStatsWindow}
+        comparison={compareMode ? { selectedIds: comparePlayerIds, onToggle: toggleComparePlayer } : undefined} /> : <>
       {isNfl && researchMode === "season" && <div className="mb-2 flex items-center justify-between gap-2 text-xs text-slate-500">
         <span>{nflStatsSeason ? `${nflStatsSeason} regular-season stats · Totals (FP/G is per game)` : "NFL season stats"}</span>
         <button type="button" onClick={() => setNflAscending(value => !value)} className="shrink-0 rounded-lg border px-2 py-1" aria-label="Change NFL stat sort direction">
@@ -1972,31 +1953,6 @@ export default function PlayerPool({
               </button>
             ) : null}
           </label>
-
-          {!isGolf &&
-          researchMode ===
-            "league" ? (
-            <details className="draft-projection-key">
-              <summary>
-                <span aria-hidden="true">ⓘ</span>
-                Projection key
-              </summary>
-
-              <div>
-                <p>
-                  Mark&apos;s Projection blends NBA
-                  averages, league performance, recent
-                  form, and average finish.
-                </p>
-
-                <div className="draft-projection-key-items">
-                  <span>🏆 Strong history</span>
-                  <span>🔥 Trending up</span>
-                  <span>🧊 Trending down</span>
-                </div>
-              </div>
-            </details>
-          ) : null}
         </div>
 
         <div className="draft-player-filter-row">
@@ -2068,17 +2024,17 @@ export default function PlayerPool({
             <span>Sort</span>
 
             <select
+              aria-label="Draft player sort"
               value={sortBy}
               onChange={(event) => {
                 const next = event.target.value as SortOption;
-                if (next === "projection" && !isGolf) setResearchMode("projection");
                 setSortBy(next);
               }}
             >
               {researchMode ===
                 "league" ? (
                 <>
-                  {!isGolf ? <option value="projection">Projection</option> : null}
+                  {!isGolf && <option value="average">League Average</option>}
                   <option value="times_drafted">
                     Times Drafted
                   </option>
@@ -2187,7 +2143,6 @@ export default function PlayerPool({
                 researchMode ===
                   "season" ? (
                 <>
-                  <option value="projection">Projection</option>
                   {nflPositionStats(positionFilter).map(key => <option key={key} value={key}>{nflStatFields[key][1]}</option>)}
                   <option value="name">Player Name</option>
                 </>
@@ -2195,7 +2150,6 @@ export default function PlayerPool({
                 researchMode ===
                   "season" ? (
                 <>
-                  <option value="projection">Projection</option>
                   <option value="season_fp">
                     Fantasy Points
                   </option>
@@ -2230,10 +2184,6 @@ export default function PlayerPool({
                 </>
               ) : (
                 <>
-                  <option value="projection">
-                    Projection
-                  </option>
-
                   <option value="average">
                     League Average
                   </option>
@@ -2286,11 +2236,6 @@ export default function PlayerPool({
             const isOnSlate =
               availablePlayerIdSet.has(player.id);
 
-            const projectionMeta =
-              playerProjections?.[player.id];
-
-            const draftProjection = resolveDraftProjection(player.id, playerProjections, playerAverageMap);
-
             const seasonStat =
               nbaSeasonStatByPlayerId.get(
                 player.id,
@@ -2306,60 +2251,9 @@ export default function PlayerPool({
                 player.id,
               );
 
-            const displayScore =
-              isGolf
-                ? researchMode ===
-                    "season"
-                  ? golfSeasonSortValue(
-                      golfSeasonStat,
-                    )
-                  : player.owgr_rank
-                : isNfl
-                  ? researchMode ===
-                      "season"
-                    ? nflSeasonSortValue(
-                        nflSeasonStatByPlayerId.get(
-                          player.id,
-                        ),
-                      )
-                    : playerAverageMap.get(
-                        player.id,
-                      )
-                  : isNba &&
-                      researchMode ===
-                        "season"
-                    ? seasonSortValue(
-                        seasonStat,
-                      )
-                      : sortBy ===
-                      "average"
-                      ? playerAverageMap.get(
-                          player.id,
-                        ) ?? 0
-                      : draftProjection.projection ?? 0;
-
-            const scoreLabel =
-              isGolf
-                ? researchMode ===
-                    "season"
-                  ? golfSeasonSortLabel
-                  : "OWGR"
-                : isNfl
-                  ? researchMode ===
-                      "season"
-                    ? nflSeasonSortLabel
-                    : "111 Avg"
-                  : isNba &&
-                      researchMode ===
-                        "season"
-                    ? seasonSortLabel
-                    : sortBy ===
-                      "average"
-                      ? "Avg"
-                      : "Proj";
-
-            const badges =
-              projectionMeta?.badges ?? [];
+            const displayScore = isGolf ? golfSeasonSortValue(golfSeasonStat)
+              : isNfl ? nflSeasonSortValue(nflSeasonStatByPlayerId.get(player.id)) : seasonSortValue(seasonStat);
+            const scoreLabel = isGolf ? golfSeasonSortLabel : isNfl ? nflSeasonSortLabel : seasonSortLabel;
 
             const card = (
               <button
@@ -2378,26 +2272,20 @@ export default function PlayerPool({
                   }
 
                   if (speedEntry) {
-                    void speedEntry.onSelect(player);
+                    if (!isGolf && researchMode === "season") speedEntry.onResearch(player);
+                    else void speedEntry.onSelect(player);
                     return;
                   }
 
-                  if (
-                    researchMode ===
-                    "season"
-                  ) {
-                    setResearchPlayer(
-                      player,
-                    );
-
-                    return;
-                  }
+                  if (isGolf && researchMode === "season") { setResearchPlayer(player); return; }
 
                   setDraftingPlayer(
                     player,
                   );
                 }}
-                style={speedEntry ? { paddingRight: "3rem" } : undefined}
+                aria-pressed={compareMode ? comparePlayerIds.includes(player.id) : undefined}
+                aria-label={`${compareMode ? "Compare" : "Select"} ${player.name}`}
+                style={speedEntry || !isGolf ? { paddingRight: "3rem" } : undefined}
                 className={`draft-player-card ${speedEntry ? "w-full h-full" : ""} ${
                   hasSeasonResearch
                     ? "draft-player-card--season draft-player-card--research"
@@ -2458,53 +2346,8 @@ export default function PlayerPool({
                       </span>
                     ) : null}
 
-                    {researchMode === "projection" ? (
-                      <span
-                        className="draft-player-score"
-                        title={
-                          draftProjection.source === "nba_v2" || draftProjection.source === "nfl_v2"
-                            ? `${draftProjection.modelVersion ?? "V2"} · ${draftProjection.confidence ?? "unknown"} confidence`
-                            : draftProjection.source === "unavailable"
-                              ? "No V2 or fallback projection is available"
-                              : "Historical fallback; not a V2 projection"
-                        }
-                      >
-                        {draftProjection.projection === null
-                          ? "Proj —"
-                          : draftProjection.source === "nba_v2" || draftProjection.source === "nfl_v2"
-                            ? `Proj ${formatScore(draftProjection.projection)}`
-                            : `111 Avg ${formatScore(draftProjection.projection)}`}
-                      </span>
-                    ) : null}
-
-                    {badges.includes("trophy") ||
-                    badges.includes("winner") ? (
-                      <span
-                        title="Strong league history"
-                        aria-label="Strong league history"
-                      >
-                        🏆
-                      </span>
-                    ) : null}
-
-                    {badges.includes("hot") ? (
-                      <span
-                        title="Trending up"
-                        aria-label="Trending up"
-                      >
-                        🔥
-                      </span>
-                    ) : null}
-
-                    {badges.includes("cold") ? (
-                      <span
-                        title="Trending down"
-                        aria-label="Trending down"
-                      >
-                        🧊
-                      </span>
-                    ) : null}
-
+                    {!isGolf && researchMode === "season" && <span className="draft-player-score">{scoreLabel} {formatScore(displayScore)}</span>}
+                    {sortBy === "average" && <span className="draft-player-score">League Avg {formatScore(playerAverageMap.get(player.id))}</span>}
                     {isOnSlate ? (
                       <span className="draft-player-on-slate">
                         On slate
@@ -3302,24 +3145,28 @@ export default function PlayerPool({
                       : "Compare"
                     : researchMode ===
                         "season"
-                      ? "View Stats"
+                      ? isGolf ? "View Stats" : "Draft options"
                       : ownerTeam
                         ? `On ${ownerTeam.name}`
                         : "Draft"}
                 </div>
               </button>
             );
-            return speedEntry ? <div key={player.id} className="relative">
+            return speedEntry || !isGolf ? <div key={player.id} className="relative">
               {card}
               <button type="button" aria-label={`Info about ${player.name}`}
-                disabled={isAssigningPlayer} onClick={() => speedEntry.onResearch(player)}
+                disabled={isAssigningPlayer} onClick={() => speedEntry ? speedEntry.onResearch(player) : setResearchPlayer(player)}
                 className="absolute right-1 top-1 rounded-lg px-2 py-2 text-xs font-semibold text-sky-600">Info</button>
             </div> : card;
           })}
         </div>
       )}
 
+      </>}
+
       <PlayerResearchModal
+        slateId={props.slateId}
+        centerSeason={props.centerSeason}
         player={
           researchPlayer
             ? {
@@ -3361,9 +3208,10 @@ export default function PlayerPool({
             | "nfl"
             | "golf"
         }
-        season={Number(selectedSeason)}
+        season={selectedSeason === "all" ? "all" : Number(selectedSeason)}
         nflStatsSeason={isNfl ? nflStatsSeason ?? undefined : undefined}
-        defaultMode="season"
+        defaultMode={researchMode === "league" ? "league" : "season"}
+        actionDisabled={isAssigningPlayer}
         actionLabel={
           researchPlayer
             ? slotDraftContext
@@ -3389,7 +3237,7 @@ export default function PlayerPool({
                 }
 
                 /*
-                 * Season Stats uses PlayerResearchModal instead of
+                 * Card-based research uses PlayerResearchModal instead of
                  * the normal DraftPlayerModal.
                  *
                  * Hand the selected player back to the established
@@ -3527,7 +3375,7 @@ export default function PlayerPool({
             }
           }
         >
-          <section className="max-h-[calc(100dvh-1.5rem)] w-full overflow-y-auto rounded-[28px] border border-slate-700 bg-slate-950 text-white shadow-2xl sm:max-h-[92vh] sm:max-w-4xl">
+          <section role="dialog" aria-modal="true" aria-label="Compare Players" className="max-h-[calc(100dvh-1.5rem)] w-full overflow-y-auto rounded-[28px] border border-slate-700 bg-slate-950 text-white shadow-2xl sm:max-h-[92vh] sm:max-w-4xl">
             <header className="sticky top-0 z-10 flex items-center justify-between border-b border-sky-900 bg-slate-950/95 px-5 py-4 backdrop-blur">
               <div>
                 <div className="text-xs font-black uppercase tracking-[0.2em] text-sky-300">
@@ -3542,11 +3390,7 @@ export default function PlayerPool({
                 </h3>
 
                 <div className="mt-1 text-xs text-slate-400">
-                  {isGolf
-                    ? `${selectedSeason} PGA Season Stats`
-                    : isNfl
-                      ? `${nflStatsSeason ?? selectedSeason} NFL Season Stats`
-                      : `${selectedSeason} NBA Season Stats`}
+                  {comparisonHeading(comparisonSport, comparisonSeason, comparisonWindow)}
                 </div>
               </div>
 
@@ -3621,7 +3465,8 @@ export default function PlayerPool({
               </div>
 
               <div className="mt-4 overflow-hidden rounded-2xl border border-slate-700">
-                {(
+                {useObservedComparison ? <ObservedComparisonRows sport={comparisonSport} season={comparisonSeason} window={comparisonWindow}
+                  slateId={props.slateId} players={comparePlayers} /> : (
                   isGolf
                     ? [
                         [
@@ -3907,18 +3752,6 @@ export default function PlayerPool({
                       ]
                     : [
                         [
-                          "Projection",
-                          (
-                            player:
-                              Player,
-                          ) =>
-                            playerProjections?.[
-                              player.id
-                            ]?.projection ??
-                            null,
-                          false,
-                        ],
-                        [
                           "League Avg",
                           (
                             player:
@@ -4089,4 +3922,11 @@ export default function PlayerPool({
       </div>
     </section>
   );
+}
+
+export default function PlayerPool(props: PlayerPoolProps) {
+  const { selectedSport: contextSport } = useSelectedSport();
+  const selectedSport = props.sport ?? contextSport;
+  const { groupContext } = useGroupContext();
+  return <DraftPlayerBrowser key={`${groupContext?.group.id}:${selectedSport}:${props.slateId}:${props.selectedSeason}:${props.nflSeason}`} {...props} />;
 }

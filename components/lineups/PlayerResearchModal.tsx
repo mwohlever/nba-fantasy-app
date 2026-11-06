@@ -7,6 +7,8 @@ import {
 } from "react";
 
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import { modalSeasons } from "@/lib/player-center/modalContext";
+import PlayerCenterModal from "@/components/player-center/PlayerCenterModal";
 
 type Sport =
   | "nba"
@@ -44,6 +46,8 @@ export type ResearchPlayer = {
 };
 
 type Props = {
+  slateId?: number | null;
+  centerSeason?: number;
   player:
     ResearchPlayer | null;
 
@@ -59,6 +63,7 @@ type Props = {
     Mode;
 
   actionLabel?: string;
+  actionDisabled?: boolean;
 
   onAction?:
     () =>
@@ -453,7 +458,7 @@ function StatCard({
   );
 }
 
-export default function PlayerResearchModal({
+function LegacyPlayerResearchModal({
   player,
   sport,
   season,
@@ -1764,4 +1769,15 @@ export default function PlayerResearchModal({
       </section>
     </div>
   );
+}
+
+export default function PlayerResearchModal(props: Props) {
+  if (props.sport === "golf") return <LegacyPlayerResearchModal {...props} />;
+  if (!props.player) return null;
+  const seasons = modalSeasons({ ...props, sport: props.sport });
+  return <PlayerCenterModal identity={props.player} sport={props.sport} season={seasons.professionalSeason}
+    leagueSeason={seasons.leagueSeason} defaultMode={props.defaultMode} slateId={props.slateId} onClose={props.onClose}>
+    {props.actionLabel && props.onAction ? <button type="button" className="pc-primary-action" disabled={props.actionDisabled}
+      onClick={() => { if (!props.actionDisabled) void props.onAction?.(); }}>{props.actionLabel}</button> : null}
+  </PlayerCenterModal>;
 }
