@@ -27,15 +27,19 @@ export default function ResearchBrowser({ sport, season, slateId, loader = realC
   const search = controlledSearch ?? searchState, position = controlledPosition ?? positionState;
   const { groupContext } = useGroupContext(), scope = groupContext?.group.id ?? "none";
   const providerPosition = ["G", "F/C", "QB", "RB", "WR", "TE", "K", "D/ST"].includes(position) ? position : undefined;
+  const batchContext = `${scope}:${sport}:${season}:${slateId}`;
+  const [batch, setBatch] = useState<{ context: string; ids: number[]; attempted: number[] }>({ context: "", ids: [], attempted: [] });
+  const activeBatch: { ids: number[]; attempted: number[] } = batch.context === batchContext ? batch : { ids: [], attempted: [] };
+  const playerIds = activeBatch.ids.join(",") || undefined;
   const requestMetric = metric === "name" ? "fantasy_points" : metric;
   const load = useCallback(async (signal: AbortSignal) => {
-    const data = await loader.comparisons({ sport, season, slateId, window, metric: requestMetric, ascending, position: providerPosition }, signal);
+    const data = await loader.comparisons({ sport, season, slateId, window, metric: requestMetric, ascending, position: providerPosition, playerIds }, signal);
     if (!Array.isArray(data.players) || !data.coverage) throw new Error("Comparison data is not available for this pool.");
     if (data.sport !== sport || data.season !== season || data.window !== window || data.metric !== requestMetric) throw new Error("Comparison context changed. Reopen player research.");
     if (!fixture && scope !== "none" && (data as ComparisonData & { groupId?: string }).groupId !== scope) throw new Error("The active Group changed. Reopen player research.");
     return data;
-  }, [loader, sport, season, slateId, window, requestMetric, ascending, providerPosition, fixture, scope]);
-  const { data, loading, error } = useCenterResource(`${scope}:${sport}:${season}:${slateId}:${window}:${requestMetric}:${ascending}:${providerPosition}`, load);
+  }, [loader, sport, season, slateId, window, requestMetric, ascending, providerPosition, fixture, scope, playerIds]);
+  const { data, loading, error } = useCenterResource(`${scope}:${sport}:${season}:${slateId}:${window}:${requestMetric}:${ascending}:${providerPosition}:${playerIds}`, load);
   const options = useMemo<string[]>(() => {
     if (sport === "nba") return [...comparisonStats.nba];
     const keys = position === "FLEX" ? ["RB", "WR", "TE"] : position === "SF" ? ["QB", "RB", "WR", "TE"]
@@ -61,6 +65,10 @@ export default function ResearchBrowser({ sport, season, slateId, loader = realC
     return comparison || a.identity.name.localeCompare(b.identity.name) * (metric === "name" && !ascending ? -1 : 1) || a.identity.id - b.identity.id;
   });
   const observedPlayers = rows.filter(entry => { const value = dataById.get(entry.identity.id)?.observedAverage; return value != null && Number.isFinite(value); }).length;
+  const missing = rows.filter(entry => {
+    const row = dataById.get(entry.identity.id);
+    return !activeBatch.attempted.includes(entry.identity.id) && row?.player.identity === "resolved" && row.metricRelevant !== false && row.observedAverage == null;
+  }).slice(0, 3).map(entry => entry.identity.id);
   const selectedMetric = statLabels[metric] ?? "Player name";
   const coverageMetric = statLabels[requestMetric] ?? requestMetric;
   const allPositions = positions ?? (sport === "nba" ? ["All", "G", "F/C"] : ["All", "QB", "RB", "WR", "TE", "K", "D/ST"]);
@@ -77,7 +85,8 @@ export default function ResearchBrowser({ sport, season, slateId, loader = realC
     </div>
     <div className="pc-browser-subcontrols"><WindowControl value={window} onChange={setWindow} />{extras}</div>
     <div className="pc-sort-state" aria-live="polite"><strong>{metric === "name" ? `Player name · ${ascending ? "A–Z" : "Z–A"}` : canSort ? `${windowLabel[window]} · ${selectedMetric} / game · ${ascending ? "low to high" : "high to low"}` : observedPlayers ? `Observed-data sorting · ${windowLabel[window]} · ${selectedMetric} / game · ${ascending ? "low to high" : "high to low"}` : "Alphabetical · statistical ranking unavailable"}</strong><span>{rows.length} players</span></div>
-    <p className="pc-footnote pc-observed-note">Numerical sorts use available actual game data and may not represent complete league-wide rankings.</p>
+    {!fixture && <button type="button" className="pc-direction" disabled={loading || !missing.length} onClick={() => setBatch({ context: batchContext, ids: missing, attempted: [...activeBatch.attempted, ...missing] })}>{loading ? "Loading facts…" : `Load missing game stats (${missing.length})`}</button>}
+    <p className="pc-footnote pc-observed-note">Load missing stats for up to three shown players at a time; search or filter to choose players. Numerical sorts use available actual game data and may not represent complete league-wide rankings.</p>
     <CoverageNotice summary={loading ? "Checking coverage…" : error ? "Comparison data unavailable" : metric === "name" ? "Player research coverage" : canSort ? "Complete-sample ranking coverage verified" : `${observedPlayers}/${rows.length} shown with observed values · full-pool ranking uncertified`}>
       <p>{error || `${observedPlayers}/${rows.length} shown players have observed ${coverageMetric} values for ${data?.seasonLabel ?? season}. ${metric !== "name" && canSort ? "Complete-sample ranking coverage is verified for the selected metric and window." : "Observed values are not a complete or certified league-wide ranking."}`}</p>
       <p>{data?.coverage.rankablePlayers ?? 0}/{data?.coverage.relevantPlayers ?? 0} source players have a certified complete sample for this metric and window.</p>

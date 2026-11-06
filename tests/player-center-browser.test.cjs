@@ -214,3 +214,27 @@ test('trend one/zero/all-incomplete states, player/season reset, and Group/snaps
   }
  }finally{await browser.close();}
 });
+
+test('post-launch Burrow 6/7 observed averages and Castle compact season stats at 360/390', {skip:(!modulePath||!base)&&'Set browser module and URL',timeout:180000},async()=>{
+ const {chromium}=require(modulePath),browser=await chromium.launch();
+ try{for(const width of [360,390])for(const sport of ['nfl','nba']){
+  const {page,errors}=await setup(browser,width,sport,h=>{
+   h.player.name=sport==='nfl'?'Joe Burrow':'Stephon Castle';h.coverage={kind:'appearance_log',expectedGames:sport==='nfl'?7:6,fetchedAt:capture.capturedAt,freshness:'fresh',issues:[]};
+   const g=h.games.find(g=>g.status==='final'&&g.participation==='played');h.games=Array.from({length:6},(_,i)=>({...structuredClone(g),eventId:String(500+i),gameAt:`2026-10-${10+i}T20:00:00Z`,issues:[],stats:sport==='nfl'?{passing_yards:100*(i+1),passing_tds:0,passing_ints:0,rushing_yards:0,rushing_tds:0,receiving_yards:0,receiving_tds:0,receptions:0,fumbles_lost:0}:{points:10,rebounds:0,assists:0,steals:0,blocks:0,turnovers:0}}));return h;
+  });
+  await page.goto(`${base}/player-history?sport=${sport}&playerId=${sport==='nfl'?435:6}`,{waitUntil:'domcontentloaded',timeout:90000});await waitProfile(page);const profile=page.locator('.pc-profile');
+  assert.equal(await profile.getByLabel('Summary sample and coverage',{exact:true}).count(),1);assert.equal(await profile.locator('.pc-metrics small').count(),0);assert.ok((await profile.locator('.pc-metrics > div > span').allTextContents()).every(label=>label.endsWith('/game')));
+  if(sport==='nfl'){
+   assert.match(await profile.locator('.pc-summary').innerText(),/6 scored \/ 6 observed.*1 missing games/s);assert.match(await profile.locator('.pc-summary').innerText(),/Observed average/);
+   const passing=profile.locator('.pc-metrics > div').filter({hasText:'Pass YDS'}).first();assert.match(await passing.innerText(),/350/);
+   await profile.getByRole('button',{name:'Last 3',exact:true}).click();assert.match(await passing.innerText(),/500/);
+   await profile.getByRole('button',{name:'Last 5',exact:true}).click();assert.match(await passing.innerText(),/400/);
+  }else{
+   await profile.getByRole('tab',{name:'Season stats',exact:true}).click();await profile.locator('.pc-season-table').first().waitFor();
+   assert.equal(await profile.locator('.pc-season-table:visible').count(),1);assert.equal(await profile.locator('.pc-season-details').getAttribute('open'),null);
+   const primary=profile.locator('.pc-season-table').first();assert.ok((await primary.boundingBox()).height<180);assert.ok((await primary.locator('thead th').count())<=9);
+   await profile.locator('.pc-season-details > summary').click();assert.ok(await profile.locator('.pc-season-table:visible').count()>1);
+  }
+  await fits(page,`${sport} postlaunch ${width}`);assert.deepEqual(errors,[]);await page.close();
+ }}finally{await browser.close();}
+});

@@ -100,7 +100,7 @@ test('a newly opened NBA comparison follows Season, Last game, Last 3 and explic
     dialog = nodes(s.render()).find(n => n.props?.role === 'dialog'); assert.equal(find(dialog, Rows).props.window, window);
     loaded = await loadRows(find(dialog, Rows).props); assert.deepEqual(cells(loaded.tree, 'points').map(value), expected); loaded.h.unmount();
   }
-  button(dialog, '×').props.onClick(); s.props.centerSeason = 2026; changeWindow(s, 'season'); button(s.render(), 'Compare ( 2 )').props.onClick();
+  button(dialog, '×').props.onClick(); nodes(s.render()).find(n => n.props?.['aria-label'] === 'Draft research season').props.onChange({ target: { value: '2026' } }); changeWindow(s, 'season'); button(s.render(), 'Compare ( 2 )').props.onClick();
   dialog = nodes(s.render()).find(n => n.props?.role === 'dialog'); assert.match(text(dialog), /2025–26 NBA · Season averages/);
   loaded = await loadRows(find(dialog, Rows).props); assert.deepEqual(cells(loaded.tree, 'points').map(value), ['9000.0', '9001.0 ✓']);
   assert.deepEqual(s.writes, []); loaded.h.unmount(); s.close();

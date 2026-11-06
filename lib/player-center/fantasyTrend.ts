@@ -25,9 +25,9 @@ export function defaultTrendPeriod(points: TrendPoint[]): TrendPeriod {
  * The chart still keeps incomplete appearances in its fixed chronological windows.
  */
 export function lastFiveFantasySummary(profile: CenterProfile) {
-  const completed = fantasyTrendGames(profile);
+  const completed = fantasyTrendGames(profile).slice(-5);
   const scored = completed.filter((point): point is TrendPoint & { points: number } => point.points !== null).slice(-5);
-  const sample = scored.length ? completed.slice(completed.indexOf(scored[0])) : completed.slice(-5);
+  const sample = completed;
   const unavailable = sample.filter(point => point.points === null).length;
   return {
     average: scored.length ? scored.reduce((sum, point) => sum + point.points, 0) / scored.length : null,

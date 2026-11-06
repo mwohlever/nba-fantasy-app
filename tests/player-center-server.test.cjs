@@ -166,7 +166,7 @@ test('absent/invalid/stale caches fall back read-only, while comparisons cannot 
  reset();const {h,row}=cacheFixture();catalogTables(h);const repo=new SupabaseCenterRepository(db,()=>cacheNow);let requests=0;
  const provider={history:async()=>{requests++;return structuredClone(h);}},service=new PlayerCenterService(repo,provider,()=>cacheNow);
  await service.profile({sport:'nba',playerId:6,season:2027,phase:'regular',scoring:scoring('nba')});assert.equal(requests,1);
- const comparisons=await service.comparisons({sport:'nba',season:2027,window:'season',metric:'points',ascending:false,scoring:scoring('nba')});assert.equal(comparisons.coverage.canSort,false);assert.equal(requests,1,'comparisons never call ESPN');
+ const comparisons=await service.comparisons({sport:'nba',season:2027,window:'season',metric:'points',ascending:false,scoring:scoring('nba')});assert.equal(comparisons.profilesUsed,1);assert.equal(comparisons.players[0].observedAverage,compareHistories({sport:"nba",season:2027,window:"season",metric:"points",ascending:false,scoring:scoring("nba")},[h],new Date(cacheNow).toISOString(),null).players[0].observedAverage);assert.equal(requests,1,'comparisons reuse profile facts without new ESPN calls');
  state.tables.player_center_season_cache=[{...row,checked_at:'2000-01-01T00:00:00Z'}];assert.equal(await repo.profileSnapshot(h.player,2027),null);
  state.tables.player_center_season_cache=[row];const staleRepo=new SupabaseCenterRepository(db,()=>cacheNow+2*86400000);
  const fallback=new PlayerCenterService(staleRepo,{history:async()=>({...structuredClone(h),coverage:{...h.coverage,freshness:'unavailable'}})},()=>cacheNow+2*86400000);

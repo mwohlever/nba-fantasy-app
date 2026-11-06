@@ -46,7 +46,7 @@ export default function ObservedComparisonRows({ sport, season, window, slateId,
     if (season === null || !validCenterSeason(season, sport)) throw new Error("A valid professional season is required for comparison.");
     if (scope === "none") throw new Error("An active Group is required for comparison.");
     // Omit the browser's position/search filters: selected NFL players can span positions.
-    const result = await loader.comparisons({ sport, season, window, slateId, metric: "fantasy_points", ascending: false }, signal);
+    const result = await loader.comparisons({ sport, season, window, slateId, metric: "fantasy_points", ascending: false, playerIds: ids }, signal);
     if (result.sport !== sport || result.season !== season || result.window !== window || result.phase !== "regular" ||
       result.metric !== "fantasy_points" || (result as ComparisonData & { groupId?: string }).groupId !== scope || !Array.isArray(result.players)) {
       throw new Error("Comparison context changed. Reopen Compare Players.");

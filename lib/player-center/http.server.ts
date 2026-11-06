@@ -52,7 +52,10 @@ export async function playerCenterGet(request: Request, mode: "profile" | "compa
     const position = params.get("position") ?? undefined;
     if (phase !== "regular" || !["last1", "last3", "last5", "season"].includes(window) || !["asc", "desc"].includes(direction) ||
       position && !(sport === "nba" ? ["G", "F/C", "UTIL"] : ["QB", "RB", "WR", "TE", "K", "D/ST"]).includes(position)) return reply({ error: "Invalid comparison window, phase, position, or direction." }, 400);
-    const result = await service.comparisons({ sport, season, window: window as CenterWindow, metric, position, ascending: direction === "asc", scoring });
+    const idsParam = params.get("playerIds");
+    const playerIds = idsParam === null ? undefined : idsParam.split(",").map(value => positiveId(value));
+    if (playerIds && (playerIds.length > 3 || playerIds.some(id => id === null))) return reply({ error: "Select up to three valid players." }, 400);
+    const result = await service.comparisons({ playerIds: playerIds as number[] | undefined, sport, season, window: window as CenterWindow, metric, position, ascending: direction === "asc", scoring });
     return reply({ ...scope, ...result });
   } catch (error) {
     if (error instanceof Error && error.message === "Unsupported comparison metric") return reply({ error: error.message }, 400);

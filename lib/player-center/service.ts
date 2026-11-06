@@ -1,6 +1,6 @@
 import { BoundedReadCache, ReadBudget } from "./cache";
 import { comparisonStats, compareHistories } from "./comparison";
-import { presentProfile } from "./presentation";
+import { presentProfile, type PresentableHistory } from "./presentation";
 import { CenterEspnReader } from "./espn";
 import { cacheIsStale } from "./durableCache";
 import type { CenterCatalog, CenterRepository } from "./repository.server";
@@ -8,6 +8,15 @@ import { type CenterHistory, type CenterPhase, type CenterScoringContext, type C
 
 /** Read-only orchestration with injectable reads: provider profiles and stored-only draft comparisons. */
 export class PlayerCenterService {
+  // Public raw facts only. Scores are always recalculated for the authorized Group/slate.
+  private profileFacts = new Map<string, { history: PresentableHistory; at: number }>();
+  private remember(history: PresentableHistory) {
+    const key = `${history.player.sport}:${history.season}:${history.player.playerId}`;
+    this.profileFacts.delete(key);
+    this.profileFacts.set(key, { history: structuredClone(history), at: this.now() });
+    if (this.profileFacts.size > 128) this.profileFacts.delete(this.profileFacts.keys().next().value!);
+    return history;
+  }
   private catalogCache: BoundedReadCache<CenterCatalog>;
   private historyCache: BoundedReadCache<CenterHistory[]>;
   constructor(private readonly repository: CenterRepository, private readonly espn = new CenterEspnReader(), private readonly now: () => number = Date.now) {
@@ -48,16 +57,30 @@ export class PlayerCenterService {
     const catalog = await this.catalog(input.sport), player = catalog.players.find(row => row.playerId === input.playerId);
     if (!player) return null;
     const snapshot = input.phase === "regular" ? await this.repository.profileSnapshot?.(player, input.season) : null;
-    if (snapshot?.coverage.freshness === "fresh") return presentProfile(snapshot, input.scoring, snapshot.coverage.cache!.asOf);
+    if (snapshot?.coverage.freshness === "fresh") return presentProfile(this.remember(snapshot), input.scoring, snapshot.coverage.cache!.asOf);
     const history = await this.espn.history(player, input.season, input.phase);
-    if (snapshot && history.coverage.freshness !== "fresh") return presentProfile(snapshot, input.scoring, snapshot.coverage.cache!.asOf);
+    if (snapshot && history.coverage.freshness !== "fresh") return presentProfile(this.remember(snapshot), input.scoring, snapshot.coverage.cache!.asOf);
     const asOf = new Date(this.now()).toISOString();
+    if (input.phase === "regular" && history.coverage.freshness === "fresh") this.remember(history);
     return presentProfile(history, input.scoring, asOf);
   }
-  async comparisons(input: { sport: CenterSport; season: number; window: CenterWindow; metric: string; position?: string; ascending: boolean; scoring: CenterScoringContext }) {
+  async comparisons(input: { sport: CenterSport; season: number; window: CenterWindow; metric: string; position?: string; ascending: boolean; scoring: CenterScoringContext; playerIds?: number[] }) {
     const allowed = input.sport === "nba" ? comparisonStats.nba : Object.entries(comparisonStats).filter(([key]) => key !== "nba").flatMap(([, stats]) => [...stats]);
     if (!(allowed as readonly string[]).includes(input.metric)) throw new Error("Unsupported comparison metric");
     const catalog = await this.catalog(input.sport), stored = await this.stored(input.sport, input.season, catalog);
-    return compareHistories(input, stored.histories, stored.asOf, stored.readAt);
+    if (input.playerIds && (input.playerIds.length > 3 || input.playerIds.some(id => !Number.isSafeInteger(id) || id <= 0))) throw new Error("Invalid profile batch");
+    // Explicit, bounded research reads; never fan out across the full catalog.
+    let providerRequests = 0;
+    await Promise.all((input.playerIds ?? []).map(async playerId => {
+      try { const profile = await this.profile({ ...input, playerId, phase: "regular" }); providerRequests += profile?.providerRequests ?? 0; } catch { /* Existing stored facts remain available. */ }
+    }));
+    let profilesUsed = 0;
+    const histories = stored.histories.map(history => {
+      const facts = this.profileFacts.get(`${input.sport}:${input.season}:${history.player.playerId}`);
+      if (!facts || this.now() - facts.at > 15 * 60_000 || facts.history.player.providerPlayerId !== history.player.providerPlayerId || facts.history.player.nativePlayerId !== history.player.nativePlayerId || history.player.identity !== "resolved") return history;
+      profilesUsed++;
+      return { ...structuredClone(facts.history), player: history.player };
+    });
+    return { ...compareHistories(input, histories, stored.asOf, stored.readAt), source: profilesUsed ? "stored_and_provider" as const : "stored" as const, providerRequests, profilesUsed };
   }
 }

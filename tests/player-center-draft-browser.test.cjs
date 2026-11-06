@@ -16,7 +16,7 @@ test('actual NBA/NFL draft pages retain scoped server inputs, actual-stat resear
   const groupContext={group:{id:'a',name:'Draft fixture Group',slug:'a',isActive:true},team:{id:1,name:'First team'},membership:{role:'admin',isActive:true},canAdministerGroup:true,leagues:[{id:sport+'-a',sportKey:sport,name:sport,isEnabled:true,settings:{},gameMode:'standard'}]};
   for(const enabled of [true,false])for(const width of [360,390,1280]){
    const activeBundle=enabled?bundle:require('./helpers/nfl-draft-browser-bundle.cjs')(sport,false);
-   const page=await browser.newPage({viewport:{width,height:900},hasTouch:width<600}),errors=[],requests=[],writes=[],forecasts=[];page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
+   const page=await browser.newPage({viewport:{width,height:900},hasTouch:width<600}),errors=[],requests=[],writes=[],forecasts=[],loadedFacts=new Set();page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
    await page.route('**/*',async route=>{
     const request=route.request(),url=new URL(request.url());if(url.hostname!=='draft.test')return route.abort();
     if(request.resourceType()==='image')return route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"/>'});
@@ -37,7 +37,7 @@ test('actual NBA/NFL draft pages retain scoped server inputs, actual-stat resear
      else if(url.pathname.startsWith('/api/player-center')){
       requests.push(url);assert.equal(url.searchParams.get('slateId'),'193');assert.equal(url.searchParams.get('sport'),sport);
       const scoring={sport,basis:'slate_snapshot',settings:snapshot},season=Number(url.searchParams.get('season'));
-      if(url.pathname.endsWith('/comparisons'))body={...compareHistories({sport,season,scoring,window:url.searchParams.get('window'),metric:url.searchParams.get('metric'),position:url.searchParams.get('position')??undefined,ascending:url.searchParams.get('direction')==='asc'},pool,capture.capturedAt,capture.capturedAt),groupId:'a',leagueId:sport+'-a'};
+      if(url.pathname.endsWith('/comparisons')){for(const id of (url.searchParams.get('playerIds')??'').split(',').filter(Boolean))loadedFacts.add(Number(id));body={...compareHistories({sport,season,scoring,window:url.searchParams.get('window'),metric:url.searchParams.get('metric'),position:url.searchParams.get('position')??undefined,ascending:url.searchParams.get('direction')==='asc'},pool.filter(h=>h.season===season).map(h=>{if(sport!=='nfl'||loadedFacts.has(h.player.playerId))return h;const copy=structuredClone(h);for(const g of copy.games)g.stats.fumbles_lost=null;return copy;}),capture.capturedAt,capture.capturedAt),groupId:'a',leagueId:sport+'-a'};}
       else{const h=pool.find(h=>h.player.playerId===Number(url.searchParams.get('playerId'))&&h.season===season);assert.ok(h,'exact local identity and season');body={...presentProfile(h,scoring,capture.capturedAt),groupId:'a',leagueId:sport+'-a'};}
      }
      return route.fulfill({json:body});
@@ -65,6 +65,10 @@ test('actual NBA/NFL draft pages retain scoped server inputs, actual-stat resear
    }
 
    await research.locator('tbody tr').first().waitFor();
+   const seasonSelect=page.getByLabel('Draft research season');const current=sport==='nba'?2027:2026;assert.equal(await seasonSelect.inputValue(),String(current));
+   await seasonSelect.selectOption(String(current-1));await page.waitForTimeout(150);assert.ok(requests.some(u=>u.searchParams.get('season')===String(current-1)));await seasonSelect.selectOption(String(current));
+   if(sport==='nfl'){await research.getByRole('searchbox').fill('Patrick Mahomes');await research.getByRole('button',{name:/Load missing game stats/}).click();await page.waitForFunction(()=>document.querySelector('.pc-sort-state').textContent.includes('Observed-data sorting'));assert.ok(requests.some(u=>u.searchParams.has('playerIds')));await research.getByRole('searchbox').fill('');}
+
    for(const label of ['Last game','Last 3','Last 5','Season']){await research.getByRole('button',{name:label,exact:true}).click();await page.waitForTimeout(100);assert.equal(await research.getByRole('button',{name:label,exact:true}).getAttribute('aria-pressed'),'true');}
    await research.getByLabel('Position filter').selectOption(sport==='nba'?'F/C':'QB');await research.getByLabel('Stat sort',{exact:true}).selectOption(sport==='nba'?'points':'passing_yards');await research.getByRole('button',{name:'Change stat sort direction'}).click();
    const name=sport==='nba'?'LeBron James':'Patrick Mahomes';await research.getByRole('searchbox').fill(name);await research.locator('button.pc-player-button').filter({hasText:name}).waitFor();assert.equal(await research.locator('tbody tr').count(),1);
