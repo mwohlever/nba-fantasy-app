@@ -446,7 +446,6 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
 
   const [nflStatsSeason, setNflStatsSeason] = useState<number | null>(null);
   const [nflAscending, setNflAscending] = useState(false);
-  const [gameStatsWindow, setGameStatsWindow] = useState<CenterWindow>("last5");
   const [sortBy, setSortBy] =
     useState<SortOption>(
       selectedSport === "golf" ? "owgr" : "times_drafted",
@@ -648,7 +647,7 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
 
   useEffect(() => {
     if (
-      !isNba
+      !isNba || centerEnabled
     ) {
       return;
     }
@@ -742,12 +741,13 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
     };
   }, [
     isNba,
+    centerEnabled,
     selectedSeason,
   ]);
 
   useEffect(() => {
     if (
-      !isNfl
+      !isNfl || centerEnabled
     ) {
       return;
     }
@@ -844,6 +844,7 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
     };
   }, [
     isNfl,
+    centerEnabled,
     selectedSeason,
     nflSeason,
   ]);
@@ -1552,7 +1553,7 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
   const storedSeason = isNfl ? nflStatsSeason : selectedSeason === "all" ? null : Number(selectedSeason);
   const requestedSeason = researchMode === "season" || !centerEnabled ? storedSeason : professionalResearchSeason;
   const comparisonSeason = requestedSeason !== null && validCenterSeason(requestedSeason, comparisonSport) ? requestedSeason : null;
-  const comparisonWindow = useObservedComparison && researchMode !== "season" ? gameStatsWindow : "season";
+  const comparisonWindow: CenterWindow = "season";
 
   const golfSeasonSortLabel =
     sortBy ===
@@ -1795,22 +1796,6 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
             </button>}
           </div>
 
-          {centerEnabled && researchMode !== "league" && <label className="flex items-center gap-2 text-xs text-slate-400">
-            Data source
-            <select aria-label="Game Stats source" value={researchMode === "season" ? isNfl ? "totals" : "averages" : "games"}
-              className="rounded-lg border border-slate-600 bg-slate-900 px-2 py-2 text-slate-100"
-              onChange={event => {
-                const stored = event.target.value !== "games";
-                setResearchMode(stored ? "season" : "actual");
-                if (stored) setSortBy(isNfl ? nflPositionStats(positionFilter)[0] ?? "name" : "season_fp");
-                setCompareMode(false); setComparePlayerIds([]);
-              }}>
-              <option value="games">Observed game logs</option>
-              {isNfl ? <option value="totals">{nflStatsSeason ?? "Stored"} season totals</option>
-                : <option value="averages">{selectedSeason === "all" ? "Stored" : seasonLabel("nba", Number(selectedSeason))} season averages</option>}
-            </select>
-          </label>}
-
           {centerEnabled && researchMode === "actual" && <label className="text-xs text-slate-400">Professional season <select aria-label="Draft research season" value={professionalResearchSeason} onChange={event => { setProfessionalResearchSeason(Number(event.target.value)); setCompareOpen(false); }}>{[...new Set([professionalSeason(isNfl ? "nfl" : "nba"), professionalSeason(isNfl ? "nfl" : "nba") - 1, professionalSeason(isNfl ? "nfl" : "nba") - 2, professionalResearchSeason])].map(year => <option key={year} value={year}>{seasonLabel(isNfl ? "nfl" : "nba", year)}</option>)}</select></label>}
           {compareMode ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1913,7 +1898,6 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
       ) : null}
 
       {researchMode === "actual" && centerEnabled ? <DraftPlayerCenter {...props} centerSeason={professionalResearchSeason} sport={isNfl ? "nfl" : "nba"}
-        researchWindow={gameStatsWindow} onResearchWindowChange={setGameStatsWindow}
         comparison={compareMode ? { selectedIds: comparePlayerIds, onToggle: toggleComparePlayer } : undefined} /> : <>
       {isNfl && researchMode === "season" && <div className="mb-2 flex items-center justify-between gap-2 text-xs text-slate-500">
         <span>{nflStatsSeason ? `${nflStatsSeason} regular-season stats · Totals (FP/G is per game)` : "NFL season stats"}</span>

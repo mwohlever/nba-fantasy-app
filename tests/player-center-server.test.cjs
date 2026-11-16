@@ -33,6 +33,7 @@ const db = { from: query, rpc() { throw Error('RPC FORBIDDEN'); } };
 const stubService = class {
   async profile(input) { state.calls.push(input); return { scoring: input.scoring }; }
   async comparisons(input) { state.calls.push(input); return { scoring: input.scoring, providerRequests: 0 }; }
+  async seasonCatalog(input) { state.calls.push(input); return { scoring: input.scoring, window: "season", source: "bulk_provider" }; }
 };
 Module._load = function(request, parent, ...args) {
   if (request === 'server-only') return {};
@@ -195,4 +196,14 @@ test('cache paging is bounded and a later failed page never publishes a partial 
  assert.equal(full.length,31);assert.ok(full.every(h=>h.coverage.cache?.complete));assert.equal(state.queries.filter(q=>q.table==='player_center_season_cache').length,2);assert.ok(!state.queries.some(q=>q.table==='nfl_player_game_observations'));
  state.failPage=(table,first)=>table==='player_center_season_cache'&&first>=25;
  const partial=await repo.histories('nfl',2026,catalog,new Date(cacheNow).toISOString());assert.ok(partial.every(h=>h.coverage.comparisonEligible===false));assert.ok(partial.every(h=>h.games.length===0));
+});
+
+test('Draft catalog HTTP requests are season-only, scoped and cannot trigger per-player loading',async()=>{
+ reset();
+ for(const extra of ['window=last5','window=season&playerIds=1'])assert.equal((await playerCenterGet(request('sport=nba&season=2027&view=catalog&'+extra),'comparisons')).status,400);
+ const response=await playerCenterGet(request('sport=nba&season=2027&view=catalog&window=season&metric=points&eligiblePlayerIds=1,2'),'comparisons');assert.equal(response.status,200);const body=await response.json();assert.equal(body.source,'bulk_provider');assert.deepEqual(state.calls.at(-1).eligiblePlayerIds,[1,2]);assert.equal(body.groupId,'group-a');
+});
+test('older game requests validate NFL event shape and preserve authorized scoring context',async()=>{
+ reset();for(const extra of ['sport=nba&events=1','sport=nfl&events=1,1','sport=nfl&events=abc','sport=nfl&events=1,2,3,4,5,6'])assert.equal((await playerCenterGet(request('season=2026&playerId=1&'+extra),'profile')).status,400);
+ const response=await playerCenterGet(request('sport=nfl&season=2026&playerId=1&events=401872660,401872932'),'profile');assert.equal(response.status,200);assert.deepEqual(state.calls.at(-1).eventIds,['401872660','401872932']);assert.equal(state.calls.at(-1).scoring.basis,'league_settings');
 });
