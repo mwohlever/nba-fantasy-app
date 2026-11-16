@@ -138,19 +138,16 @@ for (const sport of ['nba', 'nfl']) for (const enabled of [true, false, undefine
     const s = await setup(sport, enabled);
     assert.equal(button(s.render(), 'Season Stats'), undefined);
     button(s.render(), 'Game Stats').props.onClick(); s.h.render(s.props, true);
-    if (enabled !== false && sport === 'nba') {
+    if (enabled !== false) {
       const center = find(s.render(), Center), h = host(Center), browser = find(h.render(center.props), Browser), b = host(Browser);
+      assert.equal(browser.props.seasonOnly, true);
       const tree = b.render(browser.props), select = nodes(tree).find(n => n.props?.['aria-label'] === 'Stat sort');
-      const keys = nodes(select).filter(n => n.type === 'option').map(n => n.props.value);
-      for (const metric of ['fantasy_points', 'points', 'rebounds', 'assists', 'steals', 'blocks']) assert.ok(keys.includes(metric));
-      assert.ok(!keys.includes('turnovers'));
-      assert.equal(browser.props.season, 2027); assert.deepEqual(s.actions, []);
-      b.unmount(); h.unmount();
-      nodes(s.render()).find(n => n.props?.['aria-label'] === 'Game Stats source').props.onChange({ target: { value: 'averages' } }); s.h.render(s.props, true);
-    }
-    if (enabled !== false && sport === 'nfl') {
-      nodes(s.render()).find(n => n.props?.['aria-label'] === 'Game Stats source').props.onChange({ target: { value: 'totals' } }); s.h.render(s.props, true);
-      assert.equal(button(s.render(), 'Game Stats').props['aria-pressed'], true);
+      const options = nodes(select).filter(n => n.type === 'option');
+      assert.ok(!options.some(n => ['turnovers','passing_ints','fumbles_lost'].includes(n.props.value)));
+      if (sport === 'nfl') assert.equal(options.find(n => n.props.value === 'fantasy_points').props.disabled, true);
+      assert.equal(browser.props.season, sport === 'nba' ? 2027 : 2026);
+      assert.equal(nodes(s.render()).find(n => n.props?.['aria-label'] === 'Game Stats source'), undefined);
+      assert.deepEqual(s.actions, []); b.unmount(); h.unmount(); s.h.unmount(); s.outer.unmount(); return;
     }
     const select = nodes(s.render()).find(n => n.props?.['aria-label'] === 'Draft player sort');
     const keys = nodes(select).filter(n => n.type === 'option').map(n => n.props.value);

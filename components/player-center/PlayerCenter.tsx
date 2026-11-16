@@ -9,6 +9,7 @@ import type { CenterProfile } from "@/lib/player-center/presentation";
 import { lastFiveFantasySummary } from "@/lib/player-center/fantasyTrend";
 import { realCenterLoader, type CenterLoader } from "./data";
 import { useCenterResource } from "./useCenterResource";
+import { loadVisibleGameStats } from "./visibleGameStats";
 import SeasonStats from "./SeasonStats";
 import FantasyStats from "./FantasyStats";
 import CoverageNotice from "./CoverageNotice";
@@ -32,14 +33,14 @@ function PlayerCenterBody({ identity, sport, season: initialSeason, slateId, loa
   const [revision, setRevision] = useState(0), [showAll, setShowAll] = useState(expanded);
   const { groupContext } = useGroupContext();
   const scope = groupContext?.group.id ?? "none";
-  const key = `${scope}:${sport}:${identity.id}:${season}:${slateId ?? "league"}:${revision}`;
+  const key = `${scope}:${sport}:${identity.id}:${season}:${slateId ?? "league"}:${revision}:${showAll}`;
   const load = useCallback(async (signal: AbortSignal) => {
-    const profile = await loader.profile({ sport, playerId: identity.id, season, slateId }, signal);
+    const profile = await loadVisibleGameStats(loader, { sport, playerId: identity.id, season, slateId }, signal, showAll ? 25 : 10);
     if (profile.player.playerId !== identity.id || profile.player.sport !== sport || profile.season !== season) throw new Error("The statistics returned for a different player or season.");
     const responseScope = profile as CenterProfile & { groupId?: string };
     if (!fixture && scope !== "none" && responseScope.groupId !== scope) throw new Error("Your Group changed. Reopen this player profile.");
     return profile;
-  }, [loader, sport, identity.id, season, slateId, fixture, scope]);
+  }, [loader, sport, identity.id, season, slateId, fixture, scope, showAll]);
   const { data, loading, error } = useCenterResource(key, load);
   const cutoff = Date.parse(data?.asOf ?? new Date().toISOString());
   const games = [...(data?.games ?? [])].sort((a, b) => {

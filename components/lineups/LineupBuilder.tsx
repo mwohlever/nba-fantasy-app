@@ -707,9 +707,9 @@ export default function LineupBuilder({
 
         if (positionFilter !== "All") {
           const matchesPositionFilter =
-            selectedSport === "nfl"
+            (selectedSport === "nfl" || selectedSport === "nba")
               ? canPlayerFillRosterSlot(
-                  "nfl",
+                  selectedSport,
                   player.position_group,
                   positionFilter,
                 )

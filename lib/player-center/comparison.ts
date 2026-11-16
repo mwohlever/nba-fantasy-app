@@ -116,17 +116,23 @@ export function compareActualStats(left: number | null | undefined, right: numbe
 
 
 /** Shared deterministic comparison for stored observations and isolated, captured preview pools. */
-export function compareHistories(input: { sport: CenterScoringContext["sport"]; season: number; window: CenterWindow; metric: string; position?: string; ascending: boolean; scoring: CenterScoringContext }, histories: CenterHistory[], asOf: string, readAt: string | null) {
-    const players = histories.filter(history => history.player.active && (!input.position || history.player.position === input.position)).map(history => {
+function metricFields(sport: CenterScoringContext["sport"], position: string, catalog?: boolean): readonly string[] {
+  if (sport === "nba") return comparisonStats.nba;
+  if (catalog && !["K", "D/ST"].includes(position)) return [...new Set(["QB", "RB", "WR", "TE"].flatMap(key => [...comparisonStats[key as "QB" | "RB" | "WR" | "TE"]]))];
+  return comparisonStats[position as keyof typeof comparisonStats] ?? [];
+}
+
+export function compareHistories(input: { sport: CenterScoringContext["sport"]; season: number; window: CenterWindow; metric: string; position?: string; ascending: boolean; scoring: CenterScoringContext; eligibleIds?: number[]; catalog?: boolean }, histories: CenterHistory[], asOf: string, readAt: string | null) {
+    const players = histories.filter(history => (history.player.active || input.eligibleIds?.includes(history.player.playerId)) && (!input.position || history.player.position === input.position)).map(history => {
       const summary = summarizeHistory(history, input.window, input.scoring, asOf);
-      const fields = input.sport === "nba" ? comparisonStats.nba : comparisonStats[history.player.position as keyof typeof comparisonStats] ?? [];
+      const fields = metricFields(input.sport, history.player.position, input.catalog);
       const relevant = (fields as readonly string[]).includes(input.metric);
       return { player: history.player, coverage: summary.basis === "published_season" ? { ...history.coverage, freshness: summary.freshness, fetchedAt: history.seasonFacts!.fetchedAt, issues: summary.issues } : history.coverage, summary,
         metricRelevant: relevant,
         observedAverage: relevant ? summary.observedAverages[input.metric] ?? null : null,
         rankableAverage: relevant && summary.metricComparable[input.metric] ? summary.averages[input.metric] ?? null : null };
     });
-    const relevant = players.filter(row => input.sport === "nba" || ((comparisonStats[row.player.position as keyof typeof comparisonStats] ?? []) as readonly string[]).includes(input.metric));
+    const relevant = players.filter(row => row.metricRelevant);
     // Unknown rows cannot silently drop out of the comparison universe. Explicit GP=0 is a known absence.
     const required = input.window === "last1" ? 1 : input.window === "last3" ? 3 : input.window === "last5" ? 5 : null;
     const knownShortSample = (row: typeof players[number]) => (row.summary.basis === "published_season" && row.player.identity === "resolved" && row.summary.freshness === "fresh" && row.summary.expectedGames === 0) || row.player.identity === "resolved" && row.coverage.freshness === "fresh" &&

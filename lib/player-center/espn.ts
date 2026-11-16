@@ -326,7 +326,7 @@ export class CenterEspnReader {
     for (const chunk of chunks) { joined.set(chunk, offset); offset += chunk.length; }
     return JSON.parse(new TextDecoder().decode(joined)) as unknown;
   }
-  async history(player: CenterPlayer, season: number, phase: CenterPhase, budget?: ReadBudget) {
+  async history(player: CenterPlayer, season: number, phase: CenterPhase, budget?: ReadBudget, eventIds?: string[]) {
     budget ??= new ReadBudget(8, this.now() + 18_000);
     const result: CenterHistory & { seasonFacts?: import("./types").SeasonFacts | null; seasonStats: CenterSeasonStats | null; byeWeeks: number[] | null; providerRequests: number } = {
       player, season, phase, source: "provider", games: [], seasonStats: null, byeWeeks: null, providerRequests: 0,
@@ -369,11 +369,13 @@ export class CenterEspnReader {
       // Bound enrichment to the latest five appearance candidates. Unknown/live rows
       // retain their positions and cannot be skipped in favor of older good scores.
       const appearances = [...result.games].filter(game => game.participation !== "dnp" && game.status !== "scheduled" && game.status !== "live" && Date.parse(game.gameAt) <= this.now()).sort((a, b) => b.gameAt.localeCompare(a.gameAt));
-      const candidates = appearances.slice(0, 5);
-      if (appearances.length > 5) result.coverage.issues.push("recent_enrichment_limited_to_five");
-      const enrich = async (game: CenterGame) => {
+      if (eventIds && (eventIds.length > 5 || new Set(eventIds).size !== eventIds.length || eventIds.some(id => !appearances.some(game => game.eventId === id)))) throw new Error("Requested game is not in this player log");
+      const requested = eventIds?.map(id => appearances.find(game => game.eventId === id)!) ?? [];
+      const candidates = [...new Map([...requested, ...appearances.slice(0, 5)].map(game => [game.eventId, game])).values()];
+      const enrich = async (game: CenterGame, cacheOnly = false) => {
         const source = espnNflEventSummaryUrl(game.eventId);
-        const summary = await this.cache.read(`summary:${game.eventId}`, async () => normalizeCenterNflSummary(await this.json(source), game.eventId), ttl, budget);
+        const summary = await this.cache.read(`summary:${game.eventId}`, async () => normalizeCenterNflSummary(await this.json(source), game.eventId), ttl, cacheOnly ? new ReadBudget(0, budget.deadline) : budget);
+        if (cacheOnly && summary.freshness !== "fresh") return;
         if (summary.value && "teams" in summary.value) {
           try {
             const enriched = enrichNflGame(game, summary.value, source);
@@ -388,7 +390,10 @@ export class CenterEspnReader {
         if (summary.error === "provider_request_budget") result.coverage.issues.push("summary_coverage_budget_limited");
       };
       // Match the existing cache's three-request concurrency bound.
-      for (let offset = 0; offset < candidates.length; offset += 3) await Promise.all(candidates.slice(offset, offset + 3).map(enrich));
+      for (let offset = 0; offset < candidates.length; offset += 3) await Promise.all(candidates.slice(offset, offset + 3).map(game => enrich(game)));
+      // Reuse previously verified older summaries without authorizing more requests.
+      await Promise.all(appearances.filter(game => !candidates.includes(game)).map(game => enrich(game, true)));
+      if (appearances.some(game => game.status !== "final")) result.coverage.issues.push("recent_enrichment_limited_to_five");
     }
     // The validated appearance log establishes chronological window membership.
     // GP and season-field completeness are separate evidence for season summaries.

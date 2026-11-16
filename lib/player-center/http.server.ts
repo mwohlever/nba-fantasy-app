@@ -45,7 +45,10 @@ export async function playerCenterGet(request: Request, mode: "profile" | "compa
     if (mode === "profile") {
       const playerId = positiveId(params.get("playerId"));
       if (!playerId) return reply({ error: "A valid playerId is required." }, 400);
-      const result = await service.profile({ sport, playerId, season, phase: phase as CenterPhase, scoring });
+      const eventsParam = params.get("events");
+      const eventIds = eventsParam === null ? undefined : eventsParam.split(",");
+      if (eventIds && (sport !== "nfl" || eventIds.length > 5 || new Set(eventIds).size !== eventIds.length || eventIds.some(id => !/^[1-9]\d{0,19}$/.test(id)))) return reply({ error: "Select up to five valid NFL games." }, 400);
+      const result = await service.profile({ sport, playerId, season, phase: phase as CenterPhase, scoring, eventIds });
       return result ? reply({ ...scope, ...result }) : reply({ error: "Player not found." }, 404);
     }
     const window = params.get("window") ?? "last5", metric = params.get("metric") ?? "fantasy_points", direction = params.get("direction") ?? "desc";
@@ -58,6 +61,11 @@ export async function playerCenterGet(request: Request, mode: "profile" | "compa
     const eligibleParam = params.get("eligiblePlayerIds");
     const eligiblePlayerIds = eligibleParam === null ? undefined : eligibleParam.split(",").filter(Boolean).map(value => positiveId(value));
     if (eligiblePlayerIds && (eligiblePlayerIds.length > 2000 || eligiblePlayerIds.some(id => id === null) || new Set(eligiblePlayerIds).size !== eligiblePlayerIds.length)) return reply({ error: "Invalid eligible player pool." }, 400);
+    if (params.get("view") === "catalog") {
+      if (window !== "season" || playerIds !== undefined) return reply({ error: "Draft catalogs use bulk season statistics only." }, 400);
+      const result = await service.seasonCatalog({ eligiblePlayerIds: eligiblePlayerIds as number[] | undefined, sport, season, metric, position, ascending: direction === "asc", scoring });
+      return reply({ ...scope, ...result });
+    }
     const result = await service.comparisons({ eligiblePlayerIds: eligiblePlayerIds as number[] | undefined, playerIds: playerIds as number[] | undefined, sport, season, window: window as CenterWindow, metric, position, ascending: direction === "asc", scoring });
     return reply({ ...scope, ...result });
   } catch (error) {

@@ -65,11 +65,10 @@ async function workspace(sport = 'nba', options = {}) {
   const outer = host(Pool), h = host(outer.render(props).type); h.render(props, true); await tick(); h.render(props, true); await tick();
   return { f, requests, writes, props, h, render: () => h.render(props), close: () => { h.unmount(); outer.unmount(); } };
 }
-function changeWindow(s, window) {
+function seasonOnly(s) {
   const c = host(Center), b = host(Browser), browser = find(c.render(find(s.render(), Center).props), Browser);
-  const control = find(b.render(browser.props), WindowControl); control.props.onChange(window);
+  assert.equal(browser.props.seasonOnly, true); assert.equal(find(b.render(browser.props), WindowControl), undefined);
   b.unmount(); c.unmount();
-  assert.equal(find(s.render(), Center).props.researchWindow, window);
 }
 function openComparison(s, ids = [901, 902]) {
   nodes(s.render()).find(n => n.props?.['data-floating-compare']).props.onClick();
@@ -78,41 +77,37 @@ function openComparison(s, ids = [901, 902]) {
   return nodes(s.render()).find(n => n.props?.role === 'dialog');
 }
 
-test('NBA current Last 5 comparison inherits the browser context and uses one canonical all-metric response', async () => {
-  const s = await workspace(); changeWindow(s, 'last5'); const dialog = openComparison(s);
-  assert.match(text(dialog), /2026–27 NBA · Last 5 averages/);
-  const props = find(dialog, Rows).props; assert.equal(props.season, 2027); assert.equal(props.window, 'last5'); assert.equal(props.slateId, 12);
+test('NBA Draft comparison uses Season and retains the slate context and uses one canonical all-metric response', async () => {
+  const s = await workspace(); seasonOnly(s); const dialog = openComparison(s);
+  assert.match(text(dialog), /2026–27 NBA · Season averages/);
+  const props = find(dialog, Rows).props; assert.equal(props.season, 2027); assert.equal(props.window, 'season'); assert.equal(props.slateId, 12);
   const { h, tree } = await loadRows(props);
-  for (const [key, expected] of Object.entries({ fantasy_points: ['45.6', '52.1 ✓'], points: ['30.0', '40.0 ✓'], rebounds: ['3.0 ✓', '3.0 ✓'], assists: ['6.0 ✓', '3.0'], steals: ['1.0', '2.0 ✓'], blocks: ['2.0 ✓', '1.0'], turnovers: ['3.0', '2.0 ✓'] })) {
+  for (const [key, expected] of Object.entries({ fantasy_points: ['57.7', '79.8 ✓'], points: ['41.7', '66.7 ✓'], rebounds: ['4.2 ✓', '4.2 ✓'], assists: ['6.3 ✓', '3.8'], steals: ['0.8', '1.7 ✓'], blocks: ['1.7 ✓', '0.8'], turnovers: ['3.5', '2.7 ✓'] })) {
     const actual = cells(tree, key).map(value);
     assert.deepEqual(actual, expected, key);
   }
   const reads = s.requests.filter(u => u.pathname === '/api/player-center/comparisons'); assert.equal(reads.length, 1);
-  assert.equal(reads[0].searchParams.get('season'), '2027'); assert.equal(reads[0].searchParams.get('window'), 'last5'); assert.equal(reads[0].searchParams.get('position'), null);
+  assert.equal(reads[0].searchParams.get('season'), '2027'); assert.equal(reads[0].searchParams.get('window'), 'season'); assert.equal(reads[0].searchParams.get('position'), null);
   assert.doesNotMatch(text(tree), /99999|9000/); assert.deepEqual(s.writes, []); h.unmount(); s.close();
 });
 
-test('a newly opened NBA comparison follows Season, Last game, Last 3 and explicit historical professional seasons', async () => {
-  const s = await workspace(); changeWindow(s, 'season'); let dialog = openComparison(s);
+test('Draft stays season-only while comparison rows and Player Center retain other windows and historical seasons', async () => {
+  const s = await workspace(); seasonOnly(s); let dialog = openComparison(s);
   let loaded = await loadRows(find(dialog, Rows).props); assert.deepEqual(cells(loaded.tree, 'points').map(value), ['41.7', '66.7 ✓']); loaded.h.unmount();
   for (const [window, expected] of [['last1', ['50.0', '60.0 ✓']], ['last3', ['40.0', '50.0 ✓']]]) {
-    button(dialog, '×').props.onClick(); changeWindow(s, window); button(s.render(), 'Compare ( 2 )').props.onClick();
-    dialog = nodes(s.render()).find(n => n.props?.role === 'dialog'); assert.equal(find(dialog, Rows).props.window, window);
-    loaded = await loadRows(find(dialog, Rows).props); assert.deepEqual(cells(loaded.tree, 'points').map(value), expected); loaded.h.unmount();
+    loaded = await loadRows({ ...find(dialog, Rows).props, window }); assert.deepEqual(cells(loaded.tree, 'points').map(value), expected); loaded.h.unmount();
   }
-  button(dialog, '×').props.onClick(); nodes(s.render()).find(n => n.props?.['aria-label'] === 'Draft research season').props.onChange({ target: { value: '2026' } }); changeWindow(s, 'season'); button(s.render(), 'Compare ( 2 )').props.onClick();
+  button(dialog, '×').props.onClick(); nodes(s.render()).find(n => n.props?.['aria-label'] === 'Draft research season').props.onChange({ target: { value: '2026' } }); seasonOnly(s); button(s.render(), 'Compare ( 2 )').props.onClick();
   dialog = nodes(s.render()).find(n => n.props?.role === 'dialog'); assert.match(text(dialog), /2025–26 NBA · Season averages/);
   loaded = await loadRows(find(dialog, Rows).props); assert.deepEqual(cells(loaded.tree, 'points').map(value), ['9000.0', '9001.0 ✓']);
   assert.deepEqual(s.writes, []); loaded.h.unmount(); s.close();
 });
 
-test('explicit stored historical season selection requests that professional season rather than current/legacy cached averages', async () => {
+test('historical Draft season selection requests that exact professional season', async () => {
   const s = await workspace();
-  nodes(s.render()).find(n => n.props?.['aria-label'] === 'Game Stats source').props.onChange({ target: { value: 'averages' } });
-  nodes(s.render()).find(n => n.props?.['data-floating-compare']).props.onClick();
-  for (const id of [901, 902]) nodes(s.render()).find(n => n.props?.['aria-label'] === `Compare ${s.f.players.find(p => p.id === id).name}`).props.onClick();
-  button(s.render(), 'Compare ( 2 )').props.onClick(); const dialog = nodes(s.render()).find(n => n.props?.role === 'dialog');
-  assert.match(text(dialog), /2025–26 NBA · Season averages/); const loaded = await loadRows(find(dialog, Rows).props);
+  nodes(s.render()).find(n => n.props?.['aria-label'] === 'Draft research season').props.onChange({ target: { value: '2026' } });
+  const dialog = openComparison(s); const loaded = await loadRows(find(dialog, Rows).props);
+  assert.match(text(dialog), /2025–26 NBA · Season averages/);
   assert.equal(s.requests.at(-1).searchParams.get('season'), '2026'); assert.equal(s.requests.at(-1).searchParams.get('window'), 'season');
   assert.doesNotMatch(text(loaded.tree), /99999/); loaded.h.unmount(); s.close();
 });
@@ -130,15 +125,15 @@ test('short/incomplete current samples retain per-metric sample counts and unkno
   const s = await workspace(), h = s.f.histories.find(h => h.season === 2027 && h.player.playerId === 901); h.games = h.games.slice(-2);
   for (const g of h.games) g.stats.blocks = null;
   const dialog = openComparison(s), loaded = await loadRows(find(dialog, Rows).props);
-  assert.equal(value(cells(loaded.tree, 'points')[0]), '45.0 ✓'); assert.match(text(cells(loaded.tree, 'points')[0]), /n=2.*Partial/);
+  assert.equal(value(cells(loaded.tree, 'points')[0]), '45.0'); assert.match(text(cells(loaded.tree, 'points')[0]), /n=2.*Partial/);
   assert.equal(value(cells(loaded.tree, 'blocks')[0]), '—'); assert.equal(value(cells(loaded.tree, 'fantasy_points')[0]), '—');
   loaded.h.unmount(); s.close();
 });
 
-test('NFL current-season Last 3 works across three positions without inheriting the browser position filter', async () => {
-  const s = await workspace('nfl'); s.props.positionFilter = 'QB'; changeWindow(s, 'last3'); const dialog = openComparison(s, [901, 902, 903]);
-  assert.match(text(dialog), /2026 NFL · Last 3 averages/); const loaded = await loadRows(find(dialog, Rows).props);
-  assert.equal(cells(loaded.tree, 'passing_yards').length, 3); assert.equal(value(cells(loaded.tree, 'passing_yards')[0]), '140.0 ✓');
+test('NFL season comparison works across three positions without inheriting the browser position filter', async () => {
+  const s = await workspace('nfl'); s.props.positionFilter = 'QB'; seasonOnly(s); const dialog = openComparison(s, [901, 902, 903]);
+  assert.match(text(dialog), /2026 NFL · Season averages/); const loaded = await loadRows(find(dialog, Rows).props);
+  assert.equal(cells(loaded.tree, 'passing_yards').length, 3); assert.equal(value(cells(loaded.tree, 'passing_yards')[0]), '125.0 ✓');
   assert.equal(s.requests.at(-1).searchParams.get('position'), null); assert.equal(s.requests.at(-1).searchParams.get('season'), '2026');
   assert.deepEqual(s.writes, []); loaded.h.unmount(); s.close();
 });
@@ -147,7 +142,7 @@ test('FP uses the same canonical frozen rules as the requested slate; metric dir
   const s = await workspace('nba', { scoring: { points: 2 } });
   s.f.histories.find(h => h.season === 2027 && h.player.playerId === 901).games.forEach(g => { g.stats.turnovers = 0; });
   const dialog = openComparison(s), loaded = await loadRows(find(dialog, Rows).props);
-  assert.equal(value(cells(loaded.tree, 'fantasy_points')[0]), '78.6'); assert.equal(value(cells(loaded.tree, 'turnovers')[0]), '0.0 ✓');
+  assert.equal(value(cells(loaded.tree, 'fantasy_points')[0]), '102.8'); assert.equal(value(cells(loaded.tree, 'turnovers')[0]), '0.0 ✓');
   assert.match(text(loaded.tree), /Frozen slate scoring/); loaded.h.unmount(); s.close();
 });
 
