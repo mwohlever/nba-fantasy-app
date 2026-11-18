@@ -2,6 +2,7 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useGroupContext } from "@/components/providers/GroupProvider";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import { existingDraftOrder, nflDraftMetrics, resolveNflDraftSort, type DraftSortSelection } from "@/lib/player-center/draftSort";
 import { comparisonStats, compareActualStats, draftSortStats } from "@/lib/player-center/comparison";
 import { formatStat, statLabels, windowLabel, type CenterIdentity } from "@/lib/player-center/display";
 import type { CenterSport, CenterWindow } from "@/lib/player-center/types";
@@ -18,25 +19,23 @@ export type ResearchBrowserProps = { sport: CenterSport; season: number; slateId
   onSelect?: (identity: CenterIdentity) => void; selectedId?: number | null; disabled?: boolean; extras?: ReactNode;
   comparison?: { selectedIds: number[]; onToggle: (identity: CenterIdentity) => void } };
 
-function positionMetric(position: string) {
-  return position === "QB" ? "passing_yards" : ["RB", "FLEX"].includes(position) ? "rushing_yards" : position === "K" ? "field_goals_made" : position === "D/ST" ? "name" : "receiving_yards";
-}
-
 export default function ResearchBrowser({ sport, season, slateId, loader = realCenterLoader, fixture = false, seasonOnly = false, entries, search: controlledSearch, onSearch,
   position: controlledPosition, onPosition, positions, hidePositionFilter, onInspect, onSelect, selectedId, disabled = false, extras, comparison,
   window: controlledWindow, onWindowChange }: ResearchBrowserProps) {
   const [searchState, setSearch] = useState(""), [positionState, setPosition] = useState("All");
-  const defaultMetric = seasonOnly && sport === "nfl" ? positionMetric(controlledPosition ?? "All") : "fantasy_points";
-  const [windowState, setWindowState] = useState<CenterWindow>("last5"), [metricState, setMetric] = useState(defaultMetric), [ascending, setAscending] = useState(false);
+  const nflDraft = seasonOnly && sport === "nfl";
+  const [nflSelection, setNflSelection] = useState<DraftSortSelection | null>(null);
+  const defaultMetric = "fantasy_points";
+  const [windowState, setWindowState] = useState<CenterWindow>("last5"), [metricState, setMetric] = useState(defaultMetric), [ascendingState, setAscending] = useState(false);
   const window = seasonOnly ? "season" : controlledWindow ?? windowState, setWindow = onWindowChange ?? setWindowState;
   const search = controlledSearch ?? searchState, position = controlledPosition ?? positionState;
-  const options = useMemo<string[]>(() => {
+  const baseOptions = useMemo<string[]>(() => {
     if (sport === "nba") return draftSortStats(comparisonStats.nba);
     const keys = position === "FLEX" ? ["RB", "WR", "TE"] : position === "SF" ? ["QB", "RB", "WR", "TE"]
       : position in comparisonStats ? [position] : Object.keys(comparisonStats).filter(key => key !== "nba");
     return draftSortStats([...new Set(keys.flatMap(key => [...comparisonStats[key as keyof typeof comparisonStats]]))]).filter(key => !seasonOnly || key !== "fantasy_points");
   }, [sport, position, seasonOnly]);
-  const metric = seasonOnly && metricState !== "name" && !options.includes(metricState) ? defaultMetric : metricState;
+  const baseMetric = seasonOnly && metricState !== "name" && !baseOptions.includes(metricState) ? defaultMetric : metricState;
   const { groupContext } = useGroupContext(), scope = groupContext?.group.id ?? "none";
   const providerPosition = ["G", "F/C", "QB", "RB", "WR", "TE", "K", "D/ST"].includes(position) ? position : undefined;
   const batchContext = `${scope}:${sport}:${season}:${slateId}`;
@@ -44,18 +43,29 @@ export default function ResearchBrowser({ sport, season, slateId, loader = realC
   const activeBatch: { ids: number[]; attempted: number[] } = batch.context === batchContext ? batch : { ids: [], attempted: [] };
   const eligiblePlayerIds = entries?.map(entry => entry.identity.id).join(",");
   const playerIds = seasonOnly ? undefined : activeBatch.ids.join(",") || undefined;
-  const requestMetric = metric === "name" ? "fantasy_points" : metric;
+  const sortContext = `${scope}:${sport}:${slateId}`;
+  // Catalog summaries contain every season metric. NFL sorts locally from one cached
+  // response, so default selection and sort direction cannot trigger extra ESPN work.
+  const requestMetric = nflDraft ? "fantasy_points" : baseMetric === "name" ? "fantasy_points" : baseMetric;
+  const requestAscending = nflDraft ? false : ascendingState;
   const load = useCallback(async (signal: AbortSignal) => {
-    const data = await loader.comparisons({ sport, season, slateId, window, metric: requestMetric, ascending, position: providerPosition, playerIds, eligiblePlayerIds, view: seasonOnly ? "catalog" : undefined }, signal);
+    const data = await loader.comparisons({ sport, season, slateId, window, metric: requestMetric, ascending: requestAscending, position: providerPosition, playerIds, eligiblePlayerIds, view: seasonOnly ? "catalog" : undefined }, signal);
     if (!Array.isArray(data.players) || !data.coverage) throw new Error("Comparison data is not available for this pool.");
     if (data.sport !== sport || data.season !== season || data.window !== window || data.metric !== requestMetric) throw new Error("Comparison context changed. Reopen player research.");
     if (!fixture && scope !== "none" && (data as ComparisonData & { groupId?: string }).groupId !== scope) throw new Error("The active Group changed. Reopen player research.");
     return data;
-  }, [loader, sport, season, slateId, window, requestMetric, ascending, providerPosition, fixture, scope, playerIds, eligiblePlayerIds, seasonOnly]);
-  const { data, loading, error } = useCenterResource(`${scope}:${sport}:${season}:${slateId}:${seasonOnly}:${window}:${requestMetric}:${ascending}:${providerPosition}:${playerIds}:${eligiblePlayerIds}`, load);
+  }, [loader, sport, season, slateId, window, requestMetric, requestAscending, providerPosition, fixture, scope, playerIds, eligiblePlayerIds, seasonOnly]);
+  const { data, loading, error } = useCenterResource(`${scope}:${sport}:${season}:${slateId}:${seasonOnly}:${window}:${requestMetric}:${requestAscending}:${providerPosition}:${playerIds}:${eligiblePlayerIds}`, load);
+  const fantasyAvailable = nflDraft && data?.fantasySortAvailable === true;
+  const kickingAvailable = data?.players.some(row => row.summary.basis === "published_season" && row.summary.observedAverages.field_goals_made != null) === true;
+  const nflSort = resolveNflDraftSort(position, sortContext, nflSelection, fantasyAvailable, kickingAvailable);
+  const metric = nflDraft ? nflSort.metric : baseMetric, ascending = nflDraft ? nflSort.ascending : ascendingState;
+  const options = nflDraft ? nflDraftMetrics(position, fantasyAvailable) : baseOptions;
+  const selectMetric = (value: string) => nflDraft ? setNflSelection({ metric: value, ascending, position, context: sortContext, explicit: true }) : setMetric(value);
   const dataById = new Map(data?.players.map(row => [row.player.playerId, row]) ?? []);
   const valueFor = (id: number) => {
     const row = dataById.get(id);
+    if (nflDraft) return row?.summary.basis !== "published_season" ? null : metric === existingDraftOrder || metric === "name" ? row.summary.observedAverages.fantasy_points ?? null : metric === "fantasy_points_total" ? row.summary.totals?.fantasy_points ?? null : row.summary.observedAverages[metric] ?? null;
     return seasonOnly && row?.summary.basis !== "published_season" ? null : row?.observedAverage;
   };
   const sourceEntries: BrowserEntry[] = entries ?? (data?.players.map(row => ({ identity: { id: row.player.playerId, name: row.player.name, positionGroup: row.player.position,
@@ -65,13 +75,17 @@ export default function ResearchBrowser({ sport, season, slateId, loader = realC
   const knownEntries = sourceEntries.every(entry => dataById.has(entry.identity.id));
   // A known short sample can be excluded from an otherwise certified ranking.
   // If we display its observed mean, sort it numerically and qualify the whole view.
-  const canSort = metric === "name" || data?.coverage.canSort === true && knownEntries && sourceEntries.every(entry => {
+  const canSort = nflDraft ? metric !== existingDraftOrder && metric !== "name" && sourceEntries.length > 0 && sourceEntries.every(entry => dataById.get(entry.identity.id)?.summary.metricComparable[metric === "fantasy_points_total" ? "fantasy_points" : metric] === true)
+    : metric === "name" || data?.coverage.canSort === true && knownEntries && sourceEntries.every(entry => {
     const row = dataById.get(entry.identity.id);
     return row?.observedAverage == null || row.rankableAverage != null;
   });
+  const stableOrder = new Map(sourceEntries.map((entry, index) => [entry.identity.id, index]));
   const rows = sourceEntries.filter(row => (!search || row.identity.name.toLowerCase().includes(search.toLowerCase())) &&
     (entries !== undefined || position === "All" || row.identity.positionGroup === position)).sort((a, b) => {
     const left = dataById.get(a.identity.id), right = dataById.get(b.identity.id);
+    if (metric === existingDraftOrder) return (stableOrder.get(a.identity.id)! - stableOrder.get(b.identity.id)!) * (ascending ? -1 : 1);
+    if (nflDraft && metric !== "name" && valueFor(a.identity.id) == null && valueFor(b.identity.id) == null) return stableOrder.get(a.identity.id)! - stableOrder.get(b.identity.id)!;
     const comparison = metric !== "name" ? compareActualStats(seasonOnly ? valueFor(a.identity.id) : canSort ? left?.rankableAverage : left?.observedAverage, seasonOnly ? valueFor(b.identity.id) : canSort ? right?.rankableAverage : right?.observedAverage, ascending) : 0;
     return comparison || a.identity.name.localeCompare(b.identity.name) * (metric === "name" && !ascending ? -1 : 1) || a.identity.id - b.identity.id;
   });
@@ -81,26 +95,28 @@ export default function ResearchBrowser({ sport, season, slateId, loader = realC
     return !activeBatch.attempted.includes(entry.identity.id) && row?.player.identity === "resolved" && row.metricRelevant !== false && row.observedAverage == null;
   }).slice(0, 3).map(entry => entry.identity.id);
   const published = window === "season" && data?.players.some(row => row.summary.basis === "published_season");
-  const selectedMetric = statLabels[metric] ?? "Player name";
+  const metricSuffix = metric === "fantasy_points_total" ? "" : " / game";
+  const metricLabel = (key: string) => key === "fantasy_points_total" ? `Fantasy points (season total)${data?.fantasySortComplete === true ? "" : " (partial coverage)"}` : nflDraft && key === "fantasy_points" ? `Fantasy points / game${!fantasyAvailable ? " (unavailable)" : data?.fantasySortComplete === true ? "" : " (partial coverage)"}` : statLabels[key] ?? key;
+  const selectedMetric = metric === "fantasy_points_total" ? "Fantasy points (season total)" : metric === existingDraftOrder ? "Existing order" : statLabels[metric] ?? "Player name";
   const coverageMetric = statLabels[requestMetric] ?? requestMetric;
   const allPositions = positions ?? (sport === "nba" ? ["All", "G", "F/C"] : ["All", "QB", "RB", "WR", "TE", "K", "D/ST"]);
   return <section className="pc pc-browser" data-sport={sport} aria-label={`${sport.toUpperCase()} player research`}>
     {fixture && <div className="pc-fixture">FIXTURE PLAYER POOL · captured statistics · selection does not save a draft</div>}
     <div className="pc-browser-controls">
       <label className="pc-search">Search players<input type="search" placeholder="Search players…" value={search} onChange={e => (onSearch ?? setSearch)(e.target.value)} /></label>
-      {!hidePositionFilter && <label>Position<select aria-label="Position filter" value={position} onChange={e => { (onPosition ?? setPosition)(e.target.value); setMetric(sport === "nba" ? metric : e.target.value === "K" ? "field_goals_made" : seasonOnly && sport === "nfl" ? positionMetric(e.target.value) : "fantasy_points"); }}>
+      {!hidePositionFilter && <label>Position<select aria-label="Position filter" value={position} onChange={e => { (onPosition ?? setPosition)(e.target.value); if (!nflDraft) setMetric(sport === "nba" ? metric : e.target.value === "K" ? "field_goals_made" : "fantasy_points"); }}>
         {[...new Set(allPositions)].map(value => <option key={value} value={value}>{value}</option>)}</select></label>}
-      <label>Stat sort<select aria-label="Stat sort" value={metric} onChange={e => setMetric(e.target.value)}><option value="name">Player name</option>
-        {seasonOnly && sport === "nfl" && <option value="fantasy_points" disabled>Fantasy points (unavailable)</option>}
-        {!options.includes(metric) && metric !== "name" && <option value={metric}>{statLabels[metric]}</option>}
-        {options.map(key => <option key={key} value={key}>{statLabels[key] ?? key}</option>)}</select></label>
-      <button className="pc-direction" aria-label="Change stat sort direction" onClick={() => setAscending(value => !value)}>{ascending ? "Ascending ↑" : "Descending ↓"}</button>
+      <label>Stat sort<select aria-label="Stat sort" value={metric} onChange={e => selectMetric(e.target.value)}>{nflDraft && <option value={existingDraftOrder}>Existing order</option>}<option value="name">Player name</option>
+        {nflDraft && !fantasyAvailable && !options.includes("fantasy_points") && <option value="fantasy_points" disabled>Fantasy points (unavailable)</option>}
+        {!options.includes(metric) && metric !== "name" && metric !== existingDraftOrder && <option value={metric}>{statLabels[metric]}</option>}
+        {options.map(key => <option key={key} value={key} disabled={nflDraft && key === "fantasy_points" && !fantasyAvailable}>{metricLabel(key)}</option>)}</select></label>
+      <button className="pc-direction" aria-label="Change stat sort direction" onClick={() => nflDraft ? setNflSelection({ metric, ascending: !ascending, position, context: sortContext, explicit: nflSelection?.context === sortContext && nflSelection.explicit === true }) : setAscending(value => !value)}>{ascending ? "Ascending ↑" : "Descending ↓"}</button>
     </div>
     <div className="pc-browser-subcontrols">{!seasonOnly && <WindowControl value={window} onChange={setWindow} />}{extras}</div>
-    <div className="pc-sort-state" aria-live="polite"><strong>{metric === "name" ? `Player name · ${ascending ? "A–Z" : "Z–A"}` : canSort ? `${windowLabel[window]} · ${selectedMetric} / game · ${ascending ? "low to high" : "high to low"}` : observedPlayers ? `${published ? "Published season sorting · partial pool" : "Observed-data sorting"} · ${windowLabel[window]} · ${selectedMetric} / game · ${ascending ? "low to high" : "high to low"}` : "Alphabetical · statistical ranking unavailable"}</strong><span>{rows.length} players</span></div>
+    <div className="pc-sort-state" aria-live="polite"><strong>{metric === existingDraftOrder ? `Existing catalog order · ${ascending ? "reversed" : "original"}` : metric === "name" ? `Player name · ${ascending ? "A–Z" : "Z–A"}` : canSort ? `${windowLabel[window]} · ${selectedMetric}${metricSuffix} · ${ascending ? "low to high" : "high to low"}` : observedPlayers ? `${published ? "Published season sorting · partial pool" : "Observed-data sorting"} · ${windowLabel[window]} · ${selectedMetric}${metricSuffix} · ${ascending ? "low to high" : "high to low"}` : nflDraft ? `Season · ${selectedMetric}${metricSuffix} · Values unavailable` : "Alphabetical · statistical ranking unavailable"}</strong><span>{rows.length} players</span></div>
     {!seasonOnly && !fixture && <button type="button" className="pc-direction" disabled={loading || !missing.length} onClick={() => setBatch({ context: batchContext, ids: missing, attempted: [...activeBatch.attempted, ...missing] })}>{loading ? "Loading facts…" : `Load missing game stats (${missing.length})`}</button>}
     {!seasonOnly && <p className="pc-footnote pc-observed-note">{published ? "Published season totals and provider GP supply season averages. Missing players or scoring inputs remain unavailable; partial coverage is not a complete ranking." : "Load missing stats for up to three shown players at a time; search or filter to choose players. Numerical sorts use available actual game data and may not represent complete league-wide rankings."}</p>}
-    {seasonOnly && <p className="pc-footnote" role="status">{error || (loading ? "Loading published season statistics…" : metric === "name" ? `${rows.length} players · Name order.` : `${observedPlayers}/${rows.length} shown players with season values · ${canSort ? "Complete coverage" : "Partial coverage; missing values last"}${data?.bulkFreshness === "stale" ? " · Stale ESPN data" : ""}.`)}{sport === "nfl" && " Fantasy sorting is unavailable: ESPN bulk statistics omit total fumbles lost."}</p>}
+    {seasonOnly && <p className="pc-footnote" role="status">{error || (loading ? "Loading published season statistics…" : metric === existingDraftOrder ? `${rows.length} players · Existing catalog order; no statistical ranking claimed.` : metric === "name" ? `${rows.length} players · Name order.` : `${observedPlayers}/${rows.length} shown players with season values · ${canSort ? "Complete coverage" : "Partial coverage; missing values last"}${data?.bulkFreshness === "stale" ? " · Stale ESPN data" : ""}.`)}{nflDraft && fantasyAvailable && " NFL fumbles lost uses reconciled ESPN actual-season totals; omitted losses count as zero."}{nflDraft && !fantasyAvailable && " Fantasy sorting is unavailable for this pool: matching complete season inputs, including total fumbles lost, are required."}</p>}
     {!seasonOnly && <CoverageNotice summary={loading ? "Checking coverage…" : error ? "Comparison data unavailable" : metric === "name" ? "Player research coverage" : canSort ? "Complete-sample ranking coverage verified" : `${observedPlayers}/${rows.length} shown with ${published ? "published" : "observed"} values · full-pool ranking uncertified`}>
       <p>{error || `${observedPlayers}/${rows.length} shown players have ${published ? "published season" : "observed"} ${coverageMetric} values for ${data?.seasonLabel ?? season}. ${metric !== "name" && canSort ? "Complete-sample ranking coverage is verified for the selected metric and window." : "Available values are not a complete or certified league-wide ranking."}`}</p>
       <p>{data?.coverage.rankablePlayers ?? 0}/{data?.coverage.relevantPlayers ?? 0} source players have a certified complete sample for this metric and window.</p>
@@ -110,18 +126,18 @@ export default function ResearchBrowser({ sport, season, slateId, loader = realC
       <p>Unavailable statistics stay blank, not zero, and sort last in either direction.</p>
     </CoverageNotice>}
     <div className="pc-table-scroll" role="region" aria-label="Player research table; scroll for statistics" tabIndex={0}><table className="pc-table pc-pool-table"><thead><tr>
-      <th className="pc-sticky">Player</th><th>Position</th><th>{windowLabel[window]}<small>{metric === "name" ? "FP / game" : `${selectedMetric} / game`}</small></th><th>Status</th>
+      <th className="pc-sticky">Player</th><th>Position</th><th>{windowLabel[window]}<small>{metric === existingDraftOrder ? "FP / game" : metric === "name" ? "FP / game" : `${selectedMetric}${metricSuffix}`}</small></th><th>Status</th>
     </tr></thead><tbody>{rows.map(entry => {
       const row = dataById.get(entry.identity.id), value = valueFor(entry.identity.id);
       return <tr key={entry.identity.id} data-selected={comparison ? comparison.selectedIds.includes(entry.identity.id) : selectedId === entry.identity.id}>
         <th className="pc-sticky" scope="row"><button type="button" className="draft-player-card pc-player-button" aria-label={`${comparison ? "Compare" : onSelect ? "Select" : "View"} ${entry.identity.name} player profile`} aria-pressed={comparison ? comparison.selectedIds.includes(entry.identity.id) : undefined} disabled={disabled} onClick={() => (comparison?.onToggle ?? onSelect ?? onInspect)(entry.identity)}>
           <PlayerHeadshot nbaPlayerId={entry.identity.nbaPlayerId} nflPlayerId={entry.identity.nflPlayerId} imageUrl={entry.identity.headshotUrl} playerName={entry.identity.name} size="sm" />
           <span>{entry.identity.name}<small>{entry.identity.teamAbbreviation ?? "Player profile"}</small></span></button></th>
-        <td>{entry.identity.positionGroup ?? "—"}</td><td className="pc-fp">{formatStat(value)}{row?.metricRelevant === false && <small>Not applicable</small>}</td>
+        <td>{entry.identity.positionGroup ?? "—"}</td><td className="pc-fp">{formatStat(value)}{!nflDraft && row?.metricRelevant === false && <small>Not applicable</small>}</td>
         <td><span className="pc-status">{entry.status ?? (!row ? "Statistics unavailable" : row.player.identity !== "resolved" ? "Mapping unavailable" : row.summary.basis === "published_season" ? "Season statistics" : row.summary.availableGames ? "Observed games" : "No verified games")}</span>{row?.coverage.freshness === "stale" && <small>Statistics stale</small>}{row?.coverage.freshness === "unavailable" && <small>Statistics unavailable</small>}</td>
       </tr>;
     })}</tbody></table></div>
     {!rows.length && <div className="pc-empty"><strong>{loading ? "Loading player catalog…" : "No players to display"}</strong><p>{error || "Try another search or position. Missing coverage will not be replaced with projections."}</p></div>}
-    <p className="pc-footnote">{windowLabel[window]} averages use {seasonOnly || published ? "published season totals / GP" : "actual appearances"} in {data?.seasonLabel ?? season}. — means unavailable.{data?.asOf && <> Cutoff {new Date(data.asOf).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.</>}</p>
+    <p className="pc-footnote">{windowLabel[window]} {metric === "fantasy_points_total" ? "totals use published season statistics" : <>averages use {seasonOnly || published ? "published season totals / GP" : "actual appearances"}</>} in {data?.seasonLabel ?? season}. — means unavailable.{data?.asOf && <> Cutoff {new Date(data.asOf).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.</>}</p>
   </section>;
 }

@@ -1,0 +1,2414 @@
+{
+  "auditedAt": "2026-11-18T19:02:05.275Z",
+  "season": 2026,
+  "phase": "regular",
+  "scope": {
+    "groupId": "2ac845fb-93c8-4781-aa38-e206a76f46cb",
+    "leagueId": "dc82641b-6a31-4044-aa90-e02dcb305c54",
+    "liveScopeVerified": true
+  },
+  "method": {
+    "drafts": "All authoritative configured NFL drafts in scoped league dated Aug 2026 through Feb 2027; completion via existing getDraftTurn on atomic SQL STABLE read_fantasy_draft GET.",
+    "corrections": "Replay original selections per team, then all scoped corrections in ID order; validate exact resulting player IDs against current lineups. Main frequency counts distinct completed drafts in which the corrected final selection includes a player.",
+    "identity": "draft local player_id -> players_nfl.id -> unique positive players_nfl.nfl_player_id (ESPN); full catalog duplicate-provider checks match Player Center.",
+    "scoring": "Unmodified PlayerCenterService.seasonCatalog with existing published/complementary bulk feed and each draft frozen rules_snapshot; all nine numeric inputs and GP required for actual FP/game.",
+    "verified": "Resolved identity + published season facts + fresh source + comparable fantasy metric + numeric FP/game for every occurrence.",
+    "coverageWeighted": "Verified player-draft selections divided by all offensive player-draft selections."
+  },
+  "dataFreshness": {
+    "bulkFetchedAt": "2026-11-18T18:59:41.015Z",
+    "bulkFreshness": "fresh",
+    "bulkError": null,
+    "publishedProviderRows": 2002,
+    "providerRequestCount": 22,
+    "individualPlayerRequestCount": 0,
+    "dbGetRequestCount": 18
+  },
+  "completedDraftCount": 9,
+  "completedDrafts": [
+    {
+      "slateId": 179,
+      "name": "2026 Week 1",
+      "participants": 4,
+      "rosterSize": 6,
+      "effectiveSelections": 24,
+      "verified": 24,
+      "fantasySortComplete": true,
+      "coverageCanSort": true,
+      "frozenRulesHash": "7582a3dbb4dec4358d1022d9a60c9352ddbe0efad21b2031bfd96cc924e361ab",
+      "canonicalOffensiveScoring": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 5,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 0.5,
+        "fumblesLost": -2
+      }
+    },
+    {
+      "slateId": 189,
+      "name": "2026 Week 3",
+      "participants": 4,
+      "rosterSize": 7,
+      "effectiveSelections": 28,
+      "verified": 28,
+      "fantasySortComplete": true,
+      "coverageCanSort": true,
+      "frozenRulesHash": "83cd791ef0c24708e19e0cdcec7c4dd0d9b40830a718639709865bf3ae6cb3c2",
+      "canonicalOffensiveScoring": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 5,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 0.5,
+        "fumblesLost": -2
+      }
+    },
+    {
+      "slateId": 190,
+      "name": "2026 Week 4",
+      "participants": 4,
+      "rosterSize": 7,
+      "effectiveSelections": 28,
+      "verified": 28,
+      "fantasySortComplete": true,
+      "coverageCanSort": true,
+      "frozenRulesHash": "83cd791ef0c24708e19e0cdcec7c4dd0d9b40830a718639709865bf3ae6cb3c2",
+      "canonicalOffensiveScoring": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 5,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 0.5,
+        "fumblesLost": -2
+      }
+    },
+    {
+      "slateId": 193,
+      "name": "2026 Week 5",
+      "participants": 3,
+      "rosterSize": 7,
+      "effectiveSelections": 21,
+      "verified": 21,
+      "fantasySortComplete": true,
+      "coverageCanSort": true,
+      "frozenRulesHash": "83cd791ef0c24708e19e0cdcec7c4dd0d9b40830a718639709865bf3ae6cb3c2",
+      "canonicalOffensiveScoring": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 5,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 0.5,
+        "fumblesLost": -2
+      }
+    },
+    {
+      "slateId": 194,
+      "name": "2026 Week 6",
+      "participants": 4,
+      "rosterSize": 7,
+      "effectiveSelections": 28,
+      "verified": 28,
+      "fantasySortComplete": true,
+      "coverageCanSort": true,
+      "frozenRulesHash": "83cd791ef0c24708e19e0cdcec7c4dd0d9b40830a718639709865bf3ae6cb3c2",
+      "canonicalOffensiveScoring": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 5,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 0.5,
+        "fumblesLost": -2
+      }
+    },
+    {
+      "slateId": 195,
+      "name": "2026 Week 7",
+      "participants": 4,
+      "rosterSize": 7,
+      "effectiveSelections": 28,
+      "verified": 28,
+      "fantasySortComplete": true,
+      "coverageCanSort": true,
+      "frozenRulesHash": "83cd791ef0c24708e19e0cdcec7c4dd0d9b40830a718639709865bf3ae6cb3c2",
+      "canonicalOffensiveScoring": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 5,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 0.5,
+        "fumblesLost": -2
+      }
+    },
+    {
+      "slateId": 196,
+      "name": "2026 Week 8",
+      "participants": 4,
+      "rosterSize": 7,
+      "effectiveSelections": 28,
+      "verified": 28,
+      "fantasySortComplete": true,
+      "coverageCanSort": true,
+      "frozenRulesHash": "83cd791ef0c24708e19e0cdcec7c4dd0d9b40830a718639709865bf3ae6cb3c2",
+      "canonicalOffensiveScoring": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 5,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 0.5,
+        "fumblesLost": -2
+      }
+    },
+    {
+      "slateId": 197,
+      "name": "2026 Week 9",
+      "participants": 4,
+      "rosterSize": 7,
+      "effectiveSelections": 28,
+      "verified": 28,
+      "fantasySortComplete": true,
+      "coverageCanSort": true,
+      "frozenRulesHash": "83cd791ef0c24708e19e0cdcec7c4dd0d9b40830a718639709865bf3ae6cb3c2",
+      "canonicalOffensiveScoring": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 5,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 0.5,
+        "fumblesLost": -2
+      }
+    },
+    {
+      "slateId": 199,
+      "name": "2026 Week 10",
+      "participants": 3,
+      "rosterSize": 7,
+      "effectiveSelections": 21,
+      "verified": 21,
+      "fantasySortComplete": true,
+      "coverageCanSort": true,
+      "frozenRulesHash": "83cd791ef0c24708e19e0cdcec7c4dd0d9b40830a718639709865bf3ae6cb3c2",
+      "canonicalOffensiveScoring": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 5,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 0.5,
+        "fumblesLost": -2
+      }
+    }
+  ],
+  "excludedDrafts": [
+    {
+      "slateId": 200,
+      "name": "2026 Week 11",
+      "state": "active"
+    }
+  ],
+  "slatesWithoutAuthoritativeConfiguration": [],
+  "corrections": {
+    "totalScopedRecords": 6,
+    "appliedCompletedDraftRecords": 6,
+    "reversedOriginalSelections": 3,
+    "currentLineupIdsReconciled": true,
+    "frequencyChanges": [
+      {
+        "localPlayerId": 80,
+        "name": "Josh Allen",
+        "originalSelectionFrequency": 9,
+        "correctedFinalSelectionFrequency": 8
+      },
+      {
+        "localPlayerId": 778,
+        "name": "Brock Purdy",
+        "originalSelectionFrequency": 4,
+        "correctedFinalSelectionFrequency": 5
+      }
+    ],
+    "originalSelectionCrossCheck": {
+      "uniquePlayers": 59,
+      "playerDraftSelections": 234,
+      "allCovered": true
+    }
+  },
+  "coverage": [
+    {
+      "position": "QB",
+      "uniquePlayers": 13,
+      "verifiedUnique": 13,
+      "missingUnique": 0,
+      "uniqueCoveragePercent": 100,
+      "playerDraftSelections": 34,
+      "verifiedPlayerDraftSelections": 34,
+      "draftFrequencyWeightedCoveragePercent": 100
+    },
+    {
+      "position": "RB",
+      "uniquePlayers": 17,
+      "verifiedUnique": 17,
+      "missingUnique": 0,
+      "uniqueCoveragePercent": 100,
+      "playerDraftSelections": 83,
+      "verifiedPlayerDraftSelections": 83,
+      "draftFrequencyWeightedCoveragePercent": 100
+    },
+    {
+      "position": "WR",
+      "uniquePlayers": 18,
+      "verifiedUnique": 18,
+      "missingUnique": 0,
+      "uniqueCoveragePercent": 100,
+      "playerDraftSelections": 83,
+      "verifiedPlayerDraftSelections": 83,
+      "draftFrequencyWeightedCoveragePercent": 100
+    },
+    {
+      "position": "TE",
+      "uniquePlayers": 11,
+      "verifiedUnique": 11,
+      "missingUnique": 0,
+      "uniqueCoveragePercent": 100,
+      "playerDraftSelections": 34,
+      "verifiedPlayerDraftSelections": 34,
+      "draftFrequencyWeightedCoveragePercent": 100
+    },
+    {
+      "position": "OFFENSE",
+      "uniquePlayers": 59,
+      "verifiedUnique": 59,
+      "missingUnique": 0,
+      "uniqueCoveragePercent": 100,
+      "playerDraftSelections": 234,
+      "verifiedPlayerDraftSelections": 234,
+      "draftFrequencyWeightedCoveragePercent": 100
+    },
+    {
+      "position": "K",
+      "uniquePlayers": 0,
+      "verifiedUnique": 0,
+      "missingUnique": 0,
+      "uniqueCoveragePercent": null,
+      "playerDraftSelections": 0,
+      "verifiedPlayerDraftSelections": 0,
+      "draftFrequencyWeightedCoveragePercent": null
+    },
+    {
+      "position": "D/ST",
+      "uniquePlayers": 0,
+      "verifiedUnique": 0,
+      "missingUnique": 0,
+      "uniqueCoveragePercent": null,
+      "playerDraftSelections": 0,
+      "verifiedPlayerDraftSelections": 0,
+      "draftFrequencyWeightedCoveragePercent": null
+    }
+  ],
+  "missingOffensivePlayers": [],
+  "mostFrequentlyDrafted": [
+    {
+      "localPlayerId": 44,
+      "espnPlayerId": "4430807",
+      "name": "Bijan Robinson",
+      "position": "RB",
+      "draftFrequency": 9,
+      "verified": true
+    },
+    {
+      "localPlayerId": 232,
+      "espnPlayerId": "4241389",
+      "name": "CeeDee Lamb",
+      "position": "WR",
+      "draftFrequency": 9,
+      "verified": true
+    },
+    {
+      "localPlayerId": 809,
+      "espnPlayerId": "4430878",
+      "name": "Jaxon Smith-Njigba",
+      "position": "WR",
+      "draftFrequency": 9,
+      "verified": true
+    },
+    {
+      "localPlayerId": 18,
+      "espnPlayerId": "4361307",
+      "name": "Trey McBride",
+      "position": "TE",
+      "draftFrequency": 9,
+      "verified": true
+    },
+    {
+      "localPlayerId": 300,
+      "espnPlayerId": "4374302",
+      "name": "Amon-Ra St. Brown",
+      "position": "WR",
+      "draftFrequency": 8,
+      "verified": true
+    },
+    {
+      "localPlayerId": 452,
+      "espnPlayerId": "4432665",
+      "name": "Brock Bowers",
+      "position": "TE",
+      "draftFrequency": 8,
+      "verified": true
+    },
+    {
+      "localPlayerId": 774,
+      "espnPlayerId": "3117251",
+      "name": "Christian McCaffrey",
+      "position": "RB",
+      "draftFrequency": 8,
+      "verified": true
+    },
+    {
+      "localPlayerId": 283,
+      "espnPlayerId": "4429795",
+      "name": "Jahmyr Gibbs",
+      "position": "RB",
+      "draftFrequency": 8,
+      "verified": true
+    },
+    {
+      "localPlayerId": 80,
+      "espnPlayerId": "3918298",
+      "name": "Josh Allen",
+      "position": "QB",
+      "draftFrequency": 8,
+      "verified": true
+    },
+    {
+      "localPlayerId": 635,
+      "espnPlayerId": "4361370",
+      "name": "Chris Olave",
+      "position": "WR",
+      "draftFrequency": 7,
+      "verified": true
+    },
+    {
+      "localPlayerId": 62,
+      "espnPlayerId": "3043078",
+      "name": "Derrick Henry",
+      "position": "RB",
+      "draftFrequency": 7,
+      "verified": true
+    },
+    {
+      "localPlayerId": 169,
+      "espnPlayerId": "4362628",
+      "name": "Ja'Marr Chase",
+      "position": "WR",
+      "draftFrequency": 7,
+      "verified": true
+    },
+    {
+      "localPlayerId": 85,
+      "espnPlayerId": "4379399",
+      "name": "James Cook III",
+      "position": "RB",
+      "draftFrequency": 7,
+      "verified": true
+    },
+    {
+      "localPlayerId": 385,
+      "espnPlayerId": "4242335",
+      "name": "Jonathan Taylor",
+      "position": "RB",
+      "draftFrequency": 7,
+      "verified": true
+    },
+    {
+      "localPlayerId": 446,
+      "espnPlayerId": "4567048",
+      "name": "Kenneth Walker III",
+      "position": "RB",
+      "draftFrequency": 7,
+      "verified": true
+    }
+  ],
+  "players": [
+    {
+      "localPlayerId": 44,
+      "espnPlayerId": "4430807",
+      "name": "Bijan Robinson",
+      "position": "RB",
+      "draftFrequency": 9,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193,
+        194,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 951,
+        "rushing_tds": 6,
+        "receiving_yards": 256,
+        "receiving_tds": 1,
+        "receptions": 35,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        18.020000000000003,
+        18.020000000000003
+      ]
+    },
+    {
+      "localPlayerId": 232,
+      "espnPlayerId": "4241389",
+      "name": "CeeDee Lamb",
+      "position": "WR",
+      "draftFrequency": 9,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193,
+        194,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": -6,
+        "rushing_tds": 0,
+        "receiving_yards": 976,
+        "receiving_tds": 8,
+        "receptions": 77,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        18.15,
+        18.15
+      ]
+    },
+    {
+      "localPlayerId": 809,
+      "espnPlayerId": "4430878",
+      "name": "Jaxon Smith-Njigba",
+      "position": "WR",
+      "draftFrequency": 9,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193,
+        194,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 14,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 29,
+        "rushing_tds": 0,
+        "receiving_yards": 1207,
+        "receiving_tds": 10,
+        "receptions": 79,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        22.366,
+        22.366
+      ]
+    },
+    {
+      "localPlayerId": 18,
+      "espnPlayerId": "4361307",
+      "name": "Trey McBride",
+      "position": "TE",
+      "draftFrequency": 9,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193,
+        194,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 635,
+        "receiving_tds": 5,
+        "receptions": 78,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        13.25,
+        13.25
+      ]
+    },
+    {
+      "localPlayerId": 300,
+      "espnPlayerId": "4374302",
+      "name": "Amon-Ra St. Brown",
+      "position": "WR",
+      "draftFrequency": 8,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 9,
+        "rushing_tds": 0,
+        "receiving_yards": 755,
+        "receiving_tds": 7,
+        "receptions": 65,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        16.766666666666666,
+        16.766666666666666
+      ]
+    },
+    {
+      "localPlayerId": 452,
+      "espnPlayerId": "4432665",
+      "name": "Brock Bowers",
+      "position": "TE",
+      "draftFrequency": 8,
+      "draftIds": [
+        189,
+        190,
+        193,
+        194,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 8,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 2,
+        "rushing_tds": 0,
+        "receiving_yards": 676,
+        "receiving_tds": 6,
+        "receptions": 50,
+        "fumbles_lost": 2
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        15.600000000000001,
+        15.600000000000001
+      ]
+    },
+    {
+      "localPlayerId": 774,
+      "espnPlayerId": "3117251",
+      "name": "Christian McCaffrey",
+      "position": "RB",
+      "draftFrequency": 8,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193,
+        194,
+        195,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 519,
+        "rushing_tds": 10,
+        "receiving_yards": 431,
+        "receiving_tds": 3,
+        "receptions": 40,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        21.22222222222222,
+        21.22222222222222
+      ]
+    },
+    {
+      "localPlayerId": 283,
+      "espnPlayerId": "4429795",
+      "name": "Jahmyr Gibbs",
+      "position": "RB",
+      "draftFrequency": 8,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 1000,
+        "rushing_tds": 11,
+        "receiving_yards": 384,
+        "receiving_tds": 2,
+        "receptions": 41,
+        "fumbles_lost": 2
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        25.87777777777778,
+        25.87777777777778
+      ]
+    },
+    {
+      "localPlayerId": 80,
+      "espnPlayerId": "3918298",
+      "name": "Josh Allen",
+      "position": "QB",
+      "draftFrequency": 8,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193,
+        194,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 2223,
+        "passing_tds": 13,
+        "passing_ints": 7,
+        "rushing_yards": 290,
+        "rushing_tds": 11,
+        "receiving_yards": 1,
+        "receiving_tds": 0,
+        "receptions": 1,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        25.94666666666667,
+        25.94666666666667
+      ]
+    },
+    {
+      "localPlayerId": 635,
+      "espnPlayerId": "4361370",
+      "name": "Chris Olave",
+      "position": "WR",
+      "draftFrequency": 7,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193,
+        194,
+        195,
+        197
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 764,
+        "receiving_tds": 2,
+        "receptions": 59,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        13.100000000000001,
+        13.100000000000001
+      ]
+    },
+    {
+      "localPlayerId": 62,
+      "espnPlayerId": "3043078",
+      "name": "Derrick Henry",
+      "position": "RB",
+      "draftFrequency": 7,
+      "draftIds": [
+        189,
+        190,
+        193,
+        194,
+        195,
+        196,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": -3,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 699,
+        "rushing_tds": 10,
+        "receiving_yards": 85,
+        "receiving_tds": 1,
+        "receptions": 17,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        15.078,
+        15.078
+      ]
+    },
+    {
+      "localPlayerId": 169,
+      "espnPlayerId": "4362628",
+      "name": "Ja'Marr Chase",
+      "position": "WR",
+      "draftFrequency": 7,
+      "draftIds": [
+        179,
+        189,
+        190,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 878,
+        "receiving_tds": 7,
+        "receptions": 64,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        17.977777777777778,
+        17.977777777777778
+      ]
+    },
+    {
+      "localPlayerId": 85,
+      "espnPlayerId": "4379399",
+      "name": "James Cook III",
+      "position": "RB",
+      "draftFrequency": 7,
+      "draftIds": [
+        179,
+        189,
+        190,
+        194,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 971,
+        "rushing_tds": 9,
+        "receiving_yards": 110,
+        "receiving_tds": 0,
+        "receptions": 12,
+        "fumbles_lost": 2
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        18.233333333333334,
+        18.233333333333334
+      ]
+    },
+    {
+      "localPlayerId": 385,
+      "espnPlayerId": "4242335",
+      "name": "Jonathan Taylor",
+      "position": "RB",
+      "draftFrequency": 7,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193,
+        194,
+        195,
+        196
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 739,
+        "rushing_tds": 8,
+        "receiving_yards": 240,
+        "receiving_tds": 0,
+        "receptions": 28,
+        "fumbles_lost": 4
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        15.190000000000001,
+        15.190000000000001
+      ]
+    },
+    {
+      "localPlayerId": 446,
+      "espnPlayerId": "4567048",
+      "name": "Kenneth Walker III",
+      "position": "RB",
+      "draftFrequency": 7,
+      "draftIds": [
+        189,
+        190,
+        194,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 8,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 872,
+        "rushing_tds": 7,
+        "receiving_yards": 172,
+        "receiving_tds": 4,
+        "receptions": 26,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        22.924999999999997,
+        22.924999999999997
+      ]
+    },
+    {
+      "localPlayerId": 518,
+      "espnPlayerId": "4426515",
+      "name": "Puka Nacua",
+      "position": "WR",
+      "draftFrequency": 7,
+      "draftIds": [
+        179,
+        190,
+        193,
+        194,
+        195,
+        196,
+        197
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 7,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 41,
+        "rushing_tds": 1,
+        "receiving_yards": 715,
+        "receiving_tds": 4,
+        "receptions": 70,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        19.8,
+        19.8
+      ]
+    },
+    {
+      "localPlayerId": 117,
+      "espnPlayerId": "4241416",
+      "name": "Chuba Hubbard",
+      "position": "RB",
+      "draftFrequency": 6,
+      "draftIds": [
+        190,
+        194,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 711,
+        "rushing_tds": 7,
+        "receiving_yards": 247,
+        "receiving_tds": 2,
+        "receptions": 31,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        18.366666666666667,
+        18.366666666666667
+      ]
+    },
+    {
+      "localPlayerId": 772,
+      "espnPlayerId": "3040151",
+      "name": "George Kittle",
+      "position": "TE",
+      "draftFrequency": 6,
+      "draftIds": [
+        190,
+        193,
+        194,
+        195,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 557,
+        "receiving_tds": 5,
+        "receptions": 44,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        11.744444444444445,
+        11.744444444444445
+      ]
+    },
+    {
+      "localPlayerId": 569,
+      "espnPlayerId": "4262921",
+      "name": "Justin Jefferson",
+      "position": "WR",
+      "draftFrequency": 6,
+      "draftIds": [
+        179,
+        189,
+        193,
+        195,
+        196,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 8,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": -11,
+        "rushing_tds": 0,
+        "receiving_yards": 467,
+        "receiving_tds": 4,
+        "receptions": 40,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        11.2,
+        11.2
+      ]
+    },
+    {
+      "localPlayerId": 530,
+      "espnPlayerId": "4430737",
+      "name": "Kyren Williams",
+      "position": "RB",
+      "draftFrequency": 6,
+      "draftIds": [
+        193,
+        194,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 616,
+        "rushing_tds": 6,
+        "receiving_yards": 267,
+        "receiving_tds": 1,
+        "receptions": 38,
+        "fumbles_lost": 2
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        14.530000000000001,
+        14.530000000000001
+      ]
+    },
+    {
+      "localPlayerId": 778,
+      "espnPlayerId": "4361741",
+      "name": "Brock Purdy",
+      "position": "QB",
+      "draftFrequency": 5,
+      "draftIds": [
+        189,
+        190,
+        194,
+        195,
+        197
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 2369,
+        "passing_tds": 20,
+        "passing_ints": 5,
+        "rushing_yards": 222,
+        "rushing_tds": 2,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        24.328888888888887,
+        24.328888888888887
+      ]
+    },
+    {
+      "localPlayerId": 330,
+      "espnPlayerId": "4248528",
+      "name": "Christian Watson",
+      "position": "WR",
+      "draftFrequency": 5,
+      "draftIds": [
+        189,
+        194,
+        195,
+        196,
+        197
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 916,
+        "receiving_tds": 7,
+        "receptions": 52,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        15.760000000000002,
+        15.760000000000002
+      ]
+    },
+    {
+      "localPlayerId": 168,
+      "espnPlayerId": "3915511",
+      "name": "Joe Burrow",
+      "position": "QB",
+      "draftFrequency": 5,
+      "draftIds": [
+        193,
+        195,
+        196,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 2795,
+        "passing_tds": 27,
+        "passing_ints": 6,
+        "rushing_yards": 85,
+        "rushing_tds": 3,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        28.811111111111114,
+        28.811111111111114
+      ]
+    },
+    {
+      "localPlayerId": 176,
+      "espnPlayerId": "4239993",
+      "name": "Tee Higgins",
+      "position": "WR",
+      "draftFrequency": 5,
+      "draftIds": [
+        189,
+        190,
+        193,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 824,
+        "receiving_tds": 6,
+        "receptions": 53,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        16.1,
+        16.1
+      ]
+    },
+    {
+      "localPlayerId": 461,
+      "espnPlayerId": "4890973",
+      "name": "Ashton Jeanty",
+      "position": "RB",
+      "draftFrequency": 4,
+      "draftIds": [
+        189,
+        190,
+        194,
+        195
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 380,
+        "rushing_tds": 1,
+        "receiving_yards": 417,
+        "receiving_tds": 3,
+        "receptions": 46,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        12.67,
+        12.67
+      ]
+    },
+    {
+      "localPlayerId": 166,
+      "espnPlayerId": "4362238",
+      "name": "Chase Brown",
+      "position": "RB",
+      "draftFrequency": 4,
+      "draftIds": [
+        179,
+        189,
+        190,
+        193
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 441,
+        "rushing_tds": 1,
+        "receiving_yards": 246,
+        "receiving_tds": 2,
+        "receptions": 47,
+        "fumbles_lost": 2
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        11.8,
+        11.8
+      ]
+    },
+    {
+      "localPlayerId": 40,
+      "espnPlayerId": "4426502",
+      "name": "Drake London",
+      "position": "WR",
+      "draftFrequency": 4,
+      "draftIds": [
+        190,
+        194,
+        196,
+        197
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 4,
+        "rushing_tds": 0,
+        "receiving_yards": 801,
+        "receiving_tds": 1,
+        "receptions": 50,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        11.150000000000002,
+        11.150000000000002
+      ]
+    },
+    {
+      "localPlayerId": 667,
+      "espnPlayerId": "4595348",
+      "name": "Malik Nabers",
+      "position": "WR",
+      "draftFrequency": 4,
+      "draftIds": [
+        194,
+        195,
+        197,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 692,
+        "receiving_tds": 2,
+        "receptions": 58,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        12.022222222222222,
+        12.022222222222222
+      ]
+    },
+    {
+      "localPlayerId": 335,
+      "espnPlayerId": "4258173",
+      "name": "Nico Collins",
+      "position": "WR",
+      "draftFrequency": 4,
+      "draftIds": [
+        179,
+        193,
+        194,
+        195
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 7,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 12,
+        "rushing_tds": 0,
+        "receiving_yards": 478,
+        "receiving_tds": 5,
+        "receptions": 37,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        13.928571428571429,
+        13.928571428571429
+      ]
+    },
+    {
+      "localPlayerId": 605,
+      "espnPlayerId": "4431452",
+      "name": "Drake Maye",
+      "position": "QB",
+      "draftFrequency": 3,
+      "draftIds": [
+        195,
+        196,
+        199
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 2330,
+        "passing_tds": 18,
+        "passing_ints": 11,
+        "rushing_yards": 230,
+        "rushing_tds": 3,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 2
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        19.82,
+        19.82
+      ]
+    },
+    {
+      "localPlayerId": 248,
+      "espnPlayerId": "4361579",
+      "name": "Javonte Williams",
+      "position": "RB",
+      "draftFrequency": 3,
+      "draftIds": [
+        194,
+        196,
+        197
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 692,
+        "rushing_tds": 9,
+        "receiving_yards": 131,
+        "receiving_tds": 1,
+        "receptions": 25,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        15.48,
+        15.48
+      ]
+    },
+    {
+      "localPlayerId": 417,
+      "espnPlayerId": "4432620",
+      "name": "Parker Washington",
+      "position": "WR",
+      "draftFrequency": 3,
+      "draftIds": [
+        189,
+        190,
+        196
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 13,
+        "rushing_tds": 0,
+        "receiving_yards": 645,
+        "receiving_tds": 6,
+        "receptions": 36,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        13.31111111111111,
+        13.31111111111111
+      ]
+    },
+    {
+      "localPlayerId": 827,
+      "espnPlayerId": "4596448",
+      "name": "Bucky Irving",
+      "position": "RB",
+      "draftFrequency": 2,
+      "draftIds": [
+        196,
+        197
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 825,
+        "rushing_tds": 7,
+        "receiving_yards": 106,
+        "receiving_tds": 1,
+        "receptions": 22,
+        "fumbles_lost": 2
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        16.455555555555556,
+        16.455555555555556
+      ]
+    },
+    {
+      "localPlayerId": 159,
+      "espnPlayerId": "4259545",
+      "name": "D'Andre Swift",
+      "position": "RB",
+      "draftFrequency": 2,
+      "draftIds": [
+        189,
+        197
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 576,
+        "rushing_tds": 10,
+        "receiving_yards": 162,
+        "receiving_tds": 0,
+        "receptions": 24,
+        "fumbles_lost": 2
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        15.755555555555553,
+        15.755555555555553
+      ]
+    },
+    {
+      "localPlayerId": 93,
+      "espnPlayerId": "4385690",
+      "name": "Dalton Kincaid",
+      "position": "TE",
+      "draftFrequency": 2,
+      "draftIds": [
+        189,
+        190
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 487,
+        "receiving_tds": 2,
+        "receptions": 32,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        8.3,
+        8.3
+      ]
+    },
+    {
+      "localPlayerId": 662,
+      "espnPlayerId": "4361050",
+      "name": "Isaiah Likely",
+      "position": "TE",
+      "draftFrequency": 2,
+      "draftIds": [
+        194,
+        195
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 575,
+        "receiving_tds": 7,
+        "receptions": 55,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        14.11111111111111,
+        14.11111111111111
+      ]
+    },
+    {
+      "localPlayerId": 314,
+      "espnPlayerId": "4036378",
+      "name": "Jordan Love",
+      "position": "QB",
+      "draftFrequency": 2,
+      "draftIds": [
+        194,
+        195
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 2838,
+        "passing_tds": 20,
+        "passing_ints": 7,
+        "rushing_yards": 23,
+        "rushing_tds": 2,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        21.182,
+        21.182
+      ]
+    },
+    {
+      "localPlayerId": 66,
+      "espnPlayerId": "3916387",
+      "name": "Lamar Jackson",
+      "position": "QB",
+      "draftFrequency": 2,
+      "draftIds": [
+        179,
+        189
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 5,
+      "seasonStats": {
+        "passing_yards": 967,
+        "passing_tds": 6,
+        "passing_ints": 1,
+        "rushing_yards": 144,
+        "rushing_tds": 1,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        17.016000000000002,
+        17.016000000000002
+      ]
+    },
+    {
+      "localPlayerId": 526,
+      "espnPlayerId": "12483",
+      "name": "Matthew Stafford",
+      "position": "QB",
+      "draftFrequency": 2,
+      "draftIds": [
+        193,
+        194
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 2623,
+        "passing_tds": 19,
+        "passing_ints": 10,
+        "rushing_yards": 17,
+        "rushing_tds": 0,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        18.162,
+        18.162
+      ]
+    },
+    {
+      "localPlayerId": 292,
+      "espnPlayerId": "4430027",
+      "name": "Sam LaPorta",
+      "position": "TE",
+      "draftFrequency": 2,
+      "draftIds": [
+        189,
+        197
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 2,
+        "rushing_tds": 0,
+        "receiving_yards": 415,
+        "receiving_tds": 3,
+        "receptions": 36,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        8.633333333333333,
+        8.633333333333333
+      ]
+    },
+    {
+      "localPlayerId": 640,
+      "espnPlayerId": "4360689",
+      "name": "Tyler Shough",
+      "position": "QB",
+      "draftFrequency": 2,
+      "draftIds": [
+        189,
+        190
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 2173,
+        "passing_tds": 15,
+        "passing_ints": 7,
+        "rushing_yards": 187,
+        "rushing_tds": 2,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 4
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        18.95777777777778,
+        18.95777777777778
+      ]
+    },
+    {
+      "localPlayerId": 270,
+      "espnPlayerId": "4426338",
+      "name": "Bo Nix",
+      "position": "QB",
+      "draftFrequency": 1,
+      "draftIds": [
+        179
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 1730,
+        "passing_tds": 11,
+        "passing_ints": 4,
+        "rushing_yards": 116,
+        "rushing_tds": 2,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 2
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        15.08888888888889,
+        15.08888888888889
+      ]
+    },
+    {
+      "localPlayerId": 151,
+      "espnPlayerId": "4723086",
+      "name": "Colston Loveland",
+      "position": "TE",
+      "draftFrequency": 1,
+      "draftIds": [
+        179
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 363,
+        "receiving_tds": 2,
+        "receptions": 37,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        7.200000000000001,
+        7.200000000000001
+      ]
+    },
+    {
+      "localPlayerId": 274,
+      "espnPlayerId": "3128429",
+      "name": "Courtland Sutton",
+      "position": "WR",
+      "draftFrequency": 1,
+      "draftIds": [
+        190
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 266,
+        "receiving_tds": 2,
+        "receptions": 25,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        5.677777777777778,
+        5.677777777777778
+      ]
+    },
+    {
+      "localPlayerId": 532,
+      "espnPlayerId": "4429160",
+      "name": "De'Von Achane",
+      "position": "RB",
+      "draftFrequency": 1,
+      "draftIds": [
+        179
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 3,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 127,
+        "rushing_tds": 0,
+        "receiving_yards": 49,
+        "receiving_tds": 0,
+        "receptions": 7,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        7.033333333333334,
+        7.033333333333334
+      ]
+    },
+    {
+      "localPlayerId": 723,
+      "espnPlayerId": "4241478",
+      "name": "DeVonta Smith",
+      "position": "WR",
+      "draftFrequency": 1,
+      "draftIds": [
+        189
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 4,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 310,
+        "receiving_tds": 2,
+        "receptions": 26,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        14,
+        14
+      ]
+    },
+    {
+      "localPlayerId": 711,
+      "espnPlayerId": "4040715",
+      "name": "Jalen Hurts",
+      "position": "QB",
+      "draftFrequency": 1,
+      "draftIds": [
+        179
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 5,
+      "seasonStats": {
+        "passing_yards": 933,
+        "passing_tds": 8,
+        "passing_ints": 3,
+        "rushing_yards": 107,
+        "rushing_tds": 1,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        17.604,
+        17.604
+      ]
+    },
+    {
+      "localPlayerId": 284,
+      "espnPlayerId": "3046779",
+      "name": "Jared Goff",
+      "position": "QB",
+      "draftFrequency": 1,
+      "draftIds": [
+        197
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 2437,
+        "passing_tds": 18,
+        "passing_ints": 4,
+        "rushing_yards": 23,
+        "rushing_tds": 1,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        20.642222222222227,
+        20.642222222222227
+      ]
+    },
+    {
+      "localPlayerId": 876,
+      "espnPlayerId": "4426348",
+      "name": "Jayden Daniels",
+      "position": "QB",
+      "draftFrequency": 1,
+      "draftIds": [
+        196
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 7,
+      "seasonStats": {
+        "passing_yards": 1499,
+        "passing_tds": 10,
+        "passing_ints": 2,
+        "rushing_yards": 280,
+        "rushing_tds": 2,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        20.565714285714286,
+        20.565714285714286
+      ]
+    },
+    {
+      "localPlayerId": 276,
+      "espnPlayerId": "4372016",
+      "name": "Jaylen Waddle",
+      "position": "WR",
+      "draftFrequency": 1,
+      "draftIds": [
+        194
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 23,
+        "rushing_tds": 0,
+        "receiving_yards": 337,
+        "receiving_tds": 2,
+        "receptions": 30,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        7,
+        7
+      ]
+    },
+    {
+      "localPlayerId": 754,
+      "espnPlayerId": "4569987",
+      "name": "Jaylen Warren",
+      "position": "RB",
+      "draftFrequency": 1,
+      "draftIds": [
+        195
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 719,
+        "rushing_tds": 2,
+        "receiving_yards": 320,
+        "receiving_tds": 1,
+        "receptions": 30,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        14.988888888888889,
+        14.988888888888889
+      ]
+    },
+    {
+      "localPlayerId": 43,
+      "espnPlayerId": "4360248",
+      "name": "Kyle Pitts Sr.",
+      "position": "TE",
+      "draftFrequency": 1,
+      "draftIds": [
+        179
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 270,
+        "receiving_tds": 4,
+        "receptions": 29,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        6.35,
+        6.35
+      ]
+    },
+    {
+      "localPlayerId": 765,
+      "espnPlayerId": "16737",
+      "name": "Mike Evans",
+      "position": "WR",
+      "draftFrequency": 1,
+      "draftIds": [
+        194
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 6,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 420,
+        "receiving_tds": 3,
+        "receptions": 27,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        12.25,
+        12.25
+      ]
+    },
+    {
+      "localPlayerId": 701,
+      "espnPlayerId": "3929630",
+      "name": "Saquon Barkley",
+      "position": "RB",
+      "draftFrequency": 1,
+      "draftIds": [
+        179
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 7,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 296,
+        "rushing_tds": 3,
+        "receiving_yards": 41,
+        "receiving_tds": 0,
+        "receptions": 7,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        7.885714285714286,
+        7.885714285714286
+      ]
+    },
+    {
+      "localPlayerId": 568,
+      "espnPlayerId": "4036133",
+      "name": "T.J. Hockenson",
+      "position": "TE",
+      "draftFrequency": 1,
+      "draftIds": [
+        196
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 8,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 0,
+        "rushing_tds": 0,
+        "receiving_yards": 328,
+        "receiving_tds": 3,
+        "receptions": 35,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        8.537500000000001,
+        8.537500000000001
+      ]
+    },
+    {
+      "localPlayerId": 404,
+      "espnPlayerId": "4360310",
+      "name": "Trevor Lawrence",
+      "position": "QB",
+      "draftFrequency": 1,
+      "draftIds": [
+        190
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 2284,
+        "passing_tds": 21,
+        "passing_ints": 5,
+        "rushing_yards": 106,
+        "rushing_tds": 0,
+        "receiving_yards": 0,
+        "receiving_tds": 0,
+        "receptions": 0,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        21.662222222222223,
+        21.662222222222223
+      ]
+    },
+    {
+      "localPlayerId": 311,
+      "espnPlayerId": "4572680",
+      "name": "Tucker Kraft",
+      "position": "TE",
+      "draftFrequency": 1,
+      "draftIds": [
+        196
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 10,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 13,
+        "rushing_tds": 0,
+        "receiving_yards": 370,
+        "receiving_tds": 3,
+        "receptions": 37,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        7.4799999999999995,
+        7.4799999999999995
+      ]
+    },
+    {
+      "localPlayerId": 388,
+      "espnPlayerId": "4431459",
+      "name": "Tyler Warren",
+      "position": "TE",
+      "draftFrequency": 1,
+      "draftIds": [
+        179
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 8,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 9,
+        "rushing_tds": 1,
+        "receiving_yards": 276,
+        "receiving_tds": 2,
+        "receptions": 40,
+        "fumbles_lost": 0
+      },
+      "sparseZeroFumblesUsed": true,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        8.3125,
+        8.3125
+      ]
+    },
+    {
+      "localPlayerId": 60,
+      "espnPlayerId": "4429615",
+      "name": "Zay Flowers",
+      "position": "WR",
+      "draftFrequency": 1,
+      "draftIds": [
+        196
+      ],
+      "verified": true,
+      "reason": null,
+      "identity": "resolved",
+      "gamesPlayed": 9,
+      "seasonStats": {
+        "passing_yards": 0,
+        "passing_tds": 0,
+        "passing_ints": 0,
+        "rushing_yards": 51,
+        "rushing_tds": 0,
+        "receiving_yards": 688,
+        "receiving_tds": 3,
+        "receptions": 49,
+        "fumbles_lost": 1
+      },
+      "sparseZeroFumblesUsed": false,
+      "fpPerGameRangeAcrossFrozenSlateRules": [
+        12.71111111111111,
+        12.71111111111111
+      ]
+    }
+  ],
+  "recommendation": "Observed drafted-player coverage strongly supports season FP/game descending as a default for offensive Draft browsing. Keep missing-last placement, partial coverage disclosure for the wider eligible catalog, authorized slate/Group scoring and K/DST limitations. This audit changes no default or implementation.",
+  "safety": {
+    "databaseOperations": "GET only",
+    "databaseWrites": 0,
+    "implementationChanges": 0,
+    "canonicalScoringChanges": 0,
+    "commits": 0,
+    "pushes": 0,
+    "merges": 0,
+    "deployments": 0
+  }
+}

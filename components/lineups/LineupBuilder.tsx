@@ -138,7 +138,7 @@ export default function LineupBuilder({
 
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState<PositionFilter>("All");
-  const [onSlateOnly, setOnSlateOnly] = useState(false);
+  const [onSlateOnly, setOnSlateOnly] = useState(isDraftPage && draftSport === "nfl");
   const [viewMode] = useState<ViewMode>(defaultViewMode ?? "scoring");
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const [refreshTimestamp, setRefreshTimestamp] = useState<{ scope: string; value: string } | null>(null);
@@ -695,6 +695,8 @@ export default function LineupBuilder({
     );
   }, [orderedTeamsForSlate]);
 
+  const nflDraftSlateOnly = isDraftPage && draftSport === "nfl" && onSlateOnly;
+  const nflDraftAvailabilityReady = draftContext?.scope === refreshScopeKey;
   const filteredPlayers = useMemo(() => {
     return players
       .filter((player) => {
@@ -720,6 +722,11 @@ export default function LineupBuilder({
           }
         }
 
+        // NFL Draft availability and context are accepted together after full
+        // scope validation. Never show the broader pool while a slate is unknown.
+        if (nflDraftSlateOnly) {
+          return nflDraftAvailabilityReady && availablePlayerIdSet.has(player.id);
+        }
         if (onSlateOnly && !isAvailabilityLoading) {
           return availablePlayerIdSet.has(player.id);
         }
@@ -745,6 +752,8 @@ export default function LineupBuilder({
     searchTerm,
     positionFilter,
     onSlateOnly,
+    nflDraftSlateOnly,
+    nflDraftAvailabilityReady,
     isAvailabilityLoading,
     availablePlayerIdSet,
     playerAverageMap,
@@ -1139,6 +1148,7 @@ export default function LineupBuilder({
     const isCurrent = refreshScopeRef.current.capture();
     const valid = () => refreshMountedRef.current && isCurrent() && loadId === latestSlateLoadRef.current;
     if (!routine) setIsSlateLoading(true);
+    if (draftSport === "nfl") setIsAvailabilityLoading(true);
     try {
       const isGolfDraft = (sport ?? selectedSport) === "golf";
       const expected = { groupId: groupContext!.group.id, sport: draftSport, slateId };
@@ -1191,7 +1201,7 @@ export default function LineupBuilder({
       const text = error instanceof Error ? error.message : "Could not refresh Draft.";
       setRefreshFeedback({ scope: refreshScopeKey, text });
       return { status: "error", message: text };
-    } finally { if (valid()) setIsSlateLoading(false); }
+    } finally { if (valid()) { setIsSlateLoading(false); if (draftSport === "nfl") setIsAvailabilityLoading(false); } }
   }
 
   async function loadSlateLineups(nextSlateId: number, isScopeCurrent = isRenderScopeCurrent) {

@@ -1,0 +1,81 @@
+{
+  "season": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2026?lang=en&region=us"
+  },
+  "athlete": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2026/athletes/4362628?lang=en&region=us"
+  },
+  "seasonType": {
+    "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2026/types/2?lang=en&region=us"
+  },
+  "splits": {
+    "id": "0",
+    "type": "total",
+    "categories": [
+      {
+        "name": "general",
+        "stats": [
+          {
+            "name": "fumblesLost",
+            "value": 0
+          },
+          {
+            "name": "gamesPlayed",
+            "value": 9
+          }
+        ]
+      },
+      {
+        "name": "passing",
+        "stats": [
+          {
+            "name": "interceptions",
+            "value": 0
+          },
+          {
+            "name": "passingTouchdowns",
+            "value": 0
+          },
+          {
+            "name": "passingYards",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "name": "rushing",
+        "stats": [
+          {
+            "name": "rushingFumblesLost",
+            "value": 0
+          },
+          {
+            "name": "rushingTouchdowns",
+            "value": 0
+          },
+          {
+            "name": "rushingYards",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "name": "receiving",
+        "stats": [
+          {
+            "name": "receivingTouchdowns",
+            "value": 7
+          },
+          {
+            "name": "receivingYards",
+            "value": 878
+          },
+          {
+            "name": "receptions",
+            "value": 64
+          }
+        ]
+      }
+    ]
+  }
+}
