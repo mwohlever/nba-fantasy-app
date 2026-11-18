@@ -121,8 +121,10 @@ export class PlayerCenterService {
     });
     const missingEligiblePlayers = input.eligiblePlayerIds?.filter(id => !catalog.players.some(player => player.playerId === id)).length ?? 0;
     const offensive = histories.filter(h => !["K", "D/ST"].includes(h.player.position) && (!input.position || h.player.position === input.position));
-    const fantasySortAvailable = input.sport === "nba" || missingEligiblePlayers === 0 && offensive.length > 0 && offensive.every(h =>
+    const fantasySortComplete = input.sport === "nba" || missingEligiblePlayers === 0 && offensive.length > 0 && offensive.every(h =>
       h.seasonFacts?.freshness === "fresh" && (h.seasonFacts.gamesPlayed === 0 || h.seasonFacts.gamesPlayed !== null && fantasyPointsFromStats(h.seasonFacts.stats, h.player.position, input.scoring) !== null));
+    const fantasySortAvailable = input.sport === "nba" || offensive.some(h => h.player.identity === "resolved" &&
+      h.seasonFacts?.gamesPlayed !== null && (h.seasonFacts?.gamesPlayed ?? 0) > 0 && fantasyPointsFromStats(h.seasonFacts!.stats, h.player.position, input.scoring) !== null);
     const result = compareHistories({ ...input, window: "season", eligibleIds: input.eligiblePlayerIds, catalog: true }, histories, new Date(this.now()).toISOString(), bulk?.fetchedAt ?? null);
     if (!fantasySortAvailable && input.metric === "fantasy_points") {
       for (const row of result.players) { row.observedAverage = null; row.rankableAverage = null; }
@@ -131,7 +133,7 @@ export class PlayerCenterService {
       result.coverage.rankablePlayers = 0;
     }
     result.coverage.canSort &&= missingEligiblePlayers === 0;
-    return { ...result, source: "bulk_provider" as const, bulkFetchedAt: bulk?.fetchedAt ?? null, bulkFreshness: bulk?.freshness ?? "unavailable", fantasySortAvailable,
+    return { ...result, source: "bulk_provider" as const, bulkFetchedAt: bulk?.fetchedAt ?? null, bulkFreshness: bulk?.freshness ?? "unavailable", fantasySortAvailable, fantasySortComplete,
       coverage: { ...result.coverage, missingEligiblePlayers, reason: result.coverage.canSort ? null : input.sport === "nfl" && input.metric === "fantasy_points" && !fantasySortAvailable ? "NFL fantasy sorting requires total fumbles lost and all other scoring inputs for the eligible pool." : "Season facts are incomplete or stale for part of the eligible pool." } };
   }
   async comparisons(input: { sport: CenterSport; season: number; window: CenterWindow; metric: string; position?: string; ascending: boolean; scoring: CenterScoringContext; playerIds?: number[]; eligiblePlayerIds?: number[] }) {

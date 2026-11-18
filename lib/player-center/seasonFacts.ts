@@ -1,3 +1,4 @@
+import { NFL_FANTASY_PAGE_SIZE, nflFantasyBulkUrl, nflFantasyBulkFilter, normalizeNflFantasyPage, supplementNflFumbles, type NflFantasyActual } from "./nflFantasyBulk";
 import { BoundedReadCache, ReadBudget, type CachedRead } from "./cache";
 import { professionalSeason, type CenterPhase, type CenterSport, type CenterStats, type SeasonFacts } from "./types";
 
@@ -93,20 +94,22 @@ export function normalizeBulkSeasonPage(payload: unknown, sport: CenterSport, se
 export class SeasonFactsReader {
   private individual: BoundedReadCache<SeasonFacts>;
   private batches: BoundedReadCache<SeasonFacts[]>;
+  private nflFantasy: BoundedReadCache<NflFantasyActual[]>;
   constructor(private readonly fetcher: typeof fetch = fetch, private readonly now: () => number = Date.now) {
     this.individual = new BoundedReadCache(128, now);
     this.batches = new BoundedReadCache(8, now, 2, 4);
+    this.nflFantasy = new BoundedReadCache(8, now, 2, 4);
   }
   private ttl(sport: CenterSport, season: number) { return season < professionalSeason(sport, new Date(this.now())) ? 86_400_000 : 900_000; }
-  private async json(url: string, deadline: number) {
+  private async json(url: string, deadline: number, extraHeaders: Record<string, string> = {}, maxBytes = 3_000_000) {
     const remaining = Math.min(5000, deadline - this.now());
     if (remaining <= 0) throw new Error("Season facts deadline");
-    const response = await this.fetcher(url, { cache: "no-store", headers: { Accept: "application/json" }, signal: AbortSignal.timeout(remaining) });
+    const response = await this.fetcher(url, { cache: "no-store", headers: { Accept: "application/json", ...extraHeaders }, signal: AbortSignal.timeout(remaining) });
     if (!response.ok || !response.body) throw new Error("Season facts unavailable");
     const reader = response.body.getReader(), chunks: Uint8Array[] = [];
     let size = 0;
     try { for (;;) { const { value, done } = await reader.read(); if (done) break; size += value.length;
-      if (size > 3_000_000) { await reader.cancel(); throw new Error("Season facts response limit"); } chunks.push(value); }
+      if (size > maxBytes) { await reader.cancel(); throw new Error("Season facts response limit"); } chunks.push(value); }
     } finally { reader.releaseLock(); }
     const bytes = new Uint8Array(size); let offset = 0;
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
@@ -116,10 +119,10 @@ export class SeasonFactsReader {
     requestValid(sport, season, phase, id);
     return this.individual.read(`${sport}:${id}:${season}:${phase}`, async () => normalizeCoreSeasonFacts(await this.json(coreSeasonUrl(sport, id, season, phase), budget.deadline), sport, id, season, phase, new Date(this.now()).toISOString()), this.ttl(sport, season), budget);
   }
-  bulk(sport: CenterSport, season: number, phase: CenterPhase = "regular"): Promise<CachedRead<SeasonFacts[]>> {
+  async bulk(sport: CenterSport, season: number, phase: CenterPhase = "regular"): Promise<CachedRead<SeasonFacts[]>> {
     requestValid(sport, season, phase);
     const deadline = this.now() + 15_000;
-    return this.batches.read(`${sport}:${season}:${phase}`, async () => {
+    const published = this.batches.read(`${sport}:${season}:${phase}`, async () => {
       const rows: SeasonFacts[] = [], ids = new Set<string>();
       const fetchedAt = new Date(this.now()).toISOString();
       const pageRead = async (page: number) => normalizeBulkSeasonPage(await this.json(bulkSeasonUrl(sport, season, phase, page), deadline), sport, season, phase, page, fetchedAt);
@@ -138,6 +141,25 @@ export class SeasonFactsReader {
       if (rows.length !== first.count) throw new Error("Incomplete bulk batch");
       return rows;
     }, this.ttl(sport, season), new ReadBudget(1, deadline));
+    if (sport !== "nfl" || phase !== "regular") return published;
+    const complementary = this.nflFantasy.read(String(season), async () => {
+      const rows: NflFantasyActual[] = [], ids = new Set<string>();
+      // At most 4,000 provider players, two pages, 12 MB/page, within the shared deadline.
+      for (let page = 0; page < 2; page++) {
+        const parsed = normalizeNflFantasyPage(await this.json(nflFantasyBulkUrl(season), deadline,
+          { "x-fantasy-filter": nflFantasyBulkFilter(season, page * NFL_FANTASY_PAGE_SIZE) }, 12_000_000), season);
+        for (const id of parsed.ids) { if (ids.has(id)) throw new Error("NFL fantasy pagination repeated identity"); ids.add(id); }
+        rows.push(...parsed.rows);
+        if (parsed.count < NFL_FANTASY_PAGE_SIZE) return rows;
+      }
+      throw new Error("NFL fantasy bulk pagination limit");
+    }, this.ttl(sport, season), new ReadBudget(1, deadline));
+    const [base, companion] = await Promise.all([published, complementary]);
+    if (!base.value || !companion.value) return base;
+    const stale = base.freshness !== "fresh" || companion.freshness !== "fresh";
+    return { ...base, value: supplementNflFumbles(base.value, companion.value), freshness: stale ? "stale" : "fresh",
+      fetchedAt: [base.fetchedAt, companion.fetchedAt].filter((v): v is string => !!v).sort()[0] ?? null,
+      error: base.error ?? companion.error };
   }
 }
 export function seasonReadFacts(read: CachedRead<SeasonFacts>): SeasonFacts | null {

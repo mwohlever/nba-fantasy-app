@@ -458,8 +458,10 @@ function DraftPlayerBrowser(props: PlayerPoolProps) {
   }, [isNfl, positionFilter, researchMode]);
 
   useEffect(() => {
-    setOnSlateOnly(false);
-  }, [setOnSlateOnly]);
+    // NFL Draft owns its initial slate filter and keeps the user’s choice when
+    // the pool remounts. Preserve the existing defaults for other sports.
+    if (!isNfl) setOnSlateOnly(false);
+  }, [isNfl, setOnSlateOnly]);
 
   useEffect(() => {
     setResearchMode(
