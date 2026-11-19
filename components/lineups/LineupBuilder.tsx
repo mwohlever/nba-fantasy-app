@@ -2665,6 +2665,7 @@ export default function LineupBuilder({
         availablePlayerIdsForSlate={availablePlayerIdsForSlate}
         availablePlayerIdSet={availablePlayerIdSet}
         isAvailabilityLoading={isAvailabilityLoading}
+        slateAvailabilityReady={nflDraftAvailabilityReady}
         getOwnerTeamForPlayer={getOwnerTeamForPlayer}
         setDraftingPlayer={setDraftingPlayerWithSlotRestore}
         handleAssignPlayerToTeam={handleAssignPlayerToTeam}
