@@ -45,6 +45,8 @@ type Props = {
   isAvailabilityLoading:
     boolean;
 
+  slateAvailabilityReady?: boolean;
+
   getOwnerTeamForPlayer: (
     playerId: number,
   ) => Team | null;
@@ -92,6 +94,7 @@ export default function SlotDraftModal({
   availablePlayerIdsForSlate,
   availablePlayerIdSet,
   isAvailabilityLoading,
+  slateAvailabilityReady = !isAvailabilityLoading,
   getOwnerTeamForPlayer,
   setDraftingPlayer,
   handleAssignPlayerToTeam,
@@ -111,7 +114,7 @@ export default function SlotDraftModal({
   const [
     onSlateOnly,
     setOnSlateOnly,
-  ] = useState(false);
+  ] = useState(sport === "nfl");
 
   /*
    * Position is intentionally fixed to the roster slot.
@@ -204,9 +207,13 @@ export default function SlotDraftModal({
             return false;
           }
 
+          if (onSlateOnly && sport === "nfl" && !slateAvailabilityReady) {
+            return false;
+          }
+
           if (
             onSlateOnly &&
-            !isAvailabilityLoading &&
+            (sport === "nfl" || !isAvailabilityLoading) &&
             !availablePlayerIdSet.has(
               player.id,
             )
@@ -219,6 +226,9 @@ export default function SlotDraftModal({
       );
     }, [
       targetDraftSlot,
+      sport,
+      slateAvailabilityReady,
+      rosterSlots,
       players,
       getOwnerTeamForPlayer,
       searchTerm,
@@ -350,7 +360,7 @@ export default function SlotDraftModal({
               setSearchTerm
             }
             positionFilter={
-              positionFilter
+              sport === "nfl" ? targetDraftSlot.positionGroup as PositionFilter : positionFilter
             }
             setPositionFilter={
               setPositionFilter
